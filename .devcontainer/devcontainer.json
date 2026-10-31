@@ -1,0 +1,18 @@
+{
+  "name": "Cronch Kernel",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:24-bookworm",
+  "features": {
+    "ghcr.io/devcontainers/features/rust:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "rust-lang.rust-analyzer",
+        "anthropic.claude-code",
+        "github.vscode-pull-request-github",
+        "github.vscode-github-actions"
+      ]
+    }
+  },
+}
