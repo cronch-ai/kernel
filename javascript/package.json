@@ -1,0 +1,24 @@
+{
+  "name": "@cronch/kernel",
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.js"
+    },
+    "./kernel.wasm": "./kernel.wasm",
+    "./kernel.sha256": "./kernel.sha256"
+  },
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "kernel.wasm",
+    "kernel.sha256"
+  ],
+  "scripts": {
+    "build": "../scripts/build-wasm.sh",
+    "test": "node --test",
+    "clean": "npm run clean --prefix .."
+  }
+}

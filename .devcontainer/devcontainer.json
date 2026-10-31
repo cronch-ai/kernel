@@ -5,14 +5,20 @@
     "ghcr.io/devcontainers/features/rust:1": {},
     "ghcr.io/devcontainers/features/github-cli:1": {}
   },
+  "remoteEnv": {
+    "GH_TOKEN": "${localEnv:GH_TOKEN}",
+    "GITHUB_TOKEN": "${localEnv:GITHUB_TOKEN}"
+  },
+  "postCreateCommand": "npm ci && ./scripts/install-binaryen.sh",
   "customizations": {
     "vscode": {
       "extensions": [
         "rust-lang.rust-analyzer",
+        "biomejs.biome",
         "anthropic.claude-code",
         "github.vscode-pull-request-github",
         "github.vscode-github-actions"
       ]
     }
-  },
+  }
 }

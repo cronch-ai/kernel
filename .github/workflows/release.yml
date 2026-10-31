@@ -1,0 +1,30 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.99.1
+      - run: ./scripts/install-binaryen.sh
+      - run: ./scripts/build-wasm.sh
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(jq -r .version javascript/package.json)
+          if [ "${version%%.*}" = "0" ]; then
+            echo "Version $version is major 0; skipping release."
+            exit 0
+          fi
+          gh release create "v$version" javascript/kernel.wasm javascript/kernel.sha256 \
+            --target "$GITHUB_SHA" --generate-notes

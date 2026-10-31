@@ -1,0 +1,22 @@
+{
+  "devDependencies": {
+    "@biomejs/biome": "2.6.3",
+    "simple-git-hooks": "2.14.0"
+  },
+  "name": "kernel-tooling",
+  "private": true,
+  "scripts": {
+    "build": "./scripts/build-wasm.sh",
+    "format": "biome check --write .",
+    "lint": "biome ci .",
+    "prepare": "simple-git-hooks",
+    "clean": "cargo clean && rm -f javascript/kernel.wasm javascript/kernel.sha256",
+    "clean:all": "npm run clean && rm -rf node_modules"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "npm run format && cargo fmt --all && git update-index --again"
+  },
+  "allowScripts": {
+    "simple-git-hooks@2.14.0": true
+  }
+}
