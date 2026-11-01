@@ -171,6 +171,9 @@ test("keys content, not requests", () => {
   assert.match(kernel.key("harness", writer), /^sha256:[0-9a-f]{64}$/);
   const entry = { seq: 0, prev: `sha256:${"0".repeat(64)}`, delivery: {}, events: [] };
   assert.notEqual(kernel.key("logEntry", entry), kernel.key("harness", entry));
+  const code = { main: "a.js", modules: { "a.js": "export default {}" } };
+  assert.match(kernel.key("module", code), /^sha256:[0-9a-f]{64}$/);
+  assert.notEqual(kernel.key("module", code), kernel.key("harness", code));
 });
 
 test("throws on requests it doesn't understand", () => {

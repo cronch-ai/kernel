@@ -417,7 +417,10 @@ export type InitError =
   | { readonly kind: "harness"; readonly problems: readonly HarnessProblem[] }
   | { readonly kind: "interface"; readonly problems: readonly HarnessProblem[] };
 
-/** `logEntry`: an entry of a run's log, `{ seq, prev, delivery, events }`. */
+/**
+ * `logEntry`: an entry of a run's log, `{ seq, prev, delivery, events }`.
+ * `module`: a capability's code, `{ main, modules: { [name]: source } }`, which the kernel never reads.
+ */
 export type Kind =
   | "harness"
   | "interface"
@@ -425,7 +428,8 @@ export type Kind =
   | "grant"
   | "alphabet"
   | "evidence"
-  | "logEntry";
+  | "logEntry"
+  | "module";
 
 // SMT-LIB (`crates/kernel/src/smtlib`).
 
