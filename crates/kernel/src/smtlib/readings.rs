@@ -1,11 +1,10 @@
-//! The registries: what each Cronch type, operator and validator reads as in SMT-LIB, declared as data.
+//! The registries: what each Cronch type and operator reads as in SMT-LIB, declared as data.
 //!
 //! Encoding consults these and nothing else for meaning: adding an operator to the kernel means registering its
 //! reading here, and one with no registered reading is refused, never guessed.
 
-use crate::ir::{Type, Validator};
+use crate::ir::Type;
 use crate::ops::Op;
-use serde_json::Value;
 
 /// The sorts of the types that have one name.
 pub const SORTS: [(Type, &str); 4] = [
@@ -143,66 +142,6 @@ pub fn operator(op: Op) -> Option<Reading> {
         .iter()
         .find(|(o, _)| *o == op)
         .map(|(_, reading)| *reading)
-}
-
-/// What a validator says of a result, as a condition on the value at its path.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum Condition<'v> {
-    /// The number there against a bound, by exact value.
-    Bound {
-        at: &'v [String],
-        int: &'static str,
-        float: &'static str,
-        bound: f64,
-    },
-    /// The size of the string or list there against a bound.
-    Size {
-        at: &'v [String],
-        test: &'static str,
-        bound: u64,
-    },
-    /// The value there is one of these.
-    OneOf {
-        at: &'v [String],
-        values: &'v [Value],
-    },
-    /// Not the kernel's to check, so not stated: kept as a comment.
-    Unstated,
-}
-
-/// Every validator kind's condition.
-pub fn condition(validator: &Validator) -> Condition<'_> {
-    match validator {
-        Validator::Min { value, at } => Condition::Bound {
-            at,
-            int: ">=",
-            float: "fp.geq",
-            bound: *value,
-        },
-        Validator::Max { value, at } => Condition::Bound {
-            at,
-            int: "<=",
-            float: "fp.leq",
-            bound: *value,
-        },
-        Validator::NonEmpty { at } => Condition::Size {
-            at,
-            test: ">",
-            bound: 0,
-        },
-        Validator::MinLength { value, at } => Condition::Size {
-            at,
-            test: ">=",
-            bound: *value,
-        },
-        Validator::MaxLength { value, at } => Condition::Size {
-            at,
-            test: "<=",
-            bound: *value,
-        },
-        Validator::OneOf { values, at } => Condition::OneOf { at, values },
-        Validator::Checker { .. } | Validator::Prose { .. } => Condition::Unstated,
-    }
 }
 
 #[cfg(test)]

@@ -47,14 +47,14 @@ fn harnesses_are_checked() {
         .collect();
     assert_eq!(kinds, ["init", "expr"]);
 
-    let mut impure = double_harness();
-    impure["step"] = json!({ "e": "opaque", "type": "Int" });
-    let problems = call(json!({ "op": "checkHarness", "harness": impure }))["problems"].clone();
+    let mut unbound = double_harness();
+    unbound["step"] = var("nowhere");
+    let problems = call(json!({ "op": "checkHarness", "harness": unbound }))["problems"].clone();
     assert_eq!(
         problems[0]["problem"],
-        json!({ "kind": "impure", "at": "" })
+        json!({ "kind": "unknownVariable", "at": "", "name": "nowhere" })
     );
-    let refused = call(json!({ "op": "init", "harness": impure, "interface": {} }));
+    let refused = call(json!({ "op": "init", "harness": unbound, "interface": {} }));
     assert_eq!(refused["kind"], "refused");
 
     let problems =

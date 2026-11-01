@@ -7,8 +7,8 @@
 //! result of an `if` carries its condition's label, and a `fold` carries its list's, since which branch ran or how
 //! many steps ran depends on them. That is the standard program-counter rule, and it rules out implicit flows.
 //!
-//! Only the pure fragment evaluates here: holes, assumptions and world facts have no meaning in a harness. Unlike the
-//! Ask's partial evaluation, nothing is ever unknown, so an expression either gives a value or a defined error.
+//! Every variable has a value, so an expression either gives a value or a defined error, and `fold` is the only
+//! iteration, so evaluation always ends.
 
 use crate::check::Path;
 use crate::ir::Expr;
@@ -175,17 +175,13 @@ pub enum EvalError {
         at: Path,
         got: Value,
     },
-    /// A hole, assumption or world fact: a harness's expressions are pure.
-    Impure {
-        at: Path,
-    },
 }
 
 fn child(at: &str, segment: &str) -> Path {
     format!("{at}/{segment}")
 }
 
-/// Evaluate a pure expression with these variables bound, innermost last.
+/// Evaluate an expression with these variables bound, innermost last.
 pub fn eval(expr: &Expr, scope: Vec<(String, LValue)>) -> Result<LValue, EvalError> {
     Evaluator { scope }.eval(expr, "", &Label::new())
 }
@@ -217,9 +213,6 @@ impl Evaluator {
                     at: at.to_string(),
                     name: name.clone(),
                 }),
-            Expr::Fact { .. } | Expr::Ask { .. } | Expr::Assume { .. } | Expr::Opaque { .. } => {
-                Err(EvalError::Impure { at: at.to_string() })
-            }
             Expr::Op { op, args } => {
                 let parsed = Op::parse(op).ok_or_else(|| EvalError::UnknownOperator {
                     at: at.to_string(),
@@ -425,16 +418,34 @@ mod tests {
     }
 
     #[test]
-    fn labels_are_readable_and_holes_are_refused() {
+    fn labels_are_readable() {
         let out = run(
             json!({ "e": "label", "of": { "e": "var", "name": "x" } }),
             vec![("x", LValue::new(&json!(1), &web()))],
         );
         assert_eq!(out.value(), json!(["web"]));
-        let hole = expr(json!({ "e": "opaque", "type": "Int" }));
+    }
+
+    #[test]
+    fn folds_run_once_per_item_in_order() {
+        let xs = LValue::trusted(&json!([7, 8, 9]));
+        let fold = |body: Value| json!({ "e": "fold", "over": { "e": "var", "name": "xs" }, "init": { "e": "lit", "v": 0 }, "acc": "a", "item": "x", "body": body });
+        let sum = fold(
+            json!({ "e": "op", "op": "add", "args": [{ "e": "var", "name": "a" }, { "e": "var", "name": "x" }] }),
+        );
+        assert_eq!(run(sum, vec![("xs", xs.clone())]).value(), json!(24));
+        // The last item seen is the one that stays.
         assert_eq!(
-            eval(&hole, vec![]),
-            Err(EvalError::Impure { at: String::new() })
+            run(fold(json!({ "e": "var", "name": "x" })), vec![("xs", xs)]).value(),
+            json!(9)
+        );
+        let not_a_list = json!({ "e": "fold", "over": { "e": "lit", "v": 3 }, "init": { "e": "lit", "v": 0 }, "acc": "a", "item": "x", "body": { "e": "var", "name": "a" } });
+        assert_eq!(
+            eval(&expr(not_a_list), vec![]),
+            Err(EvalError::NotAList {
+                at: "/over".into(),
+                got: json!(3)
+            })
         );
     }
 }

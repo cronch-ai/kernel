@@ -1,4 +1,4 @@
-//! The kernel's objects: Asks, Answers and Procedures, as their JSON form.
+//! Types and expressions, as their JSON form.
 //!
 //! Values are plain JSON. Everything else is a small tagged structure, so that the TypeScript ports and the Gleam
 //! frontend can produce the same objects without a shared code generator.
@@ -8,7 +8,8 @@ use serde_json::Value;
 use std::collections::BTreeMap;
 
 /// A structural type over JSON values. `Int` conforms to `Float`, a record with more fields conforms to one with fewer,
-/// and `Any` conforms both ways (it is how prose and unknown shapes enter without being checked).
+/// and `Any` conforms both ways: it is how shapes the interpreter checks when they arrive (a step's input, an event)
+/// enter without being checked statically.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub enum Type {
     Int,
@@ -20,6 +21,7 @@ pub enum Type {
     Record(BTreeMap<String, Type>),
 }
 
+/// A named, typed parameter.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Param {
     pub name: String,
@@ -27,111 +29,8 @@ pub struct Param {
     pub ty: Type,
 }
 
-/// Whether a raw value can answer an Ask, or the Answer must be a derivation (a Procedure with no assumptions).
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Default)]
-#[serde(rename_all = "camelCase")]
-pub enum Form {
-    #[default]
-    Any,
-    Derivation,
-}
-
-impl Form {
-    fn is_any(&self) -> bool {
-        *self == Form::Any
-    }
-}
-
-/// A check on the value an Ask's Answer evaluates to. `at` navigates record fields first.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(tag = "kind", rename_all = "camelCase")]
-pub enum Validator {
-    Min {
-        value: f64,
-        #[serde(default, skip_serializing_if = "Vec::is_empty")]
-        at: Vec<String>,
-    },
-    Max {
-        value: f64,
-        #[serde(default, skip_serializing_if = "Vec::is_empty")]
-        at: Vec<String>,
-    },
-    NonEmpty {
-        #[serde(default, skip_serializing_if = "Vec::is_empty")]
-        at: Vec<String>,
-    },
-    OneOf {
-        values: Vec<Value>,
-        #[serde(default, skip_serializing_if = "Vec::is_empty")]
-        at: Vec<String>,
-    },
-    MinLength {
-        value: u64,
-        #[serde(default, skip_serializing_if = "Vec::is_empty")]
-        at: Vec<String>,
-    },
-    MaxLength {
-        value: u64,
-        #[serde(default, skip_serializing_if = "Vec::is_empty")]
-        at: Vec<String>,
-    },
-    /// Delegated to a Checker Actor. The kernel records it as `delegated` until Evidence for it is supplied.
-    Checker {
-        actor: String,
-        #[serde(default, skip_serializing_if = "String::is_empty")]
-        note: String,
-    },
-    /// An acceptance criterion stated for the answering Actor. Never checked, never reported as passed.
-    Prose { text: String },
-}
-
-/// An Ask's signature and contract: a typed hole.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct AskSpec {
-    pub name: String,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub params: Vec<Param>,
-    pub output: Type,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub description: String,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub validators: Vec<Validator>,
-    #[serde(default, skip_serializing_if = "Form::is_any")]
-    pub form: Form,
-    /// An effect Ask changes the world: it needs authority, and is never answered from the store.
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
-    pub effect: bool,
-}
-
-/// A closed Ask: a spec with a value for each parameter.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct Ask {
-    pub spec: AskSpec,
-    #[serde(default)]
-    pub args: BTreeMap<String, Value>,
-}
-
-/// A named input the requester declares, with where it came from. Using one is an environmental assumption.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct Fact {
-    pub value: Value,
-    #[serde(rename = "type", default, skip_serializing_if = "Option::is_none")]
-    pub ty: Option<Type>,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub source: String,
-}
-
-/// The context an Ask is answered in: information (facts) and capabilities (Actors the responder may route to).
-/// Facts are part of the Ask's content key; capabilities are not, since they don't change what a correct Answer is.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
-pub struct World {
-    #[serde(default)]
-    pub facts: BTreeMap<String, Fact>,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub actors: Vec<String>,
-}
-
-/// A Procedure's body. `ask` is a computational hole; `assume`, `opaque` and `fact` are epistemic ones.
+/// A pure expression: what a harness's step function, its contracts and its properties are written in. It reads
+/// variables and computes; it has no effects, holes or loops other than `fold`, so evaluating it always ends.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(tag = "e", rename_all = "camelCase")]
 pub enum Expr {
@@ -141,32 +40,9 @@ pub enum Expr {
     Var {
         name: String,
     },
-    Fact {
-        name: String,
-    },
     Op {
         op: String,
         args: Vec<Expr>,
-    },
-    Ask {
-        spec: AskSpec,
-        #[serde(default)]
-        args: BTreeMap<String, Expr>,
-    },
-    Assume {
-        v: Value,
-        #[serde(rename = "type")]
-        ty: Type,
-        #[serde(default, skip_serializing_if = "String::is_empty")]
-        note: String,
-        #[serde(default, skip_serializing_if = "String::is_empty")]
-        source: String,
-    },
-    Opaque {
-        #[serde(rename = "type")]
-        ty: Type,
-        #[serde(default, skip_serializing_if = "String::is_empty")]
-        note: String,
     },
     Let {
         name: String,
@@ -191,7 +67,6 @@ pub enum Expr {
         field: String,
     },
     /// The integrity label of a value: the untrusted sources it may depend on, as a sorted list. Empty means trusted.
-    /// Only a harness's labelled evaluation knows labels; elsewhere there are none to read.
     Label {
         of: Box<Expr>,
     },
@@ -204,12 +79,4 @@ pub enum Expr {
         item: String,
         body: Box<Expr>,
     },
-}
-
-/// What an Actor returns: a raw value, or a Procedure over the Ask's parameters.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub enum Answer {
-    Value(Value),
-    Procedure(Expr),
 }
