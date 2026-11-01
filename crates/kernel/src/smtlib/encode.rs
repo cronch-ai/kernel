@@ -642,6 +642,7 @@ impl<'w> Encoder<'w> {
                 }
             }
             Expr::Fold { .. } => Err(here(NoReading::Fold)),
+            Expr::Label { .. } => Err(here(NoReading::Label)),
         }
     }
 
@@ -725,6 +726,46 @@ impl<'w> Encoder<'w> {
                     }
                     other => return Err(NoReading::Text { of: other.clone() }),
                 }
+            }
+            Reading::Prefix | Reading::Contains => {
+                let (string, sequence) = if reading == Reading::Prefix {
+                    ("str.prefixof", "seq.prefixof")
+                } else {
+                    ("str.contains", "seq.contains")
+                };
+                match (&types[0], &types[1], reading) {
+                    (Type::String, Type::String, _) => Term::call(string, terms),
+                    (Type::List(a), Type::List(b), Reading::Prefix)
+                        if a == b && plain_equality(a) =>
+                    {
+                        Term::call(sequence, terms)
+                    }
+                    (Type::List(a), b, Reading::Contains) if **a == *b && plain_equality(a) => {
+                        let mut terms = terms;
+                        let item = terms.pop().expect("two operands");
+                        terms.push(Term::call("seq.unit", vec![item]));
+                        Term::call(sequence, terms)
+                    }
+                    (left, right, _) => {
+                        return Err(NoReading::Equality {
+                            left: left.clone(),
+                            right: right.clone(),
+                        });
+                    }
+                }
+            }
+            Reading::Append => {
+                let Type::List(element) = ty else {
+                    return Err(NoReading::Any);
+                };
+                let mut terms = terms.into_iter();
+                let (list, item) = (
+                    terms.next().expect("two operands"),
+                    terms.next().expect("two operands"),
+                );
+                let list = self.coerce(list, &types[0], ty)?;
+                let item = self.coerce(item, &types[1], element)?;
+                Term::call("seq.++", vec![list, Term::call("seq.unit", vec![item])])
             }
             Reading::Length => match &types[0] {
                 Type::String => Term::call("str.len", terms),

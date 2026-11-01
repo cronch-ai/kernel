@@ -84,6 +84,8 @@ pub enum NoReading {
     Text { of: Type },
     /// A fold: it runs once per item of a list whose length a solver doesn't know.
     Fold,
+    /// A label: an export reads values, not their provenance.
+    Label,
     /// `round` to a number of digits that isn't a literal from 0 to 22, whose scale is exact as a float.
     RoundingDigits,
     /// A record's size counts fields its type doesn't declare.

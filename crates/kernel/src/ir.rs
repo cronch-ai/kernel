@@ -190,6 +190,11 @@ pub enum Expr {
         of: Box<Expr>,
         field: String,
     },
+    /// The integrity label of a value: the untrusted sources it may depend on, as a sorted list. Empty means trusted.
+    /// Only a harness's labelled evaluation knows labels; elsewhere there are none to read.
+    Label {
+        of: Box<Expr>,
+    },
     /// `acc` starts as `init` and becomes `body` once per item of `over`, in order, with `item` bound to that item.
     /// The only iteration there is: it runs once per item of a list it is given, so evaluation always terminates.
     Fold {

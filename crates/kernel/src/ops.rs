@@ -4,7 +4,7 @@
 //! overflow, a non-finite float). Nothing here touches the world.
 
 use crate::ir::Type;
-use crate::types::conforms;
+use crate::types::{conforms, join};
 use serde::Serialize;
 use serde_json::{Number, Value};
 use std::cmp::Ordering;
@@ -31,10 +31,13 @@ pub enum Op {
     Str,
     Len,
     Round,
+    Prefix,
+    Append,
+    Contains,
 }
 
 /// Every operator, by the name a Procedure applies it with.
-pub const OPS: [(&str, Op); 20] = [
+pub const OPS: [(&str, Op); 23] = [
     ("add", Op::Add),
     ("sub", Op::Sub),
     ("mul", Op::Mul),
@@ -55,6 +58,9 @@ pub const OPS: [(&str, Op); 20] = [
     ("str", Op::Str),
     ("len", Op::Len),
     ("round", Op::Round),
+    ("prefix", Op::Prefix),
+    ("append", Op::Append),
+    ("contains", Op::Contains),
 ];
 
 impl Op {
@@ -190,6 +196,35 @@ pub fn result_type(op: Op, args: &[Type]) -> Result<Type, OpTypeError> {
                 Some(digits) => expect(1, digits, Type::Int).map(|_| Type::Float),
             }
         }
+        Op::Prefix => match (&args[0], &args[1]) {
+            (Type::List(_) | Type::Any, Type::List(_) | Type::Any) => Ok(Type::Bool),
+            (a, b) => {
+                expect(0, a, Type::String)?;
+                expect(1, b, Type::String).map(|_| Type::Bool)
+            }
+        },
+        Op::Append => match &args[0] {
+            Type::Any => Ok(Type::List(Box::new(Type::Any))),
+            Type::List(t) => join(t, &args[1])
+                .map(|t| Type::List(Box::new(t)))
+                .ok_or_else(|| OpTypeError::Operand {
+                    index: 1,
+                    expected: (**t).clone(),
+                    got: args[1].clone(),
+                }),
+            got => Err(OpTypeError::Operand {
+                index: 0,
+                expected: Type::List(Box::new(Type::Any)),
+                got: got.clone(),
+            }),
+        },
+        Op::Contains => match &args[0] {
+            Type::List(_) | Type::Any => Ok(Type::Bool),
+            got => {
+                expect(0, got, Type::String)?;
+                expect(1, &args[1], Type::String).map(|_| Type::Bool)
+            }
+        },
     }
 }
 
@@ -264,6 +299,14 @@ fn boolean(index: usize, v: &Value) -> Result<bool, OpEvalError> {
     v.as_bool().ok_or_else(|| OpEvalError::Operand {
         index,
         expected: Type::Bool,
+        got: v.clone(),
+    })
+}
+
+fn list(index: usize, v: &Value) -> Result<&Vec<Value>, OpEvalError> {
+    v.as_array().ok_or_else(|| OpEvalError::Operand {
+        index,
+        expected: Type::List(Box::new(Type::Any)),
         got: v.clone(),
     })
 }
@@ -396,6 +439,21 @@ pub fn apply(op: Op, args: &[Value]) -> Result<Value, OpEvalError> {
                 got: other.clone(),
             }),
         },
+        Op::Prefix => match (&args[0], &args[1]) {
+            (Value::Array(a), Value::Array(b)) => Ok(Value::Bool(
+                a.len() <= b.len() && a.iter().zip(b).all(|(x, y)| same(x, y)),
+            )),
+            (a, b) => Ok(Value::Bool(string(1, b)?.starts_with(string(0, a)?))),
+        },
+        Op::Append => {
+            let mut items = list(0, &args[0])?.clone();
+            items.push(args[1].clone());
+            Ok(Value::Array(items))
+        }
+        Op::Contains => match &args[0] {
+            Value::Array(items) => Ok(Value::Bool(items.iter().any(|x| same(x, &args[1])))),
+            s => Ok(Value::Bool(string(0, s)?.contains(string(1, &args[1])?))),
+        },
         Op::Round => {
             let x = as_f64(&num(0, &args[0])?);
             match args.get(1) {
@@ -485,6 +543,44 @@ mod tests {
                 expected: Type::Float,
                 got: Type::String
             })
+        );
+    }
+
+    #[test]
+    fn prefixes_appends_and_membership() {
+        let argv = json!(["npm", "test", "--watch"]);
+        assert_eq!(
+            apply(Op::Prefix, &[json!(["npm", "test"]), argv.clone()]),
+            Ok(json!(true))
+        );
+        assert_eq!(
+            apply(Op::Prefix, &[json!(["npm", "run"]), argv.clone()]),
+            Ok(json!(false))
+        );
+        assert_eq!(
+            apply(Op::Prefix, &[json!("/workspace/"), json!("/workspace/a")]),
+            Ok(json!(true))
+        );
+        assert_eq!(
+            apply(Op::Append, &[json!([1]), json!(2)]),
+            Ok(json!([1, 2]))
+        );
+        assert_eq!(apply(Op::Contains, &[argv, json!("test")]), Ok(json!(true)));
+        assert_eq!(
+            apply(Op::Contains, &[json!("a; rm"), json!(";")]),
+            Ok(json!(true))
+        );
+        assert_eq!(
+            result_type(Op::Append, &[Type::List(Box::new(Type::Int)), Type::String]),
+            Err(OpTypeError::Operand {
+                index: 1,
+                expected: Type::Int,
+                got: Type::String
+            })
+        );
+        assert_eq!(
+            result_type(Op::Append, &[Type::List(Box::new(Type::Int)), Type::Float]),
+            Ok(Type::List(Box::new(Type::Float)))
         );
     }
 

@@ -214,7 +214,7 @@ fn foreign_asks(expr: &Expr, about: &str, at: &str, out: &mut Vec<ClaimProblem>)
             .iter()
             .enumerate()
             .for_each(|(i, e)| foreign_asks(e, about, &child(&format!("items/{i}")), out)),
-        Expr::Get { of, .. } => foreign_asks(of, about, &child("of"), out),
+        Expr::Get { of, .. } | Expr::Label { of } => foreign_asks(of, about, &child("of"), out),
         Expr::Fold {
             over, init, body, ..
         } => {

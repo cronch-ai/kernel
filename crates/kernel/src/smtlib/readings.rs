@@ -43,10 +43,16 @@ pub enum Reading {
     Length,
     /// Rounding half away from zero, to an integer or to a literal number of decimal digits.
     Round,
+    /// One string or list is a prefix of another, by the kernel's equality of items.
+    Prefix,
+    /// A list with one more item at its end.
+    Append,
+    /// A list has an item, or a string a substring.
+    Contains,
 }
 
 /// Every operator's reading.
-pub const OPERATORS: [(Op, Reading); 20] = [
+pub const OPERATORS: [(Op, Reading); 23] = [
     (
         Op::Add,
         Reading::Numeric {
@@ -127,6 +133,9 @@ pub const OPERATORS: [(Op, Reading); 20] = [
     (Op::Str, Reading::Text),
     (Op::Len, Reading::Length),
     (Op::Round, Reading::Round),
+    (Op::Prefix, Reading::Prefix),
+    (Op::Append, Reading::Append),
+    (Op::Contains, Reading::Contains),
 ];
 
 pub fn operator(op: Op) -> Option<Reading> {

@@ -20,6 +20,27 @@ pub fn conforms(actual: &Type, expected: &Type) -> bool {
     }
 }
 
+/// The least type both conform to, if there is one other than giving up on checking.
+///
+/// A record keeps the fields both have, each at their join, and drops a common field whose types have none: the
+/// result is still a supertype of both under width subtyping. `Any` absorbs everything; two unrelated scalars have
+/// no join.
+pub fn join(a: &Type, b: &Type) -> Option<Type> {
+    match (a, b) {
+        (Type::Any, _) | (_, Type::Any) => Some(Type::Any),
+        _ if conforms(a, b) && conforms(b, a) => Some(a.clone()),
+        _ if conforms(a, b) => Some(b.clone()),
+        _ if conforms(b, a) => Some(a.clone()),
+        (Type::List(x), Type::List(y)) => join(x, y).map(|t| Type::List(Box::new(t))),
+        (Type::Record(x), Type::Record(y)) => Some(Type::Record(
+            x.iter()
+                .filter_map(|(name, t)| Some((name.clone(), join(t, y.get(name)?)?)))
+                .collect(),
+        )),
+        _ => None,
+    }
+}
+
 /// The value inhabits the type.
 pub fn inhabits(value: &Value, ty: &Type) -> bool {
     match (ty, value) {
@@ -82,6 +103,25 @@ mod tests {
         let narrow = record(&[("value", Type::Float)]);
         assert!(conforms(&wide, &narrow));
         assert!(!conforms(&narrow, &wide));
+    }
+
+    #[test]
+    fn joins_keep_what_both_have() {
+        let rec = |fields: &[(&str, Type)]| {
+            Type::Record(
+                fields
+                    .iter()
+                    .map(|(n, t)| (n.to_string(), t.clone()))
+                    .collect(),
+            )
+        };
+        let call = rec(&[("kind", Type::String), ("op", Type::String)]);
+        let halt = rec(&[("kind", Type::String), ("value", Type::Int)]);
+        assert_eq!(join(&call, &halt), Some(rec(&[("kind", Type::String)])));
+        assert_eq!(join(&Type::Int, &Type::Float), Some(Type::Float));
+        assert_eq!(join(&Type::Int, &Type::String), None);
+        let mixed = rec(&[("kind", Type::Int)]);
+        assert_eq!(join(&call, &mixed), Some(rec(&[])));
     }
 
     #[test]

@@ -7,7 +7,7 @@
 
 use crate::ir::{Answer, Ask, AskSpec, Expr, Form, Type, World};
 use crate::ops::{self, Op, OpTypeError};
-use crate::types::{conforms, inhabits, of_value};
+use crate::types::{conforms, inhabits, join, of_value};
 use serde::Serialize;
 use serde_json::Value;
 use std::collections::BTreeMap;
@@ -102,6 +102,10 @@ pub enum Problem {
         at: Path,
         expected: Type,
         got: Value,
+    },
+    /// A hole, assumption or world fact where only pure computation is allowed: in a harness's expressions.
+    Impure {
+        at: Path,
     },
     /// The Ask requires a derivation, and this part of the Answer is opaque.
     NotDerived {
@@ -243,7 +247,7 @@ pub fn check(ask: &Ask, world: &World, answer: &Answer) -> Construction {
                 .map(|p| (p.name.clone(), p.ty.clone()))
                 .collect();
             let mut checker = Checker {
-                world,
+                world: Some(world),
                 derivation,
                 scope,
                 out: Construction::default(),
@@ -262,8 +266,21 @@ pub fn check(ask: &Ask, world: &World, answer: &Answer) -> Construction {
     }
 }
 
+/// The type of a pure expression with these variables in scope, and what is wrong with it.
+pub fn infer(expr: &Expr, scope: Vec<(String, Type)>) -> (Option<Type>, Vec<Problem>) {
+    let mut checker = Checker {
+        world: None,
+        derivation: true,
+        scope,
+        out: Construction::default(),
+    };
+    let ty = checker.infer(expr, "");
+    (ty, checker.out.problems)
+}
+
 struct Checker<'w> {
-    world: &'w World,
+    /// `None` in a harness's expressions, which have no world, holes or assumptions: only pure computation.
+    world: Option<&'w World>,
     derivation: bool,
     /// Variables in scope, innermost last: the Ask's parameters, then enclosing `let`s.
     scope: Vec<(String, Type)>,
@@ -287,7 +304,12 @@ impl Checker<'_> {
                     name: name.clone(),
                 }),
             },
-            Expr::Fact { name } => match self.world.facts.get(name) {
+            Expr::Fact { .. } | Expr::Ask { .. } | Expr::Assume { .. } | Expr::Opaque { .. }
+                if self.world.is_none() =>
+            {
+                self.problem(Problem::Impure { at: at.to_string() })
+            }
+            Expr::Fact { name } => match self.world.and_then(|w| w.facts.get(name)) {
                 Some(fact) => {
                     if !self
                         .out
@@ -437,13 +459,14 @@ impl Checker<'_> {
                 let t = self.infer(then, &child(at, "then"));
                 let e = self.infer(otherwise, &child(at, "else"));
                 match (t, e) {
-                    (Some(t), Some(e)) if conforms(&e, &t) => Some(t),
-                    (Some(t), Some(e)) if conforms(&t, &e) => Some(e),
-                    (Some(t), Some(e)) => self.problem(Problem::Mismatch {
-                        at: child(at, "else"),
-                        expected: t,
-                        got: e,
-                    }),
+                    (Some(t), Some(e)) => match join(&t, &e) {
+                        Some(j) => Some(j),
+                        None => self.problem(Problem::Mismatch {
+                            at: child(at, "else"),
+                            expected: t,
+                            got: e,
+                        }),
+                    },
                     _ => None,
                 }
             }
@@ -467,17 +490,20 @@ impl Checker<'_> {
                     .map(|(i, e)| self.infer(e, &child(at, &format!("items/{i}"))))
                     .collect();
                 let types: Vec<Type> = types.into_iter().collect::<Option<_>>()?;
-                let first = types.first().cloned().unwrap_or(Type::Any);
+                let mut element = types.first().cloned().unwrap_or(Type::Any);
                 for (i, t) in types.iter().enumerate().skip(1) {
-                    if !conforms(t, &first) {
-                        return self.problem(Problem::Mismatch {
-                            at: child(at, &format!("items/{i}")),
-                            expected: first,
-                            got: t.clone(),
-                        });
+                    match join(&element, t) {
+                        Some(j) => element = j,
+                        None => {
+                            return self.problem(Problem::Mismatch {
+                                at: child(at, &format!("items/{i}")),
+                                expected: element,
+                                got: t.clone(),
+                            });
+                        }
                     }
                 }
-                Some(Type::List(Box::new(first)))
+                Some(Type::List(Box::new(element)))
             }
             Expr::Get { of, field } => match self.infer(of, &child(at, "of"))? {
                 Type::Any => Some(Type::Any),
@@ -494,6 +520,10 @@ impl Checker<'_> {
                     got,
                 }),
             },
+            Expr::Label { of } => {
+                self.infer(of, &child(at, "of"))?;
+                Some(Type::List(Box::new(Type::String)))
+            }
             Expr::Fold {
                 over,
                 init,

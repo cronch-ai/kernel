@@ -68,6 +68,10 @@ pub enum EvalError {
         at: Path,
         got: Value,
     },
+    /// A label read outside a harness's labelled evaluation, which is the only one that knows labels.
+    Unlabeled {
+        at: Path,
+    },
 }
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
@@ -307,6 +311,7 @@ impl Evaluator<'_> {
                         })
                 }
             },
+            Expr::Label { .. } => Err(EvalError::Unlabeled { at: at.to_string() }),
             Expr::Fold {
                 over,
                 init,

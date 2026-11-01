@@ -6,8 +6,10 @@ use crate::check::check_ask;
 use crate::claim::{
     Assessment, Claim, Verdict as ClaimVerdict, Witness, assess_claim, check_claim, claim_key,
 };
+use crate::harness::{Harness, Interface, check_harness};
 use crate::ir::{Answer, Ask, AskSpec, World};
 use crate::key::{ask_key, spec_key};
+use crate::run::{Delivery, System};
 use crate::smtlib;
 use crate::smtlib::claim::{Floats, Read};
 use crate::validate::Verdict;
@@ -73,6 +75,16 @@ pub enum Request {
     },
     /// A solver's `get-value` reply to a claim query, as the values its reads ask for.
     ReadValues { reply: String, reads: Vec<Read> },
+    /// Problems with a harness.
+    CheckHarness { harness: Harness },
+    /// A system that hasn't started: the harness at its initial state, against the interface.
+    Init {
+        harness: Harness,
+        #[serde(default)]
+        interface: Interface,
+    },
+    /// Deliver one input to a system: the next configuration, and what happened.
+    Deliver { system: System, delivery: Delivery },
 }
 
 #[derive(Serialize)]
@@ -143,6 +155,18 @@ fn respond(request: Request) -> Value {
             }
             Assessment::Assessed { .. } => assessed(&claim, &answer, &witness),
         },
+        Request::CheckHarness { harness } => json!({ "problems": check_harness(&harness) }),
+        Request::Init { harness, interface } => match System::new(harness, interface) {
+            Ok(system) => json!({ "kind": "ready", "system": system }),
+            Err(error) => json!({ "kind": "refused", "error": error }),
+        },
+        Request::Deliver {
+            mut system,
+            delivery,
+        } => {
+            let events = system.deliver(&delivery);
+            json!({ "system": system, "events": events })
+        }
         Request::ReadValues { reply, reads } => {
             match smtlib::values::read(&reply, &reads.iter().map(Read::ty).collect::<Vec<_>>()) {
                 Ok(values) => json!({ "kind": "values", "values": values }),
