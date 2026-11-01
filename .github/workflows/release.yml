@@ -26,5 +26,6 @@ jobs:
           #   echo "Version $version is major 0; skipping release."
           #   exit 0
           # fi
-          gh release create "v$version" javascript/kernel.wasm javascript/kernel.sha256 \
+          tarball=$(cd javascript && npm pack --silent)
+          gh release create "v$version" javascript/kernel.wasm javascript/kernel.sha256 "javascript/$tarball" \
             --target "$GITHUB_SHA" --generate-notes
