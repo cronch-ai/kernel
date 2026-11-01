@@ -64,6 +64,10 @@ pub enum EvalError {
         field: String,
         of: Value,
     },
+    NotAList {
+        at: Path,
+        got: Value,
+    },
 }
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
@@ -303,6 +307,41 @@ impl Evaluator<'_> {
                         })
                 }
             },
+            Expr::Fold {
+                over,
+                init,
+                acc,
+                item,
+                body,
+            } => {
+                let over_at = child(at, "over");
+                let items = match self.eval(over, &over_at)? {
+                    Ev::Unknown(open) => return Ok(Ev::Unknown(open)),
+                    Ev::Known(Value::Array(items)) => items,
+                    Ev::Known(got) => return Err(EvalError::NotAList { at: over_at, got }),
+                };
+                let (mut value, mut open) = match self.eval(init, &child(at, "init"))? {
+                    Ev::Known(v) => (Some(v), None),
+                    Ev::Unknown(o) => (None, Some(o)),
+                };
+                // Strict, like `let`: once the accumulator is unknown the result is, but every item is still visited,
+                // so the holes of all of them are reported at once.
+                let body_at = child(at, "body");
+                for x in items {
+                    self.scope.push((acc.clone(), Some(value.take())));
+                    self.scope.push((item.clone(), Some(Some(x))));
+                    let result = self.eval(body, &body_at);
+                    self.scope.truncate(self.scope.len() - 2);
+                    match result? {
+                        Ev::Known(v) => value = Some(v),
+                        Ev::Unknown(o) => merge(open.get_or_insert_with(Vec::new), o),
+                    }
+                }
+                match (open, value) {
+                    (None, Some(v)) => Ok(Ev::Known(v)),
+                    (open, _) => Ok(Ev::Unknown(open.unwrap_or_default())),
+                }
+            }
         }
     }
 

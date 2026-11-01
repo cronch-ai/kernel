@@ -82,6 +82,8 @@ pub enum NoReading {
     Equality { left: Type, right: Type },
     /// `str` of a value the kernel writes as JSON text.
     Text { of: Type },
+    /// A fold: it runs once per item of a list whose length a solver doesn't know.
+    Fold,
     /// `round` to a number of digits that isn't a literal from 0 to 22, whose scale is exact as a float.
     RoundingDigits,
     /// A record's size counts fields its type doesn't declare.

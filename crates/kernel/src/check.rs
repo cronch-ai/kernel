@@ -88,6 +88,10 @@ pub enum Problem {
         at: Path,
         got: Type,
     },
+    NotAList {
+        at: Path,
+        got: Type,
+    },
     NoSuchField {
         at: Path,
         field: String,
@@ -490,6 +494,37 @@ impl Checker<'_> {
                     got,
                 }),
             },
+            Expr::Fold {
+                over,
+                init,
+                acc,
+                item,
+                body,
+            } => {
+                let over_at = child(at, "over");
+                let item_ty = match self.infer(over, &over_at) {
+                    Some(Type::List(t)) => Some(*t),
+                    Some(Type::Any) => Some(Type::Any),
+                    Some(got) => self.problem(Problem::NotAList { at: over_at, got }),
+                    None => None,
+                };
+                let acc_ty = self.infer(init, &child(at, "init"));
+                self.scope
+                    .push((acc.clone(), acc_ty.clone().unwrap_or(Type::Any)));
+                self.scope
+                    .push((item.clone(), item_ty.unwrap_or(Type::Any)));
+                let body_ty = self.infer(body, &child(at, "body"));
+                self.scope.truncate(self.scope.len() - 2);
+                let (acc_ty, body_ty) = (acc_ty?, body_ty?);
+                if !conforms(&body_ty, &acc_ty) {
+                    return self.problem(Problem::Mismatch {
+                        at: child(at, "body"),
+                        expected: acc_ty,
+                        got: body_ty,
+                    });
+                }
+                Some(acc_ty)
+            }
         }
     }
 }

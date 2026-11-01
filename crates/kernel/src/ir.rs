@@ -190,6 +190,15 @@ pub enum Expr {
         of: Box<Expr>,
         field: String,
     },
+    /// `acc` starts as `init` and becomes `body` once per item of `over`, in order, with `item` bound to that item.
+    /// The only iteration there is: it runs once per item of a list it is given, so evaluation always terminates.
+    Fold {
+        over: Box<Expr>,
+        init: Box<Expr>,
+        acc: String,
+        item: String,
+        body: Box<Expr>,
+    },
 }
 
 /// What an Actor returns: a raw value, or a Procedure over the Ask's parameters.

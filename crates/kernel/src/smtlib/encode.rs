@@ -641,6 +641,7 @@ impl<'w> Encoder<'w> {
                     _ => Err(here(NoReading::Any)),
                 }
             }
+            Expr::Fold { .. } => Err(here(NoReading::Fold)),
         }
     }
 

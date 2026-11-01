@@ -80,7 +80,15 @@ export type Expr =
   | { readonly e: "if"; readonly cond: Expr; readonly then: Expr; readonly else: Expr }
   | { readonly e: "record"; readonly fields: Readonly<Record<string, Expr>> }
   | { readonly e: "list"; readonly items: readonly Expr[] }
-  | { readonly e: "get"; readonly of: Expr; readonly field: string };
+  | { readonly e: "get"; readonly of: Expr; readonly field: string }
+  | {
+      readonly e: "fold";
+      readonly over: Expr;
+      readonly init: Expr;
+      readonly acc: string;
+      readonly item: string;
+      readonly body: Expr;
+    };
 
 /** What an Actor returns: a raw value, or a Procedure over the Ask's parameters. */
 export type Answer = { readonly value: Value } | { readonly procedure: Expr };
@@ -150,6 +158,7 @@ export type Problem =
     }
   | { readonly kind: "mismatch"; readonly at: Path; readonly expected: Type; readonly got: Type }
   | { readonly kind: "notARecord"; readonly at: Path; readonly got: Type }
+  | { readonly kind: "notAList"; readonly at: Path; readonly got: Type }
   | { readonly kind: "noSuchField"; readonly at: Path; readonly field: string; readonly of: Type }
   | {
       readonly kind: "assumptionMismatch";
@@ -211,7 +220,8 @@ export type EvalError =
   | { readonly kind: "unknownFact"; readonly at: Path; readonly name: string }
   | { readonly kind: "unknownOperator"; readonly at: Path; readonly op: string }
   | { readonly kind: "notABool"; readonly at: Path; readonly got: Value }
-  | { readonly kind: "noSuchField"; readonly at: Path; readonly field: string; readonly of: Value };
+  | { readonly kind: "noSuchField"; readonly at: Path; readonly field: string; readonly of: Value }
+  | { readonly kind: "notAList"; readonly at: Path; readonly got: Value };
 
 /** A Checker Actor's verdict on one validator. It counts only if `checker` is the one the validator names. */
 export interface Verdict {
@@ -284,6 +294,7 @@ export type NoReading =
   | { readonly kind: "listConversion"; readonly from: Type; readonly to: Type }
   | { readonly kind: "equality"; readonly left: Type; readonly right: Type }
   | { readonly kind: "text"; readonly of: Type }
+  | { readonly kind: "fold" }
   | { readonly kind: "roundingDigits" }
   | { readonly kind: "recordSize" }
   | { readonly kind: "undeclaredField"; readonly field: string }
