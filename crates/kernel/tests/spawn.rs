@@ -2,84 +2,13 @@
 //! results, and are revoked by cancellation or by their parent ending.
 
 mod common;
+use common::demo::{actor, tools, worker};
 use common::*;
 use serde_json::{Value, json};
 
-/// Performs the action each message on `act` names, whatever it is. Ignores everything else.
-fn actor() -> Value {
-    json!({
-        "arg": { "Record": {} },
-        "state": { "Record": {} },
-        "init": {},
-        "step": on(
-            vec![("msg", step(var("state"), vec![path("input", &["value"])]))],
-            step(var("state"), vec![]),
-        ),
-    })
-}
-
-/// Calls `{op, args}` from its start value, then halts with the result, or "denied" or "failed".
-fn worker() -> Value {
-    json!({
-        "arg": { "Record": { "op": "String" } },
-        "state": { "Record": {} },
-        "init": {},
-        "step": on(
-            vec![
-                ("start", step(var("state"), vec![rec(vec![
-                    ("kind", lit(json!("call"))),
-                    ("op", path("input", &["value", "op"])),
-                    ("args", path("input", &["value", "args"])),
-                ])])),
-                ("ret", step(var("state"), vec![halt(path("input", &["value"]))])),
-                ("refused", step(var("state"), vec![halt(lit(json!("denied")))])),
-            ],
-            step(var("state"), vec![halt(lit(json!("failed")))]),
-        ),
-    })
-}
-
-fn interface() -> Value {
-    let within = |dir: &str| op("prefix", vec![lit(json!(dir)), path("args", &["path"])]);
-    let allowed = fold(
-        path("grant", &["allow"]),
-        lit(json!(false)),
-        "ok",
-        "p",
-        op(
-            "or",
-            vec![
-                var("ok"),
-                op("prefix", vec![var("p"), path("args", &["argv"])]),
-            ],
-        ),
-    );
-    let always = if_(
-        eq(var("result"), lit(json!("always"))),
-        rec(vec![(
-            "allow",
-            op(
-                "append",
-                vec![path("grant", &["allow"]), path("args", &["argv"])],
-            ),
-        )]),
-        var("grant"),
-    );
-    let argv = json!({ "Record": { "argv": { "List": "String" } } });
-    json!({
-        "operations": {
-            "fs.write": { "input": { "Record": { "path": "String" } }, "output": "Int", "effect": true, "pre": within("/workspace/") },
-            "net.fetch": { "input": { "Record": { "url": "String" } }, "output": "String", "ret": list(vec![lit(json!("web"))]) },
-            "shell.run": { "input": argv, "output": "String", "effect": true, "pre": allowed },
-            "shell.approve": { "input": argv, "output": "String", "ret": list(vec![]), "onResult": always },
-        },
-        "channels": { "act": { "type": { "Record": { "kind": "String" } } } }
-    })
-}
-
 fn system() -> Value {
     let ready = call(
-        json!({ "op": "init", "harness": actor(), "interface": interface(), "grant": { "allow": [] } }),
+        json!({ "op": "init", "harness": actor(), "interface": tools(), "grant": { "allow": [] } }),
     );
     assert_eq!(ready["kind"], "ready", "{ready}");
     deliver_all(ready["system"].clone(), vec![start(json!({}))]).0

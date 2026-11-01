@@ -1,0 +1,108 @@
+{
+  "description": "A precondition exported to SMT-LIB, a refusal, and a solver's values read back.",
+  "exchanges": [
+    {
+      "request": {
+        "definitions": [
+          {
+            "body": {
+              "args": [
+                {
+                  "e": "lit",
+                  "v": "/workspace/"
+                },
+                {
+                  "e": "get",
+                  "field": "path",
+                  "of": {
+                    "e": "var",
+                    "name": "args"
+                  }
+                }
+              ],
+              "e": "op",
+              "op": "prefix"
+            },
+            "name": "pre",
+            "params": [
+              {
+                "name": "args",
+                "type": {
+                  "Record": {
+                    "path": "String"
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "op": "smtlib"
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "kind": "exported",
+          "text": "; Exported from Cronch. Each definition's identity is the content key of its deterministic CBOR, not this text.\n(set-logic ALL)\n\n; Records.\n; {path: String}\n(declare-datatype |record:a46c4da8| ((|record:a46c4da8| (|record:a46c4da8.path| String))))\n\n; Definitions.\n(define-fun |def:pre| ((|v:args| |record:a46c4da8|)) Bool (str.prefixof \"/workspace/\" (|record:a46c4da8.path| |v:args|)))\n"
+        }
+      }
+    },
+    {
+      "request": {
+        "definitions": [
+          {
+            "body": {
+              "acc": "a",
+              "body": {
+                "e": "var",
+                "name": "a"
+              },
+              "e": "fold",
+              "init": {
+                "e": "lit",
+                "v": 0
+              },
+              "item": "x",
+              "over": {
+                "e": "lit",
+                "v": [1]
+              }
+            },
+            "name": "f"
+          }
+        ],
+        "op": "smtlib"
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "error": {
+            "definition": "f",
+            "kind": "noReading",
+            "place": {
+              "at": "",
+              "in": "body"
+            },
+            "reason": {
+              "kind": "fold"
+            }
+          },
+          "kind": "refused"
+        }
+      }
+    },
+    {
+      "request": {
+        "op": "readValues",
+        "reply": "((x (- 5)) (y true))",
+        "types": ["Int", "Bool"]
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "kind": "values",
+          "values": [-5, true]
+        }
+      }
+    }
+  ]
+}

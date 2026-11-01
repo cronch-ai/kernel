@@ -1,0 +1,330 @@
+{
+  "description": "Content keys of harness objects.",
+  "exchanges": [
+    {
+      "request": {
+        "kind": "harness",
+        "object": {
+          "arg": {
+            "Record": {}
+          },
+          "init": {},
+          "state": {
+            "Record": {}
+          },
+          "step": {
+            "cond": {
+              "args": [
+                {
+                  "e": "get",
+                  "field": "kind",
+                  "of": {
+                    "e": "var",
+                    "name": "input"
+                  }
+                },
+                {
+                  "e": "lit",
+                  "v": "start"
+                }
+              ],
+              "e": "op",
+              "op": "eq"
+            },
+            "e": "if",
+            "else": {
+              "e": "record",
+              "fields": {
+                "actions": {
+                  "e": "list",
+                  "items": []
+                },
+                "state": {
+                  "e": "var",
+                  "name": "state"
+                }
+              }
+            },
+            "then": {
+              "e": "record",
+              "fields": {
+                "actions": {
+                  "e": "list",
+                  "items": [
+                    {
+                      "e": "record",
+                      "fields": {
+                        "args": {
+                          "e": "record",
+                          "fields": {
+                            "body": {
+                              "e": "lit",
+                              "v": "hello"
+                            },
+                            "url": {
+                              "e": "lit",
+                              "v": "https://example.com"
+                            }
+                          }
+                        },
+                        "kind": {
+                          "e": "lit",
+                          "v": "call"
+                        },
+                        "op": {
+                          "e": "lit",
+                          "v": "net.send"
+                        }
+                      }
+                    },
+                    {
+                      "e": "record",
+                      "fields": {
+                        "args": {
+                          "e": "record",
+                          "fields": {
+                            "url": {
+                              "e": "lit",
+                              "v": "https://example.com/page"
+                            }
+                          }
+                        },
+                        "kind": {
+                          "e": "lit",
+                          "v": "call"
+                        },
+                        "op": {
+                          "e": "lit",
+                          "v": "net.fetch"
+                        }
+                      }
+                    }
+                  ]
+                },
+                "state": {
+                  "e": "var",
+                  "name": "state"
+                }
+              }
+            }
+          }
+        },
+        "op": "objectKey"
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "key": "sha256:f8d537949c5934fac4c30ba5d1c228641a173fb0dd17c6081763a69b297cc3ae"
+        }
+      }
+    },
+    {
+      "request": {
+        "kind": "property",
+        "object": {
+          "always": {
+            "f": "implies",
+            "if": {
+              "f": "atom",
+              "holds": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "e": "get",
+                                "field": "kind",
+                                "of": {
+                                  "e": "var",
+                                  "name": "event"
+                                }
+                              },
+                              {
+                                "e": "lit",
+                                "v": "out"
+                              }
+                            ],
+                            "e": "op",
+                            "op": "eq"
+                          },
+                          {
+                            "args": [
+                              {
+                                "e": "get",
+                                "field": "kind",
+                                "of": {
+                                  "e": "get",
+                                  "field": "action",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "event"
+                                  }
+                                }
+                              },
+                              {
+                                "e": "lit",
+                                "v": "call"
+                              }
+                            ],
+                            "e": "op",
+                            "op": "eq"
+                          }
+                        ],
+                        "e": "op",
+                        "op": "and"
+                      },
+                      {
+                        "e": "get",
+                        "field": "performed",
+                        "of": {
+                          "e": "var",
+                          "name": "event"
+                        }
+                      }
+                    ],
+                    "e": "op",
+                    "op": "and"
+                  },
+                  {
+                    "args": [
+                      {
+                        "e": "get",
+                        "field": "op",
+                        "of": {
+                          "e": "get",
+                          "field": "action",
+                          "of": {
+                            "e": "var",
+                            "name": "event"
+                          }
+                        }
+                      },
+                      {
+                        "e": "lit",
+                        "v": "net.send"
+                      }
+                    ],
+                    "e": "op",
+                    "op": "eq"
+                  }
+                ],
+                "e": "op",
+                "op": "and"
+              }
+            },
+            "then": {
+              "f": "atom",
+              "holds": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "e": "get",
+                        "field": "body",
+                        "of": {
+                          "e": "get",
+                          "field": "args",
+                          "of": {
+                            "e": "get",
+                            "field": "labels",
+                            "of": {
+                              "e": "var",
+                              "name": "event"
+                            }
+                          }
+                        }
+                      }
+                    ],
+                    "e": "op",
+                    "op": "len"
+                  },
+                  {
+                    "e": "lit",
+                    "v": 0
+                  }
+                ],
+                "e": "op",
+                "op": "eq"
+              }
+            }
+          },
+          "name": "noUntrustedSend"
+        },
+        "op": "objectKey"
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "key": "sha256:e14c086676f803a797f346bc88fc1ac30ade302bade53d412974affc4520ec6c"
+        }
+      }
+    },
+    {
+      "request": {
+        "kind": "interface",
+        "object": {
+          "channels": {
+            "act": {
+              "type": {
+                "Record": {
+                  "kind": "String"
+                }
+              }
+            },
+            "user": {
+              "type": "String"
+            }
+          },
+          "operations": {
+            "fs.write": {
+              "effect": true,
+              "input": {
+                "Record": {
+                  "path": "String"
+                }
+              },
+              "output": "Int"
+            },
+            "net.fetch": {
+              "input": {
+                "Record": {
+                  "url": "String"
+                }
+              },
+              "output": "String",
+              "ret": {
+                "e": "list",
+                "items": [
+                  {
+                    "e": "lit",
+                    "v": "web"
+                  }
+                ]
+              }
+            },
+            "net.send": {
+              "effect": true,
+              "input": {
+                "Record": {
+                  "body": "String",
+                  "url": "String"
+                }
+              },
+              "output": "Int"
+            }
+          }
+        },
+        "op": "objectKey"
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "key": "sha256:274ffd31ce52b0d63dd92c006422108acff2f175382d0f5d46aa5dfaba1beb21"
+        }
+      }
+    }
+  ]
+}

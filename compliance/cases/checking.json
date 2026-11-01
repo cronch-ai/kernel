@@ -1,0 +1,594 @@
+{
+  "description": "Problems with a harness, an interface and a property.",
+  "exchanges": [
+    {
+      "request": {
+        "harness": {
+          "arg": {
+            "Record": {}
+          },
+          "init": 1,
+          "state": {
+            "Record": {}
+          },
+          "step": {
+            "cond": {
+              "args": [
+                {
+                  "e": "get",
+                  "field": "kind",
+                  "of": {
+                    "e": "var",
+                    "name": "input"
+                  }
+                },
+                {
+                  "e": "lit",
+                  "v": "start"
+                }
+              ],
+              "e": "op",
+              "op": "eq"
+            },
+            "e": "if",
+            "else": {
+              "e": "record",
+              "fields": {
+                "actions": {
+                  "e": "list",
+                  "items": []
+                },
+                "state": {
+                  "e": "var",
+                  "name": "state"
+                }
+              }
+            },
+            "then": {
+              "e": "record",
+              "fields": {
+                "actions": {
+                  "e": "list",
+                  "items": [
+                    {
+                      "e": "record",
+                      "fields": {
+                        "args": {
+                          "e": "record",
+                          "fields": {
+                            "body": {
+                              "e": "lit",
+                              "v": "hello"
+                            },
+                            "url": {
+                              "e": "lit",
+                              "v": "https://example.com"
+                            }
+                          }
+                        },
+                        "kind": {
+                          "e": "lit",
+                          "v": "call"
+                        },
+                        "op": {
+                          "e": "lit",
+                          "v": "net.send"
+                        }
+                      }
+                    },
+                    {
+                      "e": "record",
+                      "fields": {
+                        "args": {
+                          "e": "record",
+                          "fields": {
+                            "url": {
+                              "e": "lit",
+                              "v": "https://example.com/page"
+                            }
+                          }
+                        },
+                        "kind": {
+                          "e": "lit",
+                          "v": "call"
+                        },
+                        "op": {
+                          "e": "lit",
+                          "v": "net.fetch"
+                        }
+                      }
+                    }
+                  ]
+                },
+                "state": {
+                  "e": "var",
+                  "name": "state"
+                }
+              }
+            }
+          }
+        },
+        "op": "checkHarness"
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "problems": [
+            {
+              "expected": {
+                "Record": {}
+              },
+              "got": 1,
+              "kind": "init"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "request": {
+        "harness": {
+          "arg": {
+            "Record": {}
+          },
+          "init": {},
+          "state": {
+            "Record": {}
+          },
+          "step": {
+            "cond": {
+              "args": [
+                {
+                  "e": "get",
+                  "field": "kind",
+                  "of": {
+                    "e": "var",
+                    "name": "input"
+                  }
+                },
+                {
+                  "e": "lit",
+                  "v": "start"
+                }
+              ],
+              "e": "op",
+              "op": "eq"
+            },
+            "e": "if",
+            "else": {
+              "e": "record",
+              "fields": {
+                "actions": {
+                  "e": "list",
+                  "items": []
+                },
+                "state": {
+                  "e": "var",
+                  "name": "state"
+                }
+              }
+            },
+            "then": {
+              "e": "record",
+              "fields": {
+                "actions": {
+                  "e": "list",
+                  "items": [
+                    {
+                      "e": "record",
+                      "fields": {
+                        "args": {
+                          "e": "record",
+                          "fields": {
+                            "body": {
+                              "e": "lit",
+                              "v": "hello"
+                            },
+                            "url": {
+                              "e": "lit",
+                              "v": "https://example.com"
+                            }
+                          }
+                        },
+                        "kind": {
+                          "e": "lit",
+                          "v": "call"
+                        },
+                        "op": {
+                          "e": "lit",
+                          "v": "net.send"
+                        }
+                      }
+                    },
+                    {
+                      "e": "record",
+                      "fields": {
+                        "args": {
+                          "e": "record",
+                          "fields": {
+                            "url": {
+                              "e": "lit",
+                              "v": "https://example.com/page"
+                            }
+                          }
+                        },
+                        "kind": {
+                          "e": "lit",
+                          "v": "call"
+                        },
+                        "op": {
+                          "e": "lit",
+                          "v": "net.fetch"
+                        }
+                      }
+                    }
+                  ]
+                },
+                "state": {
+                  "e": "var",
+                  "name": "state"
+                }
+              }
+            }
+          }
+        },
+        "op": "checkHarness"
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "problems": []
+        }
+      }
+    },
+    {
+      "request": {
+        "interface": {
+          "operations": {
+            "x": {
+              "input": {
+                "Record": {}
+              },
+              "output": "Int",
+              "pre": {
+                "e": "lit",
+                "v": 1
+              }
+            }
+          }
+        },
+        "op": "checkInterface"
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "problems": [
+            {
+              "expected": "Bool",
+              "got": "Int",
+              "kind": "part",
+              "place": {
+                "in": "operation",
+                "name": "x",
+                "part": "pre"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "request": {
+        "op": "checkProperty",
+        "property": {
+          "always": {
+            "f": "implies",
+            "if": {
+              "f": "atom",
+              "holds": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "e": "get",
+                                "field": "kind",
+                                "of": {
+                                  "e": "var",
+                                  "name": "event"
+                                }
+                              },
+                              {
+                                "e": "lit",
+                                "v": "out"
+                              }
+                            ],
+                            "e": "op",
+                            "op": "eq"
+                          },
+                          {
+                            "args": [
+                              {
+                                "e": "get",
+                                "field": "kind",
+                                "of": {
+                                  "e": "get",
+                                  "field": "action",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "event"
+                                  }
+                                }
+                              },
+                              {
+                                "e": "lit",
+                                "v": "call"
+                              }
+                            ],
+                            "e": "op",
+                            "op": "eq"
+                          }
+                        ],
+                        "e": "op",
+                        "op": "and"
+                      },
+                      {
+                        "e": "get",
+                        "field": "performed",
+                        "of": {
+                          "e": "var",
+                          "name": "event"
+                        }
+                      }
+                    ],
+                    "e": "op",
+                    "op": "and"
+                  },
+                  {
+                    "e": "get",
+                    "field": "effect",
+                    "of": {
+                      "e": "var",
+                      "name": "event"
+                    }
+                  }
+                ],
+                "e": "op",
+                "op": "and"
+              }
+            },
+            "then": {
+              "f": "not",
+              "of": {
+                "f": "since",
+                "left": {
+                  "f": "not",
+                  "of": {
+                    "f": "atom",
+                    "holds": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "args": [
+                                    {
+                                      "e": "get",
+                                      "field": "kind",
+                                      "of": {
+                                        "e": "var",
+                                        "name": "event"
+                                      }
+                                    },
+                                    {
+                                      "e": "lit",
+                                      "v": "in"
+                                    }
+                                  ],
+                                  "e": "op",
+                                  "op": "eq"
+                                },
+                                {
+                                  "args": [
+                                    {
+                                      "e": "get",
+                                      "field": "kind",
+                                      "of": {
+                                        "e": "get",
+                                        "field": "input",
+                                        "of": {
+                                          "e": "var",
+                                          "name": "event"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "e": "lit",
+                                      "v": "msg"
+                                    }
+                                  ],
+                                  "e": "op",
+                                  "op": "eq"
+                                }
+                              ],
+                              "e": "op",
+                              "op": "and"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "e": "get",
+                                  "field": "channel",
+                                  "of": {
+                                    "e": "get",
+                                    "field": "input",
+                                    "of": {
+                                      "e": "var",
+                                      "name": "event"
+                                    }
+                                  }
+                                },
+                                {
+                                  "e": "lit",
+                                  "v": "user"
+                                }
+                              ],
+                              "e": "op",
+                              "op": "eq"
+                            }
+                          ],
+                          "e": "op",
+                          "op": "and"
+                        },
+                        {
+                          "args": [
+                            {
+                              "e": "get",
+                              "field": "value",
+                              "of": {
+                                "e": "get",
+                                "field": "input",
+                                "of": {
+                                  "e": "var",
+                                  "name": "event"
+                                }
+                              }
+                            },
+                            {
+                              "e": "lit",
+                              "v": "stop"
+                            }
+                          ],
+                          "e": "op",
+                          "op": "ne"
+                        }
+                      ],
+                      "e": "op",
+                      "op": "and"
+                    }
+                  }
+                },
+                "right": {
+                  "f": "atom",
+                  "holds": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "e": "get",
+                                    "field": "kind",
+                                    "of": {
+                                      "e": "var",
+                                      "name": "event"
+                                    }
+                                  },
+                                  {
+                                    "e": "lit",
+                                    "v": "in"
+                                  }
+                                ],
+                                "e": "op",
+                                "op": "eq"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "e": "get",
+                                    "field": "kind",
+                                    "of": {
+                                      "e": "get",
+                                      "field": "input",
+                                      "of": {
+                                        "e": "var",
+                                        "name": "event"
+                                      }
+                                    }
+                                  },
+                                  {
+                                    "e": "lit",
+                                    "v": "msg"
+                                  }
+                                ],
+                                "e": "op",
+                                "op": "eq"
+                              }
+                            ],
+                            "e": "op",
+                            "op": "and"
+                          },
+                          {
+                            "args": [
+                              {
+                                "e": "get",
+                                "field": "channel",
+                                "of": {
+                                  "e": "get",
+                                  "field": "input",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "event"
+                                  }
+                                }
+                              },
+                              {
+                                "e": "lit",
+                                "v": "user"
+                              }
+                            ],
+                            "e": "op",
+                            "op": "eq"
+                          }
+                        ],
+                        "e": "op",
+                        "op": "and"
+                      },
+                      {
+                        "args": [
+                          {
+                            "e": "get",
+                            "field": "value",
+                            "of": {
+                              "e": "get",
+                              "field": "input",
+                              "of": {
+                                "e": "var",
+                                "name": "event"
+                              }
+                            }
+                          },
+                          {
+                            "e": "lit",
+                            "v": "stop"
+                          }
+                        ],
+                        "e": "op",
+                        "op": "eq"
+                      }
+                    ],
+                    "e": "op",
+                    "op": "and"
+                  }
+                }
+              }
+            }
+          },
+          "name": "stopMeansStop"
+        }
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "problems": []
+        }
+      }
+    }
+  ]
+}

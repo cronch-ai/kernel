@@ -1,0 +1,4919 @@
+{
+  "description": "A child narrowed and approved: an \"always\" in the child widens its parent.",
+  "exchanges": [
+    {
+      "request": {
+        "grant": {
+          "allow": []
+        },
+        "harness": {
+          "arg": {
+            "Record": {}
+          },
+          "init": {},
+          "state": {
+            "Record": {}
+          },
+          "step": {
+            "cond": {
+              "args": [
+                {
+                  "e": "get",
+                  "field": "kind",
+                  "of": {
+                    "e": "var",
+                    "name": "input"
+                  }
+                },
+                {
+                  "e": "lit",
+                  "v": "msg"
+                }
+              ],
+              "e": "op",
+              "op": "eq"
+            },
+            "e": "if",
+            "else": {
+              "e": "record",
+              "fields": {
+                "actions": {
+                  "e": "list",
+                  "items": []
+                },
+                "state": {
+                  "e": "var",
+                  "name": "state"
+                }
+              }
+            },
+            "then": {
+              "e": "record",
+              "fields": {
+                "actions": {
+                  "e": "list",
+                  "items": [
+                    {
+                      "e": "get",
+                      "field": "value",
+                      "of": {
+                        "e": "var",
+                        "name": "input"
+                      }
+                    }
+                  ]
+                },
+                "state": {
+                  "e": "var",
+                  "name": "state"
+                }
+              }
+            }
+          }
+        },
+        "interface": {
+          "channels": {
+            "act": {
+              "type": {
+                "Record": {
+                  "kind": "String"
+                }
+              }
+            }
+          },
+          "operations": {
+            "fs.write": {
+              "effect": true,
+              "input": {
+                "Record": {
+                  "path": "String"
+                }
+              },
+              "output": "Int",
+              "pre": {
+                "args": [
+                  {
+                    "e": "lit",
+                    "v": "/workspace/"
+                  },
+                  {
+                    "e": "get",
+                    "field": "path",
+                    "of": {
+                      "e": "var",
+                      "name": "args"
+                    }
+                  }
+                ],
+                "e": "op",
+                "op": "prefix"
+              }
+            },
+            "net.fetch": {
+              "input": {
+                "Record": {
+                  "url": "String"
+                }
+              },
+              "output": "String",
+              "ret": {
+                "e": "list",
+                "items": [
+                  {
+                    "e": "lit",
+                    "v": "web"
+                  }
+                ]
+              }
+            },
+            "shell.approve": {
+              "input": {
+                "Record": {
+                  "argv": {
+                    "List": "String"
+                  }
+                }
+              },
+              "onResult": {
+                "cond": {
+                  "args": [
+                    {
+                      "e": "var",
+                      "name": "result"
+                    },
+                    {
+                      "e": "lit",
+                      "v": "always"
+                    }
+                  ],
+                  "e": "op",
+                  "op": "eq"
+                },
+                "e": "if",
+                "else": {
+                  "e": "var",
+                  "name": "grant"
+                },
+                "then": {
+                  "e": "record",
+                  "fields": {
+                    "allow": {
+                      "args": [
+                        {
+                          "e": "get",
+                          "field": "allow",
+                          "of": {
+                            "e": "var",
+                            "name": "grant"
+                          }
+                        },
+                        {
+                          "e": "get",
+                          "field": "argv",
+                          "of": {
+                            "e": "var",
+                            "name": "args"
+                          }
+                        }
+                      ],
+                      "e": "op",
+                      "op": "append"
+                    }
+                  }
+                }
+              },
+              "output": "String",
+              "ret": {
+                "e": "list",
+                "items": []
+              }
+            },
+            "shell.run": {
+              "effect": true,
+              "input": {
+                "Record": {
+                  "argv": {
+                    "List": "String"
+                  }
+                }
+              },
+              "output": "String",
+              "pre": {
+                "acc": "ok",
+                "body": {
+                  "args": [
+                    {
+                      "e": "var",
+                      "name": "ok"
+                    },
+                    {
+                      "args": [
+                        {
+                          "e": "var",
+                          "name": "p"
+                        },
+                        {
+                          "e": "get",
+                          "field": "argv",
+                          "of": {
+                            "e": "var",
+                            "name": "args"
+                          }
+                        }
+                      ],
+                      "e": "op",
+                      "op": "prefix"
+                    }
+                  ],
+                  "e": "op",
+                  "op": "or"
+                },
+                "e": "fold",
+                "init": {
+                  "e": "lit",
+                  "v": false
+                },
+                "item": "p",
+                "over": {
+                  "e": "get",
+                  "field": "allow",
+                  "of": {
+                    "e": "var",
+                    "name": "grant"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "op": "init"
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "kind": "ready",
+          "system": {
+            "grant": {
+              "allow": []
+            },
+            "root": {
+              "harness": {
+                "arg": {
+                  "Record": {}
+                },
+                "init": {},
+                "state": {
+                  "Record": {}
+                },
+                "step": {
+                  "cond": {
+                    "args": [
+                      {
+                        "e": "get",
+                        "field": "kind",
+                        "of": {
+                          "e": "var",
+                          "name": "input"
+                        }
+                      },
+                      {
+                        "e": "lit",
+                        "v": "msg"
+                      }
+                    ],
+                    "e": "op",
+                    "op": "eq"
+                  },
+                  "e": "if",
+                  "else": {
+                    "e": "record",
+                    "fields": {
+                      "actions": {
+                        "e": "list",
+                        "items": []
+                      },
+                      "state": {
+                        "e": "var",
+                        "name": "state"
+                      }
+                    }
+                  },
+                  "then": {
+                    "e": "record",
+                    "fields": {
+                      "actions": {
+                        "e": "list",
+                        "items": [
+                          {
+                            "e": "get",
+                            "field": "value",
+                            "of": {
+                              "e": "var",
+                              "name": "input"
+                            }
+                          }
+                        ]
+                      },
+                      "state": {
+                        "e": "var",
+                        "name": "state"
+                      }
+                    }
+                  }
+                }
+              },
+              "interface": {
+                "channels": {
+                  "act": {
+                    "type": {
+                      "Record": {
+                        "kind": "String"
+                      }
+                    }
+                  }
+                },
+                "operations": {
+                  "fs.write": {
+                    "effect": true,
+                    "input": {
+                      "Record": {
+                        "path": "String"
+                      }
+                    },
+                    "output": "Int",
+                    "pre": {
+                      "args": [
+                        {
+                          "e": "lit",
+                          "v": "/workspace/"
+                        },
+                        {
+                          "e": "get",
+                          "field": "path",
+                          "of": {
+                            "e": "var",
+                            "name": "args"
+                          }
+                        }
+                      ],
+                      "e": "op",
+                      "op": "prefix"
+                    }
+                  },
+                  "net.fetch": {
+                    "input": {
+                      "Record": {
+                        "url": "String"
+                      }
+                    },
+                    "output": "String",
+                    "ret": {
+                      "e": "list",
+                      "items": [
+                        {
+                          "e": "lit",
+                          "v": "web"
+                        }
+                      ]
+                    }
+                  },
+                  "shell.approve": {
+                    "input": {
+                      "Record": {
+                        "argv": {
+                          "List": "String"
+                        }
+                      }
+                    },
+                    "onResult": {
+                      "cond": {
+                        "args": [
+                          {
+                            "e": "var",
+                            "name": "result"
+                          },
+                          {
+                            "e": "lit",
+                            "v": "always"
+                          }
+                        ],
+                        "e": "op",
+                        "op": "eq"
+                      },
+                      "e": "if",
+                      "else": {
+                        "e": "var",
+                        "name": "grant"
+                      },
+                      "then": {
+                        "e": "record",
+                        "fields": {
+                          "allow": {
+                            "args": [
+                              {
+                                "e": "get",
+                                "field": "allow",
+                                "of": {
+                                  "e": "var",
+                                  "name": "grant"
+                                }
+                              },
+                              {
+                                "e": "get",
+                                "field": "argv",
+                                "of": {
+                                  "e": "var",
+                                  "name": "args"
+                                }
+                              }
+                            ],
+                            "e": "op",
+                            "op": "append"
+                          }
+                        }
+                      }
+                    },
+                    "output": "String",
+                    "ret": {
+                      "e": "list",
+                      "items": []
+                    }
+                  },
+                  "shell.run": {
+                    "effect": true,
+                    "input": {
+                      "Record": {
+                        "argv": {
+                          "List": "String"
+                        }
+                      }
+                    },
+                    "output": "String",
+                    "pre": {
+                      "acc": "ok",
+                      "body": {
+                        "args": [
+                          {
+                            "e": "var",
+                            "name": "ok"
+                          },
+                          {
+                            "args": [
+                              {
+                                "e": "var",
+                                "name": "p"
+                              },
+                              {
+                                "e": "get",
+                                "field": "argv",
+                                "of": {
+                                  "e": "var",
+                                  "name": "args"
+                                }
+                              }
+                            ],
+                            "e": "op",
+                            "op": "prefix"
+                          }
+                        ],
+                        "e": "op",
+                        "op": "or"
+                      },
+                      "e": "fold",
+                      "init": {
+                        "e": "lit",
+                        "v": false
+                      },
+                      "item": "p",
+                      "over": {
+                        "e": "get",
+                        "field": "allow",
+                        "of": {
+                          "e": "var",
+                          "name": "grant"
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "next": 0,
+              "pending": [],
+              "queue": [],
+              "started": false,
+              "state": {
+                "record": {
+                  "fields": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "delivery": {
+          "input": {
+            "kind": "start",
+            "value": {}
+          }
+        },
+        "op": "deliver",
+        "system": {
+          "grant": {
+            "allow": []
+          },
+          "root": {
+            "harness": {
+              "arg": {
+                "Record": {}
+              },
+              "init": {},
+              "state": {
+                "Record": {}
+              },
+              "step": {
+                "cond": {
+                  "args": [
+                    {
+                      "e": "get",
+                      "field": "kind",
+                      "of": {
+                        "e": "var",
+                        "name": "input"
+                      }
+                    },
+                    {
+                      "e": "lit",
+                      "v": "msg"
+                    }
+                  ],
+                  "e": "op",
+                  "op": "eq"
+                },
+                "e": "if",
+                "else": {
+                  "e": "record",
+                  "fields": {
+                    "actions": {
+                      "e": "list",
+                      "items": []
+                    },
+                    "state": {
+                      "e": "var",
+                      "name": "state"
+                    }
+                  }
+                },
+                "then": {
+                  "e": "record",
+                  "fields": {
+                    "actions": {
+                      "e": "list",
+                      "items": [
+                        {
+                          "e": "get",
+                          "field": "value",
+                          "of": {
+                            "e": "var",
+                            "name": "input"
+                          }
+                        }
+                      ]
+                    },
+                    "state": {
+                      "e": "var",
+                      "name": "state"
+                    }
+                  }
+                }
+              }
+            },
+            "interface": {
+              "channels": {
+                "act": {
+                  "type": {
+                    "Record": {
+                      "kind": "String"
+                    }
+                  }
+                }
+              },
+              "operations": {
+                "fs.write": {
+                  "effect": true,
+                  "input": {
+                    "Record": {
+                      "path": "String"
+                    }
+                  },
+                  "output": "Int",
+                  "pre": {
+                    "args": [
+                      {
+                        "e": "lit",
+                        "v": "/workspace/"
+                      },
+                      {
+                        "e": "get",
+                        "field": "path",
+                        "of": {
+                          "e": "var",
+                          "name": "args"
+                        }
+                      }
+                    ],
+                    "e": "op",
+                    "op": "prefix"
+                  }
+                },
+                "net.fetch": {
+                  "input": {
+                    "Record": {
+                      "url": "String"
+                    }
+                  },
+                  "output": "String",
+                  "ret": {
+                    "e": "list",
+                    "items": [
+                      {
+                        "e": "lit",
+                        "v": "web"
+                      }
+                    ]
+                  }
+                },
+                "shell.approve": {
+                  "input": {
+                    "Record": {
+                      "argv": {
+                        "List": "String"
+                      }
+                    }
+                  },
+                  "onResult": {
+                    "cond": {
+                      "args": [
+                        {
+                          "e": "var",
+                          "name": "result"
+                        },
+                        {
+                          "e": "lit",
+                          "v": "always"
+                        }
+                      ],
+                      "e": "op",
+                      "op": "eq"
+                    },
+                    "e": "if",
+                    "else": {
+                      "e": "var",
+                      "name": "grant"
+                    },
+                    "then": {
+                      "e": "record",
+                      "fields": {
+                        "allow": {
+                          "args": [
+                            {
+                              "e": "get",
+                              "field": "allow",
+                              "of": {
+                                "e": "var",
+                                "name": "grant"
+                              }
+                            },
+                            {
+                              "e": "get",
+                              "field": "argv",
+                              "of": {
+                                "e": "var",
+                                "name": "args"
+                              }
+                            }
+                          ],
+                          "e": "op",
+                          "op": "append"
+                        }
+                      }
+                    }
+                  },
+                  "output": "String",
+                  "ret": {
+                    "e": "list",
+                    "items": []
+                  }
+                },
+                "shell.run": {
+                  "effect": true,
+                  "input": {
+                    "Record": {
+                      "argv": {
+                        "List": "String"
+                      }
+                    }
+                  },
+                  "output": "String",
+                  "pre": {
+                    "acc": "ok",
+                    "body": {
+                      "args": [
+                        {
+                          "e": "var",
+                          "name": "ok"
+                        },
+                        {
+                          "args": [
+                            {
+                              "e": "var",
+                              "name": "p"
+                            },
+                            {
+                              "e": "get",
+                              "field": "argv",
+                              "of": {
+                                "e": "var",
+                                "name": "args"
+                              }
+                            }
+                          ],
+                          "e": "op",
+                          "op": "prefix"
+                        }
+                      ],
+                      "e": "op",
+                      "op": "or"
+                    },
+                    "e": "fold",
+                    "init": {
+                      "e": "lit",
+                      "v": false
+                    },
+                    "item": "p",
+                    "over": {
+                      "e": "get",
+                      "field": "allow",
+                      "of": {
+                        "e": "var",
+                        "name": "grant"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "next": 0,
+            "pending": [],
+            "queue": [],
+            "started": false,
+            "state": {
+              "record": {
+                "fields": {}
+              }
+            }
+          }
+        }
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "events": [
+            {
+              "input": {
+                "kind": "start",
+                "value": {}
+              },
+              "kind": "in",
+              "origin": [],
+              "state": {}
+            }
+          ],
+          "system": {
+            "grant": {
+              "allow": []
+            },
+            "root": {
+              "harness": {
+                "arg": {
+                  "Record": {}
+                },
+                "init": {},
+                "state": {
+                  "Record": {}
+                },
+                "step": {
+                  "cond": {
+                    "args": [
+                      {
+                        "e": "get",
+                        "field": "kind",
+                        "of": {
+                          "e": "var",
+                          "name": "input"
+                        }
+                      },
+                      {
+                        "e": "lit",
+                        "v": "msg"
+                      }
+                    ],
+                    "e": "op",
+                    "op": "eq"
+                  },
+                  "e": "if",
+                  "else": {
+                    "e": "record",
+                    "fields": {
+                      "actions": {
+                        "e": "list",
+                        "items": []
+                      },
+                      "state": {
+                        "e": "var",
+                        "name": "state"
+                      }
+                    }
+                  },
+                  "then": {
+                    "e": "record",
+                    "fields": {
+                      "actions": {
+                        "e": "list",
+                        "items": [
+                          {
+                            "e": "get",
+                            "field": "value",
+                            "of": {
+                              "e": "var",
+                              "name": "input"
+                            }
+                          }
+                        ]
+                      },
+                      "state": {
+                        "e": "var",
+                        "name": "state"
+                      }
+                    }
+                  }
+                }
+              },
+              "interface": {
+                "channels": {
+                  "act": {
+                    "type": {
+                      "Record": {
+                        "kind": "String"
+                      }
+                    }
+                  }
+                },
+                "operations": {
+                  "fs.write": {
+                    "effect": true,
+                    "input": {
+                      "Record": {
+                        "path": "String"
+                      }
+                    },
+                    "output": "Int",
+                    "pre": {
+                      "args": [
+                        {
+                          "e": "lit",
+                          "v": "/workspace/"
+                        },
+                        {
+                          "e": "get",
+                          "field": "path",
+                          "of": {
+                            "e": "var",
+                            "name": "args"
+                          }
+                        }
+                      ],
+                      "e": "op",
+                      "op": "prefix"
+                    }
+                  },
+                  "net.fetch": {
+                    "input": {
+                      "Record": {
+                        "url": "String"
+                      }
+                    },
+                    "output": "String",
+                    "ret": {
+                      "e": "list",
+                      "items": [
+                        {
+                          "e": "lit",
+                          "v": "web"
+                        }
+                      ]
+                    }
+                  },
+                  "shell.approve": {
+                    "input": {
+                      "Record": {
+                        "argv": {
+                          "List": "String"
+                        }
+                      }
+                    },
+                    "onResult": {
+                      "cond": {
+                        "args": [
+                          {
+                            "e": "var",
+                            "name": "result"
+                          },
+                          {
+                            "e": "lit",
+                            "v": "always"
+                          }
+                        ],
+                        "e": "op",
+                        "op": "eq"
+                      },
+                      "e": "if",
+                      "else": {
+                        "e": "var",
+                        "name": "grant"
+                      },
+                      "then": {
+                        "e": "record",
+                        "fields": {
+                          "allow": {
+                            "args": [
+                              {
+                                "e": "get",
+                                "field": "allow",
+                                "of": {
+                                  "e": "var",
+                                  "name": "grant"
+                                }
+                              },
+                              {
+                                "e": "get",
+                                "field": "argv",
+                                "of": {
+                                  "e": "var",
+                                  "name": "args"
+                                }
+                              }
+                            ],
+                            "e": "op",
+                            "op": "append"
+                          }
+                        }
+                      }
+                    },
+                    "output": "String",
+                    "ret": {
+                      "e": "list",
+                      "items": []
+                    }
+                  },
+                  "shell.run": {
+                    "effect": true,
+                    "input": {
+                      "Record": {
+                        "argv": {
+                          "List": "String"
+                        }
+                      }
+                    },
+                    "output": "String",
+                    "pre": {
+                      "acc": "ok",
+                      "body": {
+                        "args": [
+                          {
+                            "e": "var",
+                            "name": "ok"
+                          },
+                          {
+                            "args": [
+                              {
+                                "e": "var",
+                                "name": "p"
+                              },
+                              {
+                                "e": "get",
+                                "field": "argv",
+                                "of": {
+                                  "e": "var",
+                                  "name": "args"
+                                }
+                              }
+                            ],
+                            "e": "op",
+                            "op": "prefix"
+                          }
+                        ],
+                        "e": "op",
+                        "op": "or"
+                      },
+                      "e": "fold",
+                      "init": {
+                        "e": "lit",
+                        "v": false
+                      },
+                      "item": "p",
+                      "over": {
+                        "e": "get",
+                        "field": "allow",
+                        "of": {
+                          "e": "var",
+                          "name": "grant"
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "next": 0,
+              "pending": [],
+              "queue": [],
+              "started": true,
+              "state": {
+                "record": {
+                  "fields": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "delivery": {
+          "input": {
+            "channel": "act",
+            "kind": "msg",
+            "value": {
+              "args": {
+                "argv": ["npm", "publish"]
+              },
+              "kind": "call",
+              "op": "shell.run"
+            }
+          }
+        },
+        "op": "deliver",
+        "system": {
+          "grant": {
+            "allow": []
+          },
+          "root": {
+            "harness": {
+              "arg": {
+                "Record": {}
+              },
+              "init": {},
+              "state": {
+                "Record": {}
+              },
+              "step": {
+                "cond": {
+                  "args": [
+                    {
+                      "e": "get",
+                      "field": "kind",
+                      "of": {
+                        "e": "var",
+                        "name": "input"
+                      }
+                    },
+                    {
+                      "e": "lit",
+                      "v": "msg"
+                    }
+                  ],
+                  "e": "op",
+                  "op": "eq"
+                },
+                "e": "if",
+                "else": {
+                  "e": "record",
+                  "fields": {
+                    "actions": {
+                      "e": "list",
+                      "items": []
+                    },
+                    "state": {
+                      "e": "var",
+                      "name": "state"
+                    }
+                  }
+                },
+                "then": {
+                  "e": "record",
+                  "fields": {
+                    "actions": {
+                      "e": "list",
+                      "items": [
+                        {
+                          "e": "get",
+                          "field": "value",
+                          "of": {
+                            "e": "var",
+                            "name": "input"
+                          }
+                        }
+                      ]
+                    },
+                    "state": {
+                      "e": "var",
+                      "name": "state"
+                    }
+                  }
+                }
+              }
+            },
+            "interface": {
+              "channels": {
+                "act": {
+                  "type": {
+                    "Record": {
+                      "kind": "String"
+                    }
+                  }
+                }
+              },
+              "operations": {
+                "fs.write": {
+                  "effect": true,
+                  "input": {
+                    "Record": {
+                      "path": "String"
+                    }
+                  },
+                  "output": "Int",
+                  "pre": {
+                    "args": [
+                      {
+                        "e": "lit",
+                        "v": "/workspace/"
+                      },
+                      {
+                        "e": "get",
+                        "field": "path",
+                        "of": {
+                          "e": "var",
+                          "name": "args"
+                        }
+                      }
+                    ],
+                    "e": "op",
+                    "op": "prefix"
+                  }
+                },
+                "net.fetch": {
+                  "input": {
+                    "Record": {
+                      "url": "String"
+                    }
+                  },
+                  "output": "String",
+                  "ret": {
+                    "e": "list",
+                    "items": [
+                      {
+                        "e": "lit",
+                        "v": "web"
+                      }
+                    ]
+                  }
+                },
+                "shell.approve": {
+                  "input": {
+                    "Record": {
+                      "argv": {
+                        "List": "String"
+                      }
+                    }
+                  },
+                  "onResult": {
+                    "cond": {
+                      "args": [
+                        {
+                          "e": "var",
+                          "name": "result"
+                        },
+                        {
+                          "e": "lit",
+                          "v": "always"
+                        }
+                      ],
+                      "e": "op",
+                      "op": "eq"
+                    },
+                    "e": "if",
+                    "else": {
+                      "e": "var",
+                      "name": "grant"
+                    },
+                    "then": {
+                      "e": "record",
+                      "fields": {
+                        "allow": {
+                          "args": [
+                            {
+                              "e": "get",
+                              "field": "allow",
+                              "of": {
+                                "e": "var",
+                                "name": "grant"
+                              }
+                            },
+                            {
+                              "e": "get",
+                              "field": "argv",
+                              "of": {
+                                "e": "var",
+                                "name": "args"
+                              }
+                            }
+                          ],
+                          "e": "op",
+                          "op": "append"
+                        }
+                      }
+                    }
+                  },
+                  "output": "String",
+                  "ret": {
+                    "e": "list",
+                    "items": []
+                  }
+                },
+                "shell.run": {
+                  "effect": true,
+                  "input": {
+                    "Record": {
+                      "argv": {
+                        "List": "String"
+                      }
+                    }
+                  },
+                  "output": "String",
+                  "pre": {
+                    "acc": "ok",
+                    "body": {
+                      "args": [
+                        {
+                          "e": "var",
+                          "name": "ok"
+                        },
+                        {
+                          "args": [
+                            {
+                              "e": "var",
+                              "name": "p"
+                            },
+                            {
+                              "e": "get",
+                              "field": "argv",
+                              "of": {
+                                "e": "var",
+                                "name": "args"
+                              }
+                            }
+                          ],
+                          "e": "op",
+                          "op": "prefix"
+                        }
+                      ],
+                      "e": "op",
+                      "op": "or"
+                    },
+                    "e": "fold",
+                    "init": {
+                      "e": "lit",
+                      "v": false
+                    },
+                    "item": "p",
+                    "over": {
+                      "e": "get",
+                      "field": "allow",
+                      "of": {
+                        "e": "var",
+                        "name": "grant"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "next": 0,
+            "pending": [],
+            "queue": [],
+            "started": true,
+            "state": {
+              "record": {
+                "fields": {}
+              }
+            }
+          }
+        }
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "events": [
+            {
+              "input": {
+                "channel": "act",
+                "kind": "msg",
+                "value": {
+                  "args": {
+                    "argv": ["npm", "publish"]
+                  },
+                  "kind": "call",
+                  "op": "shell.run"
+                }
+              },
+              "kind": "in",
+              "origin": [],
+              "state": {}
+            },
+            {
+              "action": {
+                "args": {
+                  "argv": ["npm", "publish"]
+                },
+                "kind": "call",
+                "op": "shell.run"
+              },
+              "call": 0,
+              "kind": "out",
+              "labels": {
+                "args": {
+                  "argv": [[], []]
+                },
+                "kind": [],
+                "op": []
+              },
+              "origin": [],
+              "performed": false,
+              "state": {}
+            },
+            {
+              "input": {
+                "call": 0,
+                "kind": "refused",
+                "op": "shell.run"
+              },
+              "kind": "in",
+              "origin": [],
+              "state": {}
+            }
+          ],
+          "system": {
+            "grant": {
+              "allow": []
+            },
+            "root": {
+              "harness": {
+                "arg": {
+                  "Record": {}
+                },
+                "init": {},
+                "state": {
+                  "Record": {}
+                },
+                "step": {
+                  "cond": {
+                    "args": [
+                      {
+                        "e": "get",
+                        "field": "kind",
+                        "of": {
+                          "e": "var",
+                          "name": "input"
+                        }
+                      },
+                      {
+                        "e": "lit",
+                        "v": "msg"
+                      }
+                    ],
+                    "e": "op",
+                    "op": "eq"
+                  },
+                  "e": "if",
+                  "else": {
+                    "e": "record",
+                    "fields": {
+                      "actions": {
+                        "e": "list",
+                        "items": []
+                      },
+                      "state": {
+                        "e": "var",
+                        "name": "state"
+                      }
+                    }
+                  },
+                  "then": {
+                    "e": "record",
+                    "fields": {
+                      "actions": {
+                        "e": "list",
+                        "items": [
+                          {
+                            "e": "get",
+                            "field": "value",
+                            "of": {
+                              "e": "var",
+                              "name": "input"
+                            }
+                          }
+                        ]
+                      },
+                      "state": {
+                        "e": "var",
+                        "name": "state"
+                      }
+                    }
+                  }
+                }
+              },
+              "interface": {
+                "channels": {
+                  "act": {
+                    "type": {
+                      "Record": {
+                        "kind": "String"
+                      }
+                    }
+                  }
+                },
+                "operations": {
+                  "fs.write": {
+                    "effect": true,
+                    "input": {
+                      "Record": {
+                        "path": "String"
+                      }
+                    },
+                    "output": "Int",
+                    "pre": {
+                      "args": [
+                        {
+                          "e": "lit",
+                          "v": "/workspace/"
+                        },
+                        {
+                          "e": "get",
+                          "field": "path",
+                          "of": {
+                            "e": "var",
+                            "name": "args"
+                          }
+                        }
+                      ],
+                      "e": "op",
+                      "op": "prefix"
+                    }
+                  },
+                  "net.fetch": {
+                    "input": {
+                      "Record": {
+                        "url": "String"
+                      }
+                    },
+                    "output": "String",
+                    "ret": {
+                      "e": "list",
+                      "items": [
+                        {
+                          "e": "lit",
+                          "v": "web"
+                        }
+                      ]
+                    }
+                  },
+                  "shell.approve": {
+                    "input": {
+                      "Record": {
+                        "argv": {
+                          "List": "String"
+                        }
+                      }
+                    },
+                    "onResult": {
+                      "cond": {
+                        "args": [
+                          {
+                            "e": "var",
+                            "name": "result"
+                          },
+                          {
+                            "e": "lit",
+                            "v": "always"
+                          }
+                        ],
+                        "e": "op",
+                        "op": "eq"
+                      },
+                      "e": "if",
+                      "else": {
+                        "e": "var",
+                        "name": "grant"
+                      },
+                      "then": {
+                        "e": "record",
+                        "fields": {
+                          "allow": {
+                            "args": [
+                              {
+                                "e": "get",
+                                "field": "allow",
+                                "of": {
+                                  "e": "var",
+                                  "name": "grant"
+                                }
+                              },
+                              {
+                                "e": "get",
+                                "field": "argv",
+                                "of": {
+                                  "e": "var",
+                                  "name": "args"
+                                }
+                              }
+                            ],
+                            "e": "op",
+                            "op": "append"
+                          }
+                        }
+                      }
+                    },
+                    "output": "String",
+                    "ret": {
+                      "e": "list",
+                      "items": []
+                    }
+                  },
+                  "shell.run": {
+                    "effect": true,
+                    "input": {
+                      "Record": {
+                        "argv": {
+                          "List": "String"
+                        }
+                      }
+                    },
+                    "output": "String",
+                    "pre": {
+                      "acc": "ok",
+                      "body": {
+                        "args": [
+                          {
+                            "e": "var",
+                            "name": "ok"
+                          },
+                          {
+                            "args": [
+                              {
+                                "e": "var",
+                                "name": "p"
+                              },
+                              {
+                                "e": "get",
+                                "field": "argv",
+                                "of": {
+                                  "e": "var",
+                                  "name": "args"
+                                }
+                              }
+                            ],
+                            "e": "op",
+                            "op": "prefix"
+                          }
+                        ],
+                        "e": "op",
+                        "op": "or"
+                      },
+                      "e": "fold",
+                      "init": {
+                        "e": "lit",
+                        "v": false
+                      },
+                      "item": "p",
+                      "over": {
+                        "e": "get",
+                        "field": "allow",
+                        "of": {
+                          "e": "var",
+                          "name": "grant"
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "next": 1,
+              "pending": [],
+              "queue": [],
+              "started": true,
+              "state": {
+                "record": {
+                  "fields": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "delivery": {
+          "input": {
+            "channel": "act",
+            "kind": "msg",
+            "value": {
+              "arg": {
+                "args": {
+                  "argv": ["npm", "publish"]
+                },
+                "op": "shell.approve"
+              },
+              "harness": {
+                "arg": {
+                  "Record": {
+                    "op": "String"
+                  }
+                },
+                "init": {},
+                "state": {
+                  "Record": {}
+                },
+                "step": {
+                  "cond": {
+                    "args": [
+                      {
+                        "e": "get",
+                        "field": "kind",
+                        "of": {
+                          "e": "var",
+                          "name": "input"
+                        }
+                      },
+                      {
+                        "e": "lit",
+                        "v": "start"
+                      }
+                    ],
+                    "e": "op",
+                    "op": "eq"
+                  },
+                  "e": "if",
+                  "else": {
+                    "cond": {
+                      "args": [
+                        {
+                          "e": "get",
+                          "field": "kind",
+                          "of": {
+                            "e": "var",
+                            "name": "input"
+                          }
+                        },
+                        {
+                          "e": "lit",
+                          "v": "ret"
+                        }
+                      ],
+                      "e": "op",
+                      "op": "eq"
+                    },
+                    "e": "if",
+                    "else": {
+                      "cond": {
+                        "args": [
+                          {
+                            "e": "get",
+                            "field": "kind",
+                            "of": {
+                              "e": "var",
+                              "name": "input"
+                            }
+                          },
+                          {
+                            "e": "lit",
+                            "v": "refused"
+                          }
+                        ],
+                        "e": "op",
+                        "op": "eq"
+                      },
+                      "e": "if",
+                      "else": {
+                        "e": "record",
+                        "fields": {
+                          "actions": {
+                            "e": "list",
+                            "items": [
+                              {
+                                "e": "record",
+                                "fields": {
+                                  "kind": {
+                                    "e": "lit",
+                                    "v": "halt"
+                                  },
+                                  "value": {
+                                    "e": "lit",
+                                    "v": "failed"
+                                  }
+                                }
+                              }
+                            ]
+                          },
+                          "state": {
+                            "e": "var",
+                            "name": "state"
+                          }
+                        }
+                      },
+                      "then": {
+                        "e": "record",
+                        "fields": {
+                          "actions": {
+                            "e": "list",
+                            "items": [
+                              {
+                                "e": "record",
+                                "fields": {
+                                  "kind": {
+                                    "e": "lit",
+                                    "v": "halt"
+                                  },
+                                  "value": {
+                                    "e": "lit",
+                                    "v": "denied"
+                                  }
+                                }
+                              }
+                            ]
+                          },
+                          "state": {
+                            "e": "var",
+                            "name": "state"
+                          }
+                        }
+                      }
+                    },
+                    "then": {
+                      "e": "record",
+                      "fields": {
+                        "actions": {
+                          "e": "list",
+                          "items": [
+                            {
+                              "e": "record",
+                              "fields": {
+                                "kind": {
+                                  "e": "lit",
+                                  "v": "halt"
+                                },
+                                "value": {
+                                  "e": "get",
+                                  "field": "value",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "input"
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        "state": {
+                          "e": "var",
+                          "name": "state"
+                        }
+                      }
+                    }
+                  },
+                  "then": {
+                    "e": "record",
+                    "fields": {
+                      "actions": {
+                        "e": "list",
+                        "items": [
+                          {
+                            "e": "record",
+                            "fields": {
+                              "args": {
+                                "e": "get",
+                                "field": "args",
+                                "of": {
+                                  "e": "get",
+                                  "field": "value",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "input"
+                                  }
+                                }
+                              },
+                              "kind": {
+                                "e": "lit",
+                                "v": "call"
+                              },
+                              "op": {
+                                "e": "get",
+                                "field": "op",
+                                "of": {
+                                  "e": "get",
+                                  "field": "value",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "input"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      "state": {
+                        "e": "var",
+                        "name": "state"
+                      }
+                    }
+                  }
+                }
+              },
+              "kind": "spawn",
+              "narrow": [
+                {
+                  "kind": "only",
+                  "ops": ["shell.approve"]
+                }
+              ]
+            }
+          }
+        },
+        "op": "deliver",
+        "system": {
+          "grant": {
+            "allow": []
+          },
+          "root": {
+            "harness": {
+              "arg": {
+                "Record": {}
+              },
+              "init": {},
+              "state": {
+                "Record": {}
+              },
+              "step": {
+                "cond": {
+                  "args": [
+                    {
+                      "e": "get",
+                      "field": "kind",
+                      "of": {
+                        "e": "var",
+                        "name": "input"
+                      }
+                    },
+                    {
+                      "e": "lit",
+                      "v": "msg"
+                    }
+                  ],
+                  "e": "op",
+                  "op": "eq"
+                },
+                "e": "if",
+                "else": {
+                  "e": "record",
+                  "fields": {
+                    "actions": {
+                      "e": "list",
+                      "items": []
+                    },
+                    "state": {
+                      "e": "var",
+                      "name": "state"
+                    }
+                  }
+                },
+                "then": {
+                  "e": "record",
+                  "fields": {
+                    "actions": {
+                      "e": "list",
+                      "items": [
+                        {
+                          "e": "get",
+                          "field": "value",
+                          "of": {
+                            "e": "var",
+                            "name": "input"
+                          }
+                        }
+                      ]
+                    },
+                    "state": {
+                      "e": "var",
+                      "name": "state"
+                    }
+                  }
+                }
+              }
+            },
+            "interface": {
+              "channels": {
+                "act": {
+                  "type": {
+                    "Record": {
+                      "kind": "String"
+                    }
+                  }
+                }
+              },
+              "operations": {
+                "fs.write": {
+                  "effect": true,
+                  "input": {
+                    "Record": {
+                      "path": "String"
+                    }
+                  },
+                  "output": "Int",
+                  "pre": {
+                    "args": [
+                      {
+                        "e": "lit",
+                        "v": "/workspace/"
+                      },
+                      {
+                        "e": "get",
+                        "field": "path",
+                        "of": {
+                          "e": "var",
+                          "name": "args"
+                        }
+                      }
+                    ],
+                    "e": "op",
+                    "op": "prefix"
+                  }
+                },
+                "net.fetch": {
+                  "input": {
+                    "Record": {
+                      "url": "String"
+                    }
+                  },
+                  "output": "String",
+                  "ret": {
+                    "e": "list",
+                    "items": [
+                      {
+                        "e": "lit",
+                        "v": "web"
+                      }
+                    ]
+                  }
+                },
+                "shell.approve": {
+                  "input": {
+                    "Record": {
+                      "argv": {
+                        "List": "String"
+                      }
+                    }
+                  },
+                  "onResult": {
+                    "cond": {
+                      "args": [
+                        {
+                          "e": "var",
+                          "name": "result"
+                        },
+                        {
+                          "e": "lit",
+                          "v": "always"
+                        }
+                      ],
+                      "e": "op",
+                      "op": "eq"
+                    },
+                    "e": "if",
+                    "else": {
+                      "e": "var",
+                      "name": "grant"
+                    },
+                    "then": {
+                      "e": "record",
+                      "fields": {
+                        "allow": {
+                          "args": [
+                            {
+                              "e": "get",
+                              "field": "allow",
+                              "of": {
+                                "e": "var",
+                                "name": "grant"
+                              }
+                            },
+                            {
+                              "e": "get",
+                              "field": "argv",
+                              "of": {
+                                "e": "var",
+                                "name": "args"
+                              }
+                            }
+                          ],
+                          "e": "op",
+                          "op": "append"
+                        }
+                      }
+                    }
+                  },
+                  "output": "String",
+                  "ret": {
+                    "e": "list",
+                    "items": []
+                  }
+                },
+                "shell.run": {
+                  "effect": true,
+                  "input": {
+                    "Record": {
+                      "argv": {
+                        "List": "String"
+                      }
+                    }
+                  },
+                  "output": "String",
+                  "pre": {
+                    "acc": "ok",
+                    "body": {
+                      "args": [
+                        {
+                          "e": "var",
+                          "name": "ok"
+                        },
+                        {
+                          "args": [
+                            {
+                              "e": "var",
+                              "name": "p"
+                            },
+                            {
+                              "e": "get",
+                              "field": "argv",
+                              "of": {
+                                "e": "var",
+                                "name": "args"
+                              }
+                            }
+                          ],
+                          "e": "op",
+                          "op": "prefix"
+                        }
+                      ],
+                      "e": "op",
+                      "op": "or"
+                    },
+                    "e": "fold",
+                    "init": {
+                      "e": "lit",
+                      "v": false
+                    },
+                    "item": "p",
+                    "over": {
+                      "e": "get",
+                      "field": "allow",
+                      "of": {
+                        "e": "var",
+                        "name": "grant"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "next": 1,
+            "pending": [],
+            "queue": [],
+            "started": true,
+            "state": {
+              "record": {
+                "fields": {}
+              }
+            }
+          }
+        }
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "events": [
+            {
+              "input": {
+                "channel": "act",
+                "kind": "msg",
+                "value": {
+                  "arg": {
+                    "args": {
+                      "argv": ["npm", "publish"]
+                    },
+                    "op": "shell.approve"
+                  },
+                  "harness": {
+                    "arg": {
+                      "Record": {
+                        "op": "String"
+                      }
+                    },
+                    "init": {},
+                    "state": {
+                      "Record": {}
+                    },
+                    "step": {
+                      "cond": {
+                        "args": [
+                          {
+                            "e": "get",
+                            "field": "kind",
+                            "of": {
+                              "e": "var",
+                              "name": "input"
+                            }
+                          },
+                          {
+                            "e": "lit",
+                            "v": "start"
+                          }
+                        ],
+                        "e": "op",
+                        "op": "eq"
+                      },
+                      "e": "if",
+                      "else": {
+                        "cond": {
+                          "args": [
+                            {
+                              "e": "get",
+                              "field": "kind",
+                              "of": {
+                                "e": "var",
+                                "name": "input"
+                              }
+                            },
+                            {
+                              "e": "lit",
+                              "v": "ret"
+                            }
+                          ],
+                          "e": "op",
+                          "op": "eq"
+                        },
+                        "e": "if",
+                        "else": {
+                          "cond": {
+                            "args": [
+                              {
+                                "e": "get",
+                                "field": "kind",
+                                "of": {
+                                  "e": "var",
+                                  "name": "input"
+                                }
+                              },
+                              {
+                                "e": "lit",
+                                "v": "refused"
+                              }
+                            ],
+                            "e": "op",
+                            "op": "eq"
+                          },
+                          "e": "if",
+                          "else": {
+                            "e": "record",
+                            "fields": {
+                              "actions": {
+                                "e": "list",
+                                "items": [
+                                  {
+                                    "e": "record",
+                                    "fields": {
+                                      "kind": {
+                                        "e": "lit",
+                                        "v": "halt"
+                                      },
+                                      "value": {
+                                        "e": "lit",
+                                        "v": "failed"
+                                      }
+                                    }
+                                  }
+                                ]
+                              },
+                              "state": {
+                                "e": "var",
+                                "name": "state"
+                              }
+                            }
+                          },
+                          "then": {
+                            "e": "record",
+                            "fields": {
+                              "actions": {
+                                "e": "list",
+                                "items": [
+                                  {
+                                    "e": "record",
+                                    "fields": {
+                                      "kind": {
+                                        "e": "lit",
+                                        "v": "halt"
+                                      },
+                                      "value": {
+                                        "e": "lit",
+                                        "v": "denied"
+                                      }
+                                    }
+                                  }
+                                ]
+                              },
+                              "state": {
+                                "e": "var",
+                                "name": "state"
+                              }
+                            }
+                          }
+                        },
+                        "then": {
+                          "e": "record",
+                          "fields": {
+                            "actions": {
+                              "e": "list",
+                              "items": [
+                                {
+                                  "e": "record",
+                                  "fields": {
+                                    "kind": {
+                                      "e": "lit",
+                                      "v": "halt"
+                                    },
+                                    "value": {
+                                      "e": "get",
+                                      "field": "value",
+                                      "of": {
+                                        "e": "var",
+                                        "name": "input"
+                                      }
+                                    }
+                                  }
+                                }
+                              ]
+                            },
+                            "state": {
+                              "e": "var",
+                              "name": "state"
+                            }
+                          }
+                        }
+                      },
+                      "then": {
+                        "e": "record",
+                        "fields": {
+                          "actions": {
+                            "e": "list",
+                            "items": [
+                              {
+                                "e": "record",
+                                "fields": {
+                                  "args": {
+                                    "e": "get",
+                                    "field": "args",
+                                    "of": {
+                                      "e": "get",
+                                      "field": "value",
+                                      "of": {
+                                        "e": "var",
+                                        "name": "input"
+                                      }
+                                    }
+                                  },
+                                  "kind": {
+                                    "e": "lit",
+                                    "v": "call"
+                                  },
+                                  "op": {
+                                    "e": "get",
+                                    "field": "op",
+                                    "of": {
+                                      "e": "get",
+                                      "field": "value",
+                                      "of": {
+                                        "e": "var",
+                                        "name": "input"
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            ]
+                          },
+                          "state": {
+                            "e": "var",
+                            "name": "state"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "kind": "spawn",
+                  "narrow": [
+                    {
+                      "kind": "only",
+                      "ops": ["shell.approve"]
+                    }
+                  ]
+                }
+              },
+              "kind": "in",
+              "origin": [],
+              "state": {}
+            },
+            {
+              "action": {
+                "arg": {
+                  "args": {
+                    "argv": ["npm", "publish"]
+                  },
+                  "op": "shell.approve"
+                },
+                "harness": {
+                  "arg": {
+                    "Record": {
+                      "op": "String"
+                    }
+                  },
+                  "init": {},
+                  "state": {
+                    "Record": {}
+                  },
+                  "step": {
+                    "cond": {
+                      "args": [
+                        {
+                          "e": "get",
+                          "field": "kind",
+                          "of": {
+                            "e": "var",
+                            "name": "input"
+                          }
+                        },
+                        {
+                          "e": "lit",
+                          "v": "start"
+                        }
+                      ],
+                      "e": "op",
+                      "op": "eq"
+                    },
+                    "e": "if",
+                    "else": {
+                      "cond": {
+                        "args": [
+                          {
+                            "e": "get",
+                            "field": "kind",
+                            "of": {
+                              "e": "var",
+                              "name": "input"
+                            }
+                          },
+                          {
+                            "e": "lit",
+                            "v": "ret"
+                          }
+                        ],
+                        "e": "op",
+                        "op": "eq"
+                      },
+                      "e": "if",
+                      "else": {
+                        "cond": {
+                          "args": [
+                            {
+                              "e": "get",
+                              "field": "kind",
+                              "of": {
+                                "e": "var",
+                                "name": "input"
+                              }
+                            },
+                            {
+                              "e": "lit",
+                              "v": "refused"
+                            }
+                          ],
+                          "e": "op",
+                          "op": "eq"
+                        },
+                        "e": "if",
+                        "else": {
+                          "e": "record",
+                          "fields": {
+                            "actions": {
+                              "e": "list",
+                              "items": [
+                                {
+                                  "e": "record",
+                                  "fields": {
+                                    "kind": {
+                                      "e": "lit",
+                                      "v": "halt"
+                                    },
+                                    "value": {
+                                      "e": "lit",
+                                      "v": "failed"
+                                    }
+                                  }
+                                }
+                              ]
+                            },
+                            "state": {
+                              "e": "var",
+                              "name": "state"
+                            }
+                          }
+                        },
+                        "then": {
+                          "e": "record",
+                          "fields": {
+                            "actions": {
+                              "e": "list",
+                              "items": [
+                                {
+                                  "e": "record",
+                                  "fields": {
+                                    "kind": {
+                                      "e": "lit",
+                                      "v": "halt"
+                                    },
+                                    "value": {
+                                      "e": "lit",
+                                      "v": "denied"
+                                    }
+                                  }
+                                }
+                              ]
+                            },
+                            "state": {
+                              "e": "var",
+                              "name": "state"
+                            }
+                          }
+                        }
+                      },
+                      "then": {
+                        "e": "record",
+                        "fields": {
+                          "actions": {
+                            "e": "list",
+                            "items": [
+                              {
+                                "e": "record",
+                                "fields": {
+                                  "kind": {
+                                    "e": "lit",
+                                    "v": "halt"
+                                  },
+                                  "value": {
+                                    "e": "get",
+                                    "field": "value",
+                                    "of": {
+                                      "e": "var",
+                                      "name": "input"
+                                    }
+                                  }
+                                }
+                              }
+                            ]
+                          },
+                          "state": {
+                            "e": "var",
+                            "name": "state"
+                          }
+                        }
+                      }
+                    },
+                    "then": {
+                      "e": "record",
+                      "fields": {
+                        "actions": {
+                          "e": "list",
+                          "items": [
+                            {
+                              "e": "record",
+                              "fields": {
+                                "args": {
+                                  "e": "get",
+                                  "field": "args",
+                                  "of": {
+                                    "e": "get",
+                                    "field": "value",
+                                    "of": {
+                                      "e": "var",
+                                      "name": "input"
+                                    }
+                                  }
+                                },
+                                "kind": {
+                                  "e": "lit",
+                                  "v": "call"
+                                },
+                                "op": {
+                                  "e": "get",
+                                  "field": "op",
+                                  "of": {
+                                    "e": "get",
+                                    "field": "value",
+                                    "of": {
+                                      "e": "var",
+                                      "name": "input"
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        "state": {
+                          "e": "var",
+                          "name": "state"
+                        }
+                      }
+                    }
+                  }
+                },
+                "kind": "spawn",
+                "narrow": [
+                  {
+                    "kind": "only",
+                    "ops": ["shell.approve"]
+                  }
+                ]
+              },
+              "call": 1,
+              "kind": "out",
+              "labels": {
+                "arg": {
+                  "args": {
+                    "argv": [[], []]
+                  },
+                  "op": []
+                },
+                "harness": {
+                  "arg": {
+                    "Record": {
+                      "op": []
+                    }
+                  },
+                  "init": {},
+                  "state": {
+                    "Record": {}
+                  },
+                  "step": {
+                    "cond": {
+                      "args": [
+                        {
+                          "e": [],
+                          "field": [],
+                          "of": {
+                            "e": [],
+                            "name": []
+                          }
+                        },
+                        {
+                          "e": [],
+                          "v": []
+                        }
+                      ],
+                      "e": [],
+                      "op": []
+                    },
+                    "e": [],
+                    "else": {
+                      "cond": {
+                        "args": [
+                          {
+                            "e": [],
+                            "field": [],
+                            "of": {
+                              "e": [],
+                              "name": []
+                            }
+                          },
+                          {
+                            "e": [],
+                            "v": []
+                          }
+                        ],
+                        "e": [],
+                        "op": []
+                      },
+                      "e": [],
+                      "else": {
+                        "cond": {
+                          "args": [
+                            {
+                              "e": [],
+                              "field": [],
+                              "of": {
+                                "e": [],
+                                "name": []
+                              }
+                            },
+                            {
+                              "e": [],
+                              "v": []
+                            }
+                          ],
+                          "e": [],
+                          "op": []
+                        },
+                        "e": [],
+                        "else": {
+                          "e": [],
+                          "fields": {
+                            "actions": {
+                              "e": [],
+                              "items": [
+                                {
+                                  "e": [],
+                                  "fields": {
+                                    "kind": {
+                                      "e": [],
+                                      "v": []
+                                    },
+                                    "value": {
+                                      "e": [],
+                                      "v": []
+                                    }
+                                  }
+                                }
+                              ]
+                            },
+                            "state": {
+                              "e": [],
+                              "name": []
+                            }
+                          }
+                        },
+                        "then": {
+                          "e": [],
+                          "fields": {
+                            "actions": {
+                              "e": [],
+                              "items": [
+                                {
+                                  "e": [],
+                                  "fields": {
+                                    "kind": {
+                                      "e": [],
+                                      "v": []
+                                    },
+                                    "value": {
+                                      "e": [],
+                                      "v": []
+                                    }
+                                  }
+                                }
+                              ]
+                            },
+                            "state": {
+                              "e": [],
+                              "name": []
+                            }
+                          }
+                        }
+                      },
+                      "then": {
+                        "e": [],
+                        "fields": {
+                          "actions": {
+                            "e": [],
+                            "items": [
+                              {
+                                "e": [],
+                                "fields": {
+                                  "kind": {
+                                    "e": [],
+                                    "v": []
+                                  },
+                                  "value": {
+                                    "e": [],
+                                    "field": [],
+                                    "of": {
+                                      "e": [],
+                                      "name": []
+                                    }
+                                  }
+                                }
+                              }
+                            ]
+                          },
+                          "state": {
+                            "e": [],
+                            "name": []
+                          }
+                        }
+                      }
+                    },
+                    "then": {
+                      "e": [],
+                      "fields": {
+                        "actions": {
+                          "e": [],
+                          "items": [
+                            {
+                              "e": [],
+                              "fields": {
+                                "args": {
+                                  "e": [],
+                                  "field": [],
+                                  "of": {
+                                    "e": [],
+                                    "field": [],
+                                    "of": {
+                                      "e": [],
+                                      "name": []
+                                    }
+                                  }
+                                },
+                                "kind": {
+                                  "e": [],
+                                  "v": []
+                                },
+                                "op": {
+                                  "e": [],
+                                  "field": [],
+                                  "of": {
+                                    "e": [],
+                                    "field": [],
+                                    "of": {
+                                      "e": [],
+                                      "name": []
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        "state": {
+                          "e": [],
+                          "name": []
+                        }
+                      }
+                    }
+                  }
+                },
+                "kind": [],
+                "narrow": [
+                  {
+                    "kind": [],
+                    "ops": [[]]
+                  }
+                ]
+              },
+              "origin": [],
+              "performed": true,
+              "state": {}
+            },
+            {
+              "input": {
+                "kind": "start",
+                "value": {
+                  "args": {
+                    "argv": ["npm", "publish"]
+                  },
+                  "op": "shell.approve"
+                }
+              },
+              "kind": "in",
+              "origin": [1],
+              "state": {}
+            },
+            {
+              "action": {
+                "args": {
+                  "argv": ["npm", "publish"]
+                },
+                "kind": "call",
+                "op": "shell.approve"
+              },
+              "call": 0,
+              "kind": "out",
+              "labels": {
+                "args": {
+                  "argv": [[], []]
+                },
+                "kind": [],
+                "op": []
+              },
+              "origin": [1],
+              "performed": true,
+              "state": {}
+            }
+          ],
+          "system": {
+            "grant": {
+              "allow": []
+            },
+            "root": {
+              "children": [
+                {
+                  "call": 1,
+                  "run": {
+                    "harness": {
+                      "arg": {
+                        "Record": {
+                          "op": "String"
+                        }
+                      },
+                      "init": {},
+                      "state": {
+                        "Record": {}
+                      },
+                      "step": {
+                        "cond": {
+                          "args": [
+                            {
+                              "e": "get",
+                              "field": "kind",
+                              "of": {
+                                "e": "var",
+                                "name": "input"
+                              }
+                            },
+                            {
+                              "e": "lit",
+                              "v": "start"
+                            }
+                          ],
+                          "e": "op",
+                          "op": "eq"
+                        },
+                        "e": "if",
+                        "else": {
+                          "cond": {
+                            "args": [
+                              {
+                                "e": "get",
+                                "field": "kind",
+                                "of": {
+                                  "e": "var",
+                                  "name": "input"
+                                }
+                              },
+                              {
+                                "e": "lit",
+                                "v": "ret"
+                              }
+                            ],
+                            "e": "op",
+                            "op": "eq"
+                          },
+                          "e": "if",
+                          "else": {
+                            "cond": {
+                              "args": [
+                                {
+                                  "e": "get",
+                                  "field": "kind",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "input"
+                                  }
+                                },
+                                {
+                                  "e": "lit",
+                                  "v": "refused"
+                                }
+                              ],
+                              "e": "op",
+                              "op": "eq"
+                            },
+                            "e": "if",
+                            "else": {
+                              "e": "record",
+                              "fields": {
+                                "actions": {
+                                  "e": "list",
+                                  "items": [
+                                    {
+                                      "e": "record",
+                                      "fields": {
+                                        "kind": {
+                                          "e": "lit",
+                                          "v": "halt"
+                                        },
+                                        "value": {
+                                          "e": "lit",
+                                          "v": "failed"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                },
+                                "state": {
+                                  "e": "var",
+                                  "name": "state"
+                                }
+                              }
+                            },
+                            "then": {
+                              "e": "record",
+                              "fields": {
+                                "actions": {
+                                  "e": "list",
+                                  "items": [
+                                    {
+                                      "e": "record",
+                                      "fields": {
+                                        "kind": {
+                                          "e": "lit",
+                                          "v": "halt"
+                                        },
+                                        "value": {
+                                          "e": "lit",
+                                          "v": "denied"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                },
+                                "state": {
+                                  "e": "var",
+                                  "name": "state"
+                                }
+                              }
+                            }
+                          },
+                          "then": {
+                            "e": "record",
+                            "fields": {
+                              "actions": {
+                                "e": "list",
+                                "items": [
+                                  {
+                                    "e": "record",
+                                    "fields": {
+                                      "kind": {
+                                        "e": "lit",
+                                        "v": "halt"
+                                      },
+                                      "value": {
+                                        "e": "get",
+                                        "field": "value",
+                                        "of": {
+                                          "e": "var",
+                                          "name": "input"
+                                        }
+                                      }
+                                    }
+                                  }
+                                ]
+                              },
+                              "state": {
+                                "e": "var",
+                                "name": "state"
+                              }
+                            }
+                          }
+                        },
+                        "then": {
+                          "e": "record",
+                          "fields": {
+                            "actions": {
+                              "e": "list",
+                              "items": [
+                                {
+                                  "e": "record",
+                                  "fields": {
+                                    "args": {
+                                      "e": "get",
+                                      "field": "args",
+                                      "of": {
+                                        "e": "get",
+                                        "field": "value",
+                                        "of": {
+                                          "e": "var",
+                                          "name": "input"
+                                        }
+                                      }
+                                    },
+                                    "kind": {
+                                      "e": "lit",
+                                      "v": "call"
+                                    },
+                                    "op": {
+                                      "e": "get",
+                                      "field": "op",
+                                      "of": {
+                                        "e": "get",
+                                        "field": "value",
+                                        "of": {
+                                          "e": "var",
+                                          "name": "input"
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              ]
+                            },
+                            "state": {
+                              "e": "var",
+                              "name": "state"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "interface": {
+                      "channels": {
+                        "act": {
+                          "type": {
+                            "Record": {
+                              "kind": "String"
+                            }
+                          }
+                        }
+                      },
+                      "operations": {
+                        "shell.approve": {
+                          "input": {
+                            "Record": {
+                              "argv": {
+                                "List": "String"
+                              }
+                            }
+                          },
+                          "onResult": {
+                            "cond": {
+                              "args": [
+                                {
+                                  "e": "var",
+                                  "name": "result"
+                                },
+                                {
+                                  "e": "lit",
+                                  "v": "always"
+                                }
+                              ],
+                              "e": "op",
+                              "op": "eq"
+                            },
+                            "e": "if",
+                            "else": {
+                              "e": "var",
+                              "name": "grant"
+                            },
+                            "then": {
+                              "e": "record",
+                              "fields": {
+                                "allow": {
+                                  "args": [
+                                    {
+                                      "e": "get",
+                                      "field": "allow",
+                                      "of": {
+                                        "e": "var",
+                                        "name": "grant"
+                                      }
+                                    },
+                                    {
+                                      "e": "get",
+                                      "field": "argv",
+                                      "of": {
+                                        "e": "var",
+                                        "name": "args"
+                                      }
+                                    }
+                                  ],
+                                  "e": "op",
+                                  "op": "append"
+                                }
+                              }
+                            }
+                          },
+                          "output": "String",
+                          "ret": {
+                            "e": "list",
+                            "items": []
+                          }
+                        }
+                      }
+                    },
+                    "next": 1,
+                    "pending": [
+                      {
+                        "args": {
+                          "record": {
+                            "fields": {
+                              "argv": {
+                                "list": {
+                                  "items": [
+                                    {
+                                      "scalar": {
+                                        "value": "npm"
+                                      }
+                                    },
+                                    {
+                                      "scalar": {
+                                        "value": "publish"
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "call": 0,
+                        "op": "shell.approve"
+                      }
+                    ],
+                    "queue": [],
+                    "started": true,
+                    "state": {
+                      "record": {
+                        "fields": {}
+                      }
+                    }
+                  }
+                }
+              ],
+              "harness": {
+                "arg": {
+                  "Record": {}
+                },
+                "init": {},
+                "state": {
+                  "Record": {}
+                },
+                "step": {
+                  "cond": {
+                    "args": [
+                      {
+                        "e": "get",
+                        "field": "kind",
+                        "of": {
+                          "e": "var",
+                          "name": "input"
+                        }
+                      },
+                      {
+                        "e": "lit",
+                        "v": "msg"
+                      }
+                    ],
+                    "e": "op",
+                    "op": "eq"
+                  },
+                  "e": "if",
+                  "else": {
+                    "e": "record",
+                    "fields": {
+                      "actions": {
+                        "e": "list",
+                        "items": []
+                      },
+                      "state": {
+                        "e": "var",
+                        "name": "state"
+                      }
+                    }
+                  },
+                  "then": {
+                    "e": "record",
+                    "fields": {
+                      "actions": {
+                        "e": "list",
+                        "items": [
+                          {
+                            "e": "get",
+                            "field": "value",
+                            "of": {
+                              "e": "var",
+                              "name": "input"
+                            }
+                          }
+                        ]
+                      },
+                      "state": {
+                        "e": "var",
+                        "name": "state"
+                      }
+                    }
+                  }
+                }
+              },
+              "interface": {
+                "channels": {
+                  "act": {
+                    "type": {
+                      "Record": {
+                        "kind": "String"
+                      }
+                    }
+                  }
+                },
+                "operations": {
+                  "fs.write": {
+                    "effect": true,
+                    "input": {
+                      "Record": {
+                        "path": "String"
+                      }
+                    },
+                    "output": "Int",
+                    "pre": {
+                      "args": [
+                        {
+                          "e": "lit",
+                          "v": "/workspace/"
+                        },
+                        {
+                          "e": "get",
+                          "field": "path",
+                          "of": {
+                            "e": "var",
+                            "name": "args"
+                          }
+                        }
+                      ],
+                      "e": "op",
+                      "op": "prefix"
+                    }
+                  },
+                  "net.fetch": {
+                    "input": {
+                      "Record": {
+                        "url": "String"
+                      }
+                    },
+                    "output": "String",
+                    "ret": {
+                      "e": "list",
+                      "items": [
+                        {
+                          "e": "lit",
+                          "v": "web"
+                        }
+                      ]
+                    }
+                  },
+                  "shell.approve": {
+                    "input": {
+                      "Record": {
+                        "argv": {
+                          "List": "String"
+                        }
+                      }
+                    },
+                    "onResult": {
+                      "cond": {
+                        "args": [
+                          {
+                            "e": "var",
+                            "name": "result"
+                          },
+                          {
+                            "e": "lit",
+                            "v": "always"
+                          }
+                        ],
+                        "e": "op",
+                        "op": "eq"
+                      },
+                      "e": "if",
+                      "else": {
+                        "e": "var",
+                        "name": "grant"
+                      },
+                      "then": {
+                        "e": "record",
+                        "fields": {
+                          "allow": {
+                            "args": [
+                              {
+                                "e": "get",
+                                "field": "allow",
+                                "of": {
+                                  "e": "var",
+                                  "name": "grant"
+                                }
+                              },
+                              {
+                                "e": "get",
+                                "field": "argv",
+                                "of": {
+                                  "e": "var",
+                                  "name": "args"
+                                }
+                              }
+                            ],
+                            "e": "op",
+                            "op": "append"
+                          }
+                        }
+                      }
+                    },
+                    "output": "String",
+                    "ret": {
+                      "e": "list",
+                      "items": []
+                    }
+                  },
+                  "shell.run": {
+                    "effect": true,
+                    "input": {
+                      "Record": {
+                        "argv": {
+                          "List": "String"
+                        }
+                      }
+                    },
+                    "output": "String",
+                    "pre": {
+                      "acc": "ok",
+                      "body": {
+                        "args": [
+                          {
+                            "e": "var",
+                            "name": "ok"
+                          },
+                          {
+                            "args": [
+                              {
+                                "e": "var",
+                                "name": "p"
+                              },
+                              {
+                                "e": "get",
+                                "field": "argv",
+                                "of": {
+                                  "e": "var",
+                                  "name": "args"
+                                }
+                              }
+                            ],
+                            "e": "op",
+                            "op": "prefix"
+                          }
+                        ],
+                        "e": "op",
+                        "op": "or"
+                      },
+                      "e": "fold",
+                      "init": {
+                        "e": "lit",
+                        "v": false
+                      },
+                      "item": "p",
+                      "over": {
+                        "e": "get",
+                        "field": "allow",
+                        "of": {
+                          "e": "var",
+                          "name": "grant"
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "next": 2,
+              "pending": [],
+              "queue": [],
+              "started": true,
+              "state": {
+                "record": {
+                  "fields": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "delivery": {
+          "input": {
+            "call": 0,
+            "kind": "ret",
+            "value": "always"
+          },
+          "to": [1]
+        },
+        "op": "deliver",
+        "system": {
+          "grant": {
+            "allow": []
+          },
+          "root": {
+            "children": [
+              {
+                "call": 1,
+                "run": {
+                  "harness": {
+                    "arg": {
+                      "Record": {
+                        "op": "String"
+                      }
+                    },
+                    "init": {},
+                    "state": {
+                      "Record": {}
+                    },
+                    "step": {
+                      "cond": {
+                        "args": [
+                          {
+                            "e": "get",
+                            "field": "kind",
+                            "of": {
+                              "e": "var",
+                              "name": "input"
+                            }
+                          },
+                          {
+                            "e": "lit",
+                            "v": "start"
+                          }
+                        ],
+                        "e": "op",
+                        "op": "eq"
+                      },
+                      "e": "if",
+                      "else": {
+                        "cond": {
+                          "args": [
+                            {
+                              "e": "get",
+                              "field": "kind",
+                              "of": {
+                                "e": "var",
+                                "name": "input"
+                              }
+                            },
+                            {
+                              "e": "lit",
+                              "v": "ret"
+                            }
+                          ],
+                          "e": "op",
+                          "op": "eq"
+                        },
+                        "e": "if",
+                        "else": {
+                          "cond": {
+                            "args": [
+                              {
+                                "e": "get",
+                                "field": "kind",
+                                "of": {
+                                  "e": "var",
+                                  "name": "input"
+                                }
+                              },
+                              {
+                                "e": "lit",
+                                "v": "refused"
+                              }
+                            ],
+                            "e": "op",
+                            "op": "eq"
+                          },
+                          "e": "if",
+                          "else": {
+                            "e": "record",
+                            "fields": {
+                              "actions": {
+                                "e": "list",
+                                "items": [
+                                  {
+                                    "e": "record",
+                                    "fields": {
+                                      "kind": {
+                                        "e": "lit",
+                                        "v": "halt"
+                                      },
+                                      "value": {
+                                        "e": "lit",
+                                        "v": "failed"
+                                      }
+                                    }
+                                  }
+                                ]
+                              },
+                              "state": {
+                                "e": "var",
+                                "name": "state"
+                              }
+                            }
+                          },
+                          "then": {
+                            "e": "record",
+                            "fields": {
+                              "actions": {
+                                "e": "list",
+                                "items": [
+                                  {
+                                    "e": "record",
+                                    "fields": {
+                                      "kind": {
+                                        "e": "lit",
+                                        "v": "halt"
+                                      },
+                                      "value": {
+                                        "e": "lit",
+                                        "v": "denied"
+                                      }
+                                    }
+                                  }
+                                ]
+                              },
+                              "state": {
+                                "e": "var",
+                                "name": "state"
+                              }
+                            }
+                          }
+                        },
+                        "then": {
+                          "e": "record",
+                          "fields": {
+                            "actions": {
+                              "e": "list",
+                              "items": [
+                                {
+                                  "e": "record",
+                                  "fields": {
+                                    "kind": {
+                                      "e": "lit",
+                                      "v": "halt"
+                                    },
+                                    "value": {
+                                      "e": "get",
+                                      "field": "value",
+                                      "of": {
+                                        "e": "var",
+                                        "name": "input"
+                                      }
+                                    }
+                                  }
+                                }
+                              ]
+                            },
+                            "state": {
+                              "e": "var",
+                              "name": "state"
+                            }
+                          }
+                        }
+                      },
+                      "then": {
+                        "e": "record",
+                        "fields": {
+                          "actions": {
+                            "e": "list",
+                            "items": [
+                              {
+                                "e": "record",
+                                "fields": {
+                                  "args": {
+                                    "e": "get",
+                                    "field": "args",
+                                    "of": {
+                                      "e": "get",
+                                      "field": "value",
+                                      "of": {
+                                        "e": "var",
+                                        "name": "input"
+                                      }
+                                    }
+                                  },
+                                  "kind": {
+                                    "e": "lit",
+                                    "v": "call"
+                                  },
+                                  "op": {
+                                    "e": "get",
+                                    "field": "op",
+                                    "of": {
+                                      "e": "get",
+                                      "field": "value",
+                                      "of": {
+                                        "e": "var",
+                                        "name": "input"
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            ]
+                          },
+                          "state": {
+                            "e": "var",
+                            "name": "state"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "interface": {
+                    "channels": {
+                      "act": {
+                        "type": {
+                          "Record": {
+                            "kind": "String"
+                          }
+                        }
+                      }
+                    },
+                    "operations": {
+                      "shell.approve": {
+                        "input": {
+                          "Record": {
+                            "argv": {
+                              "List": "String"
+                            }
+                          }
+                        },
+                        "onResult": {
+                          "cond": {
+                            "args": [
+                              {
+                                "e": "var",
+                                "name": "result"
+                              },
+                              {
+                                "e": "lit",
+                                "v": "always"
+                              }
+                            ],
+                            "e": "op",
+                            "op": "eq"
+                          },
+                          "e": "if",
+                          "else": {
+                            "e": "var",
+                            "name": "grant"
+                          },
+                          "then": {
+                            "e": "record",
+                            "fields": {
+                              "allow": {
+                                "args": [
+                                  {
+                                    "e": "get",
+                                    "field": "allow",
+                                    "of": {
+                                      "e": "var",
+                                      "name": "grant"
+                                    }
+                                  },
+                                  {
+                                    "e": "get",
+                                    "field": "argv",
+                                    "of": {
+                                      "e": "var",
+                                      "name": "args"
+                                    }
+                                  }
+                                ],
+                                "e": "op",
+                                "op": "append"
+                              }
+                            }
+                          }
+                        },
+                        "output": "String",
+                        "ret": {
+                          "e": "list",
+                          "items": []
+                        }
+                      }
+                    }
+                  },
+                  "next": 1,
+                  "pending": [
+                    {
+                      "args": {
+                        "record": {
+                          "fields": {
+                            "argv": {
+                              "list": {
+                                "items": [
+                                  {
+                                    "scalar": {
+                                      "value": "npm"
+                                    }
+                                  },
+                                  {
+                                    "scalar": {
+                                      "value": "publish"
+                                    }
+                                  }
+                                ]
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "call": 0,
+                      "op": "shell.approve"
+                    }
+                  ],
+                  "queue": [],
+                  "started": true,
+                  "state": {
+                    "record": {
+                      "fields": {}
+                    }
+                  }
+                }
+              }
+            ],
+            "harness": {
+              "arg": {
+                "Record": {}
+              },
+              "init": {},
+              "state": {
+                "Record": {}
+              },
+              "step": {
+                "cond": {
+                  "args": [
+                    {
+                      "e": "get",
+                      "field": "kind",
+                      "of": {
+                        "e": "var",
+                        "name": "input"
+                      }
+                    },
+                    {
+                      "e": "lit",
+                      "v": "msg"
+                    }
+                  ],
+                  "e": "op",
+                  "op": "eq"
+                },
+                "e": "if",
+                "else": {
+                  "e": "record",
+                  "fields": {
+                    "actions": {
+                      "e": "list",
+                      "items": []
+                    },
+                    "state": {
+                      "e": "var",
+                      "name": "state"
+                    }
+                  }
+                },
+                "then": {
+                  "e": "record",
+                  "fields": {
+                    "actions": {
+                      "e": "list",
+                      "items": [
+                        {
+                          "e": "get",
+                          "field": "value",
+                          "of": {
+                            "e": "var",
+                            "name": "input"
+                          }
+                        }
+                      ]
+                    },
+                    "state": {
+                      "e": "var",
+                      "name": "state"
+                    }
+                  }
+                }
+              }
+            },
+            "interface": {
+              "channels": {
+                "act": {
+                  "type": {
+                    "Record": {
+                      "kind": "String"
+                    }
+                  }
+                }
+              },
+              "operations": {
+                "fs.write": {
+                  "effect": true,
+                  "input": {
+                    "Record": {
+                      "path": "String"
+                    }
+                  },
+                  "output": "Int",
+                  "pre": {
+                    "args": [
+                      {
+                        "e": "lit",
+                        "v": "/workspace/"
+                      },
+                      {
+                        "e": "get",
+                        "field": "path",
+                        "of": {
+                          "e": "var",
+                          "name": "args"
+                        }
+                      }
+                    ],
+                    "e": "op",
+                    "op": "prefix"
+                  }
+                },
+                "net.fetch": {
+                  "input": {
+                    "Record": {
+                      "url": "String"
+                    }
+                  },
+                  "output": "String",
+                  "ret": {
+                    "e": "list",
+                    "items": [
+                      {
+                        "e": "lit",
+                        "v": "web"
+                      }
+                    ]
+                  }
+                },
+                "shell.approve": {
+                  "input": {
+                    "Record": {
+                      "argv": {
+                        "List": "String"
+                      }
+                    }
+                  },
+                  "onResult": {
+                    "cond": {
+                      "args": [
+                        {
+                          "e": "var",
+                          "name": "result"
+                        },
+                        {
+                          "e": "lit",
+                          "v": "always"
+                        }
+                      ],
+                      "e": "op",
+                      "op": "eq"
+                    },
+                    "e": "if",
+                    "else": {
+                      "e": "var",
+                      "name": "grant"
+                    },
+                    "then": {
+                      "e": "record",
+                      "fields": {
+                        "allow": {
+                          "args": [
+                            {
+                              "e": "get",
+                              "field": "allow",
+                              "of": {
+                                "e": "var",
+                                "name": "grant"
+                              }
+                            },
+                            {
+                              "e": "get",
+                              "field": "argv",
+                              "of": {
+                                "e": "var",
+                                "name": "args"
+                              }
+                            }
+                          ],
+                          "e": "op",
+                          "op": "append"
+                        }
+                      }
+                    }
+                  },
+                  "output": "String",
+                  "ret": {
+                    "e": "list",
+                    "items": []
+                  }
+                },
+                "shell.run": {
+                  "effect": true,
+                  "input": {
+                    "Record": {
+                      "argv": {
+                        "List": "String"
+                      }
+                    }
+                  },
+                  "output": "String",
+                  "pre": {
+                    "acc": "ok",
+                    "body": {
+                      "args": [
+                        {
+                          "e": "var",
+                          "name": "ok"
+                        },
+                        {
+                          "args": [
+                            {
+                              "e": "var",
+                              "name": "p"
+                            },
+                            {
+                              "e": "get",
+                              "field": "argv",
+                              "of": {
+                                "e": "var",
+                                "name": "args"
+                              }
+                            }
+                          ],
+                          "e": "op",
+                          "op": "prefix"
+                        }
+                      ],
+                      "e": "op",
+                      "op": "or"
+                    },
+                    "e": "fold",
+                    "init": {
+                      "e": "lit",
+                      "v": false
+                    },
+                    "item": "p",
+                    "over": {
+                      "e": "get",
+                      "field": "allow",
+                      "of": {
+                        "e": "var",
+                        "name": "grant"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "next": 2,
+            "pending": [],
+            "queue": [],
+            "started": true,
+            "state": {
+              "record": {
+                "fields": {}
+              }
+            }
+          }
+        }
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "events": [
+            {
+              "input": {
+                "call": 0,
+                "kind": "ret",
+                "value": "always"
+              },
+              "kind": "in",
+              "origin": [1],
+              "state": {}
+            },
+            {
+              "action": {
+                "kind": "halt",
+                "value": "always"
+              },
+              "kind": "out",
+              "labels": {
+                "kind": [],
+                "value": []
+              },
+              "origin": [1],
+              "performed": true,
+              "state": {}
+            },
+            {
+              "input": {
+                "call": 1,
+                "kind": "ret",
+                "value": "always"
+              },
+              "kind": "in",
+              "origin": [],
+              "state": {}
+            }
+          ],
+          "system": {
+            "grant": {
+              "allow": [["npm", "publish"]]
+            },
+            "root": {
+              "harness": {
+                "arg": {
+                  "Record": {}
+                },
+                "init": {},
+                "state": {
+                  "Record": {}
+                },
+                "step": {
+                  "cond": {
+                    "args": [
+                      {
+                        "e": "get",
+                        "field": "kind",
+                        "of": {
+                          "e": "var",
+                          "name": "input"
+                        }
+                      },
+                      {
+                        "e": "lit",
+                        "v": "msg"
+                      }
+                    ],
+                    "e": "op",
+                    "op": "eq"
+                  },
+                  "e": "if",
+                  "else": {
+                    "e": "record",
+                    "fields": {
+                      "actions": {
+                        "e": "list",
+                        "items": []
+                      },
+                      "state": {
+                        "e": "var",
+                        "name": "state"
+                      }
+                    }
+                  },
+                  "then": {
+                    "e": "record",
+                    "fields": {
+                      "actions": {
+                        "e": "list",
+                        "items": [
+                          {
+                            "e": "get",
+                            "field": "value",
+                            "of": {
+                              "e": "var",
+                              "name": "input"
+                            }
+                          }
+                        ]
+                      },
+                      "state": {
+                        "e": "var",
+                        "name": "state"
+                      }
+                    }
+                  }
+                }
+              },
+              "interface": {
+                "channels": {
+                  "act": {
+                    "type": {
+                      "Record": {
+                        "kind": "String"
+                      }
+                    }
+                  }
+                },
+                "operations": {
+                  "fs.write": {
+                    "effect": true,
+                    "input": {
+                      "Record": {
+                        "path": "String"
+                      }
+                    },
+                    "output": "Int",
+                    "pre": {
+                      "args": [
+                        {
+                          "e": "lit",
+                          "v": "/workspace/"
+                        },
+                        {
+                          "e": "get",
+                          "field": "path",
+                          "of": {
+                            "e": "var",
+                            "name": "args"
+                          }
+                        }
+                      ],
+                      "e": "op",
+                      "op": "prefix"
+                    }
+                  },
+                  "net.fetch": {
+                    "input": {
+                      "Record": {
+                        "url": "String"
+                      }
+                    },
+                    "output": "String",
+                    "ret": {
+                      "e": "list",
+                      "items": [
+                        {
+                          "e": "lit",
+                          "v": "web"
+                        }
+                      ]
+                    }
+                  },
+                  "shell.approve": {
+                    "input": {
+                      "Record": {
+                        "argv": {
+                          "List": "String"
+                        }
+                      }
+                    },
+                    "onResult": {
+                      "cond": {
+                        "args": [
+                          {
+                            "e": "var",
+                            "name": "result"
+                          },
+                          {
+                            "e": "lit",
+                            "v": "always"
+                          }
+                        ],
+                        "e": "op",
+                        "op": "eq"
+                      },
+                      "e": "if",
+                      "else": {
+                        "e": "var",
+                        "name": "grant"
+                      },
+                      "then": {
+                        "e": "record",
+                        "fields": {
+                          "allow": {
+                            "args": [
+                              {
+                                "e": "get",
+                                "field": "allow",
+                                "of": {
+                                  "e": "var",
+                                  "name": "grant"
+                                }
+                              },
+                              {
+                                "e": "get",
+                                "field": "argv",
+                                "of": {
+                                  "e": "var",
+                                  "name": "args"
+                                }
+                              }
+                            ],
+                            "e": "op",
+                            "op": "append"
+                          }
+                        }
+                      }
+                    },
+                    "output": "String",
+                    "ret": {
+                      "e": "list",
+                      "items": []
+                    }
+                  },
+                  "shell.run": {
+                    "effect": true,
+                    "input": {
+                      "Record": {
+                        "argv": {
+                          "List": "String"
+                        }
+                      }
+                    },
+                    "output": "String",
+                    "pre": {
+                      "acc": "ok",
+                      "body": {
+                        "args": [
+                          {
+                            "e": "var",
+                            "name": "ok"
+                          },
+                          {
+                            "args": [
+                              {
+                                "e": "var",
+                                "name": "p"
+                              },
+                              {
+                                "e": "get",
+                                "field": "argv",
+                                "of": {
+                                  "e": "var",
+                                  "name": "args"
+                                }
+                              }
+                            ],
+                            "e": "op",
+                            "op": "prefix"
+                          }
+                        ],
+                        "e": "op",
+                        "op": "or"
+                      },
+                      "e": "fold",
+                      "init": {
+                        "e": "lit",
+                        "v": false
+                      },
+                      "item": "p",
+                      "over": {
+                        "e": "get",
+                        "field": "allow",
+                        "of": {
+                          "e": "var",
+                          "name": "grant"
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "next": 2,
+              "pending": [],
+              "queue": [],
+              "started": true,
+              "state": {
+                "record": {
+                  "fields": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "delivery": {
+          "input": {
+            "channel": "act",
+            "kind": "msg",
+            "value": {
+              "args": {
+                "argv": ["npm", "publish"]
+              },
+              "kind": "call",
+              "op": "shell.run"
+            }
+          }
+        },
+        "op": "deliver",
+        "system": {
+          "grant": {
+            "allow": [["npm", "publish"]]
+          },
+          "root": {
+            "harness": {
+              "arg": {
+                "Record": {}
+              },
+              "init": {},
+              "state": {
+                "Record": {}
+              },
+              "step": {
+                "cond": {
+                  "args": [
+                    {
+                      "e": "get",
+                      "field": "kind",
+                      "of": {
+                        "e": "var",
+                        "name": "input"
+                      }
+                    },
+                    {
+                      "e": "lit",
+                      "v": "msg"
+                    }
+                  ],
+                  "e": "op",
+                  "op": "eq"
+                },
+                "e": "if",
+                "else": {
+                  "e": "record",
+                  "fields": {
+                    "actions": {
+                      "e": "list",
+                      "items": []
+                    },
+                    "state": {
+                      "e": "var",
+                      "name": "state"
+                    }
+                  }
+                },
+                "then": {
+                  "e": "record",
+                  "fields": {
+                    "actions": {
+                      "e": "list",
+                      "items": [
+                        {
+                          "e": "get",
+                          "field": "value",
+                          "of": {
+                            "e": "var",
+                            "name": "input"
+                          }
+                        }
+                      ]
+                    },
+                    "state": {
+                      "e": "var",
+                      "name": "state"
+                    }
+                  }
+                }
+              }
+            },
+            "interface": {
+              "channels": {
+                "act": {
+                  "type": {
+                    "Record": {
+                      "kind": "String"
+                    }
+                  }
+                }
+              },
+              "operations": {
+                "fs.write": {
+                  "effect": true,
+                  "input": {
+                    "Record": {
+                      "path": "String"
+                    }
+                  },
+                  "output": "Int",
+                  "pre": {
+                    "args": [
+                      {
+                        "e": "lit",
+                        "v": "/workspace/"
+                      },
+                      {
+                        "e": "get",
+                        "field": "path",
+                        "of": {
+                          "e": "var",
+                          "name": "args"
+                        }
+                      }
+                    ],
+                    "e": "op",
+                    "op": "prefix"
+                  }
+                },
+                "net.fetch": {
+                  "input": {
+                    "Record": {
+                      "url": "String"
+                    }
+                  },
+                  "output": "String",
+                  "ret": {
+                    "e": "list",
+                    "items": [
+                      {
+                        "e": "lit",
+                        "v": "web"
+                      }
+                    ]
+                  }
+                },
+                "shell.approve": {
+                  "input": {
+                    "Record": {
+                      "argv": {
+                        "List": "String"
+                      }
+                    }
+                  },
+                  "onResult": {
+                    "cond": {
+                      "args": [
+                        {
+                          "e": "var",
+                          "name": "result"
+                        },
+                        {
+                          "e": "lit",
+                          "v": "always"
+                        }
+                      ],
+                      "e": "op",
+                      "op": "eq"
+                    },
+                    "e": "if",
+                    "else": {
+                      "e": "var",
+                      "name": "grant"
+                    },
+                    "then": {
+                      "e": "record",
+                      "fields": {
+                        "allow": {
+                          "args": [
+                            {
+                              "e": "get",
+                              "field": "allow",
+                              "of": {
+                                "e": "var",
+                                "name": "grant"
+                              }
+                            },
+                            {
+                              "e": "get",
+                              "field": "argv",
+                              "of": {
+                                "e": "var",
+                                "name": "args"
+                              }
+                            }
+                          ],
+                          "e": "op",
+                          "op": "append"
+                        }
+                      }
+                    }
+                  },
+                  "output": "String",
+                  "ret": {
+                    "e": "list",
+                    "items": []
+                  }
+                },
+                "shell.run": {
+                  "effect": true,
+                  "input": {
+                    "Record": {
+                      "argv": {
+                        "List": "String"
+                      }
+                    }
+                  },
+                  "output": "String",
+                  "pre": {
+                    "acc": "ok",
+                    "body": {
+                      "args": [
+                        {
+                          "e": "var",
+                          "name": "ok"
+                        },
+                        {
+                          "args": [
+                            {
+                              "e": "var",
+                              "name": "p"
+                            },
+                            {
+                              "e": "get",
+                              "field": "argv",
+                              "of": {
+                                "e": "var",
+                                "name": "args"
+                              }
+                            }
+                          ],
+                          "e": "op",
+                          "op": "prefix"
+                        }
+                      ],
+                      "e": "op",
+                      "op": "or"
+                    },
+                    "e": "fold",
+                    "init": {
+                      "e": "lit",
+                      "v": false
+                    },
+                    "item": "p",
+                    "over": {
+                      "e": "get",
+                      "field": "allow",
+                      "of": {
+                        "e": "var",
+                        "name": "grant"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "next": 2,
+            "pending": [],
+            "queue": [],
+            "started": true,
+            "state": {
+              "record": {
+                "fields": {}
+              }
+            }
+          }
+        }
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "events": [
+            {
+              "input": {
+                "channel": "act",
+                "kind": "msg",
+                "value": {
+                  "args": {
+                    "argv": ["npm", "publish"]
+                  },
+                  "kind": "call",
+                  "op": "shell.run"
+                }
+              },
+              "kind": "in",
+              "origin": [],
+              "state": {}
+            },
+            {
+              "action": {
+                "args": {
+                  "argv": ["npm", "publish"]
+                },
+                "kind": "call",
+                "op": "shell.run"
+              },
+              "call": 2,
+              "effect": true,
+              "kind": "out",
+              "labels": {
+                "args": {
+                  "argv": [[], []]
+                },
+                "kind": [],
+                "op": []
+              },
+              "origin": [],
+              "performed": true,
+              "state": {}
+            }
+          ],
+          "system": {
+            "grant": {
+              "allow": [["npm", "publish"]]
+            },
+            "root": {
+              "harness": {
+                "arg": {
+                  "Record": {}
+                },
+                "init": {},
+                "state": {
+                  "Record": {}
+                },
+                "step": {
+                  "cond": {
+                    "args": [
+                      {
+                        "e": "get",
+                        "field": "kind",
+                        "of": {
+                          "e": "var",
+                          "name": "input"
+                        }
+                      },
+                      {
+                        "e": "lit",
+                        "v": "msg"
+                      }
+                    ],
+                    "e": "op",
+                    "op": "eq"
+                  },
+                  "e": "if",
+                  "else": {
+                    "e": "record",
+                    "fields": {
+                      "actions": {
+                        "e": "list",
+                        "items": []
+                      },
+                      "state": {
+                        "e": "var",
+                        "name": "state"
+                      }
+                    }
+                  },
+                  "then": {
+                    "e": "record",
+                    "fields": {
+                      "actions": {
+                        "e": "list",
+                        "items": [
+                          {
+                            "e": "get",
+                            "field": "value",
+                            "of": {
+                              "e": "var",
+                              "name": "input"
+                            }
+                          }
+                        ]
+                      },
+                      "state": {
+                        "e": "var",
+                        "name": "state"
+                      }
+                    }
+                  }
+                }
+              },
+              "interface": {
+                "channels": {
+                  "act": {
+                    "type": {
+                      "Record": {
+                        "kind": "String"
+                      }
+                    }
+                  }
+                },
+                "operations": {
+                  "fs.write": {
+                    "effect": true,
+                    "input": {
+                      "Record": {
+                        "path": "String"
+                      }
+                    },
+                    "output": "Int",
+                    "pre": {
+                      "args": [
+                        {
+                          "e": "lit",
+                          "v": "/workspace/"
+                        },
+                        {
+                          "e": "get",
+                          "field": "path",
+                          "of": {
+                            "e": "var",
+                            "name": "args"
+                          }
+                        }
+                      ],
+                      "e": "op",
+                      "op": "prefix"
+                    }
+                  },
+                  "net.fetch": {
+                    "input": {
+                      "Record": {
+                        "url": "String"
+                      }
+                    },
+                    "output": "String",
+                    "ret": {
+                      "e": "list",
+                      "items": [
+                        {
+                          "e": "lit",
+                          "v": "web"
+                        }
+                      ]
+                    }
+                  },
+                  "shell.approve": {
+                    "input": {
+                      "Record": {
+                        "argv": {
+                          "List": "String"
+                        }
+                      }
+                    },
+                    "onResult": {
+                      "cond": {
+                        "args": [
+                          {
+                            "e": "var",
+                            "name": "result"
+                          },
+                          {
+                            "e": "lit",
+                            "v": "always"
+                          }
+                        ],
+                        "e": "op",
+                        "op": "eq"
+                      },
+                      "e": "if",
+                      "else": {
+                        "e": "var",
+                        "name": "grant"
+                      },
+                      "then": {
+                        "e": "record",
+                        "fields": {
+                          "allow": {
+                            "args": [
+                              {
+                                "e": "get",
+                                "field": "allow",
+                                "of": {
+                                  "e": "var",
+                                  "name": "grant"
+                                }
+                              },
+                              {
+                                "e": "get",
+                                "field": "argv",
+                                "of": {
+                                  "e": "var",
+                                  "name": "args"
+                                }
+                              }
+                            ],
+                            "e": "op",
+                            "op": "append"
+                          }
+                        }
+                      }
+                    },
+                    "output": "String",
+                    "ret": {
+                      "e": "list",
+                      "items": []
+                    }
+                  },
+                  "shell.run": {
+                    "effect": true,
+                    "input": {
+                      "Record": {
+                        "argv": {
+                          "List": "String"
+                        }
+                      }
+                    },
+                    "output": "String",
+                    "pre": {
+                      "acc": "ok",
+                      "body": {
+                        "args": [
+                          {
+                            "e": "var",
+                            "name": "ok"
+                          },
+                          {
+                            "args": [
+                              {
+                                "e": "var",
+                                "name": "p"
+                              },
+                              {
+                                "e": "get",
+                                "field": "argv",
+                                "of": {
+                                  "e": "var",
+                                  "name": "args"
+                                }
+                              }
+                            ],
+                            "e": "op",
+                            "op": "prefix"
+                          }
+                        ],
+                        "e": "op",
+                        "op": "or"
+                      },
+                      "e": "fold",
+                      "init": {
+                        "e": "lit",
+                        "v": false
+                      },
+                      "item": "p",
+                      "over": {
+                        "e": "get",
+                        "field": "allow",
+                        "of": {
+                          "e": "var",
+                          "name": "grant"
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "next": 3,
+              "pending": [
+                {
+                  "args": {
+                    "record": {
+                      "fields": {
+                        "argv": {
+                          "list": {
+                            "items": [
+                              {
+                                "scalar": {
+                                  "value": "npm"
+                                }
+                              },
+                              {
+                                "scalar": {
+                                  "value": "publish"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "call": 2,
+                  "op": "shell.run"
+                }
+              ],
+              "queue": [],
+              "started": true,
+              "state": {
+                "record": {
+                  "fields": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}
