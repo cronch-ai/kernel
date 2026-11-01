@@ -325,6 +325,29 @@
           "key": "sha256:274ffd31ce52b0d63dd92c006422108acff2f175382d0f5d46aa5dfaba1beb21"
         }
       }
+    },
+    {
+      "request": {
+        "kind": "logEntry",
+        "object": {
+          "delivery": {
+            "input": {
+              "kind": "start",
+              "value": {}
+            }
+          },
+          "events": [],
+          "prev": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+          "seq": 0
+        },
+        "op": "objectKey"
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "key": "sha256:a304be8b7185f41c516e18d503c9d93e88ff15fd6ec768d93d0499d22f22d583"
+        }
+      }
     }
   ]
 }

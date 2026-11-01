@@ -11,7 +11,7 @@ use crate::induction::{check_step, obligation};
 use crate::ir::{Expr, Type};
 use crate::key::{Kind, key};
 use crate::labeled::{self, LValue};
-use crate::property::{Property, check_property, monitor};
+use crate::property::{MonitorState, Property, check_property, monitor, monitor_step};
 use crate::run::{Delivery, System};
 use crate::smtlib::{self, Definition, Floats};
 use serde::{Deserialize, Serialize};
@@ -73,6 +73,15 @@ pub enum Request {
     Monitor {
         property: Property,
         trace: Vec<Value>,
+    },
+    /// The incremental monitor's state before any event, if it can decide the property.
+    MonitorStart { property: Property },
+    /// The incremental monitor over more events: its next state, and where `φ` first fails among them.
+    MonitorStep {
+        property: Property,
+        #[serde(default)]
+        state: MonitorState,
+        events: Vec<Value>,
     },
     /// The kernel's verdict on a property of a harness, by a method, as evidence.
     Prove {
@@ -190,6 +199,27 @@ fn respond(request: Request) -> Value {
         }
         Request::CheckProperty { property } => json!({ "problems": check_property(&property) }),
         Request::Monitor { property, trace } => json!(monitor(&property, &trace)),
+        Request::MonitorStart { property } => refused_or(
+            "started",
+            "state",
+            monitor_step(&property, &MonitorState::default(), &[]).map(|(state, _)| state),
+        ),
+        Request::MonitorStep {
+            property,
+            state,
+            events,
+        } => match monitor_step(&property, &state, &events) {
+            Ok((state, verdict)) => {
+                let mut stepped = json!({ "kind": "stepped", "state": state });
+                if let (Some(out), Value::Object(fields)) =
+                    (stepped.as_object_mut(), json!(verdict))
+                {
+                    out.extend(fields);
+                }
+                stepped
+            }
+            Err(error) => json!({ "kind": "refused", "error": error }),
+        },
         Request::Prove { subject, method } => match prove(&subject, &method) {
             Ok(evidence) => {
                 json!({ "kind": "evidence", "key": key(Kind::Evidence, &evidence), "evidence": evidence })

@@ -12,7 +12,7 @@ The kernel gives agent harnesses a formal semantics. A harness is a state machin
 - **Types**: structural, with records, lists and variants. A harness's input is a variant typed by its interface, which `match` reads case by case.
 - **Spawning**: a child runs against its parent's interface narrowed by combinators that can only drop, restrict or distrust. A child can never do what its parent couldn't. Cancelling the spawn revokes the child.
 - **Labels**: every value carries the untrusted sources it may depend on, including through control flow. Preconditions and properties can read them.
-- **Properties**: `□φ`, with `φ` in first-order past-time temporal logic over the events of a run. Every property is a safety property, monitored online or offline.
+- **Properties**: `□φ`, with `φ` in first-order past-time temporal logic over the events of a run. Every property is a safety property, monitored online or offline. Quantifier-free properties also have an incremental monitor (`monitorStart`, `monitorStep`) whose small state a host keeps between deliveries.
 - **Evidence**: a verdict on a property, reached by the kernel itself:
   - by replaying a counterexample;
   - by searching every run to a depth;
@@ -21,7 +21,7 @@ The kernel gives agent harnesses a formal semantics. A harness is a state machin
 
   Evidence names its harness, interface, grant and property by content key, and lists the assumptions it rests on.
 - **Induction**: for an invariant of a harness's state, the kernel decides initiation and writes consecution as an SMT-LIB query. A solver searches for counterexamples, and the kernel checks any it finds. A solver's `unsat` is never a verdict.
-- **Keys**: SHA-256 of the deterministic CBOR (RFC 8949 §4.2.1) of an object, prefixed by its kind and version.
+- **Keys**: SHA-256 of the deterministic CBOR (RFC 8949 §4.2.1) of an object, prefixed by its kind and version. Entries of a run's log are keyed too (`logEntry`), so a host can hash-chain them in the same encoding.
 
 The definitions are in [harness.rs](crates/kernel/src/harness.rs), [run.rs](crates/kernel/src/run.rs), [property.rs](crates/kernel/src/property.rs), [evidence.rs](crates/kernel/src/evidence.rs) and [induction.rs](crates/kernel/src/induction.rs), and in [index.d.ts](javascript/index.d.ts) for TypeScript. Each module explains its semantics in its doc comment. The design and its open questions are in [docs/](docs/). Worked examples are in [crates/kernel/tests/](crates/kernel/tests/).
 

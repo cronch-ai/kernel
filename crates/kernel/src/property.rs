@@ -240,6 +240,53 @@ pub struct MonitorState {
 pub enum MonitorError {
     /// Quantifiers need the values seen so far, not a fixed set of truths: they are checked on whole traces.
     Quantified,
+    /// The state isn't one this property's monitor could be in: it holds a value per subformula.
+    State { expected: usize, got: usize },
+}
+
+/// The incremental monitor over more events: its state after them, and whether `φ` held at each. On a violation it
+/// stops there, with `at` counted from the first of `events`. A host keeps the state between steps and hands it back
+/// unchanged, so it needs neither the trace so far nor the time to re-check it.
+pub fn monitor_step(
+    property: &Property,
+    state: &MonitorState,
+    events: &[Value],
+) -> Result<(MonitorState, Monitored), MonitorError> {
+    let formula = &property.always;
+    if !quantifier_free(formula) {
+        return Err(MonitorError::Quantified);
+    }
+    let expected = size(formula);
+    if !state.last.is_empty() && state.last.len() != expected {
+        return Err(MonitorError::State {
+            expected,
+            got: state.last.len(),
+        });
+    }
+    let mut state = state.clone();
+    for (at, event) in events.iter().enumerate() {
+        let (next, holds) = advance(formula, &state, event)?;
+        state = next;
+        if !holds {
+            return Ok((state, Monitored::Violated { at }));
+        }
+    }
+    Ok((state, Monitored::Holds))
+}
+
+/// How many subformulas `f` has, counting itself: the length of its monitor's state after the first event.
+fn size(f: &Formula) -> usize {
+    1 + match f {
+        Formula::Atom { .. } => 0,
+        Formula::Exists { body, .. } | Formula::Forall { body, .. } => size(body),
+        Formula::Not { of }
+        | Formula::Prev { of }
+        | Formula::Once { of }
+        | Formula::Historically { of } => size(of),
+        Formula::And { of } | Formula::Or { of } => of.iter().map(size).sum(),
+        Formula::Implies { condition, then } => size(condition) + size(then),
+        Formula::Since { left, right } => size(left) + size(right),
+    }
 }
 
 /// The monitor after one more event, and whether `φ` holds there.
@@ -340,6 +387,64 @@ mod tests {
                 }),
             },
         ]
+    }
+
+    #[test]
+    fn stepping_agrees_with_the_whole_trace() {
+        // Every trace of length up to 4, delivered in two steps split at every point.
+        let letters = [(false, false), (false, true), (true, false), (true, true)];
+        for f in formulas() {
+            let property = Property {
+                name: "p".to_string(),
+                always: f.clone(),
+            };
+            for len in 1..=4usize {
+                for code in 0..4usize.pow(len as u32) {
+                    let trace: Vec<Value> = (0..len)
+                        .map(|i| {
+                            let (a, b) = letters[(code / 4usize.pow(i as u32)) % 4];
+                            json!({ "a": a, "b": b })
+                        })
+                        .collect();
+                    for split in 0..=len {
+                        let start = MonitorState::default();
+                        let (mid, first) =
+                            monitor_step(&property, &start, &trace[..split]).unwrap();
+                        let stepped = match first {
+                            Monitored::Violated { at } => Monitored::Violated { at },
+                            Monitored::Holds => {
+                                match monitor_step(&property, &mid, &trace[split..]).unwrap().1 {
+                                    Monitored::Violated { at } => {
+                                        Monitored::Violated { at: split + at }
+                                    }
+                                    Monitored::Holds => Monitored::Holds,
+                                }
+                            }
+                        };
+                        assert_eq!(stepped, monitor(&property, &trace), "{f:?} on {trace:?}");
+                        if !mid.last.is_empty() {
+                            assert_eq!(mid.last.len(), size(&f));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn a_state_for_another_property_is_refused() {
+        let property = Property {
+            name: "p".to_string(),
+            always: formulas()[0].clone(),
+        };
+        let state = MonitorState { last: vec![true] };
+        assert_eq!(
+            monitor_step(&property, &state, &[json!({})]),
+            Err(MonitorError::State {
+                expected: 2,
+                got: 1
+            })
+        );
     }
 
     #[test]
