@@ -28,6 +28,36 @@ pub fn spec_key(spec: &AskSpec) -> String {
     digest(&json!({ "kind": SPEC, "spec": spec }))
 }
 
+/// The kinds of harness object, each keyed under its own name and version.
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub enum Kind {
+    Harness,
+    Interface,
+    Property,
+    Grant,
+    Alphabet,
+    Evidence,
+}
+
+impl Kind {
+    fn name(self) -> &'static str {
+        match self {
+            Kind::Harness => "cronch.harness/1",
+            Kind::Interface => "cronch.interface/1",
+            Kind::Property => "cronch.property/1",
+            Kind::Grant => "cronch.grant/1",
+            Kind::Alphabet => "cronch.alphabet/1",
+            Kind::Evidence => "cronch.evidence/1",
+        }
+    }
+}
+
+/// The key of a harness object of this kind.
+pub fn key(kind: Kind, object: &impl serde::Serialize) -> String {
+    digest(&json!({ "kind": kind.name(), "object": object }))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -67,6 +97,13 @@ mod tests {
             ask_key(&square(3), &BTreeMap::new()),
             ask_key(&square(3), &facts)
         );
+    }
+
+    #[test]
+    fn kinds_never_share_a_key() {
+        let object = json!({ "arg": "Int" });
+        assert_ne!(key(Kind::Harness, &object), key(Kind::Property, &object));
+        assert_eq!(key(Kind::Harness, &object), key(Kind::Harness, &object));
     }
 
     #[test]

@@ -10,6 +10,7 @@ pub mod cbor;
 pub mod check;
 pub mod claim;
 pub mod eval;
+pub mod evidence;
 pub mod harness;
 pub mod ir;
 pub mod key;

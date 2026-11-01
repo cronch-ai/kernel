@@ -6,10 +6,12 @@ use crate::check::check_ask;
 use crate::claim::{
     Assessment, Claim, Verdict as ClaimVerdict, Witness, assess_claim, check_claim, claim_key,
 };
+use crate::evidence::{Evidence, Method, Subject, prove, verify};
 use crate::harness::{
     Harness, Installation, Interface, Narrowing, check_harness, check_interface, install, narrow,
 };
 use crate::ir::{Answer, Ask, AskSpec, World};
+use crate::key::{Kind, key};
 use crate::key::{ask_key, spec_key};
 use crate::property::{Property, check_property, monitor};
 use crate::run::{Delivery, System};
@@ -98,6 +100,20 @@ pub enum Request {
         interface: Interface,
         narrowings: Vec<Narrowing>,
     },
+    /// The content key of a harness object.
+    ObjectKey { kind: Kind, object: Value },
+    /// The kernel's verdict on a property of a harness, by a method, as evidence.
+    Prove {
+        #[serde(flatten)]
+        subject: Subject,
+        method: Method,
+    },
+    /// Whether evidence is about this subject, and the kernel reaches its verdict.
+    Verify {
+        #[serde(flatten)]
+        subject: Subject,
+        evidence: Evidence,
+    },
     /// Problems with a property.
     CheckProperty { property: Property },
     /// Whether a trace satisfies a property, and if not, where it first fails.
@@ -178,6 +194,17 @@ fn respond(request: Request) -> Value {
             Assessment::Assessed { .. } => assessed(&claim, &answer, &witness),
         },
         Request::CheckHarness { harness } => json!({ "problems": check_harness(&harness) }),
+        Request::ObjectKey { kind, object } => json!({ "key": key(kind, &object) }),
+        Request::Prove { subject, method } => match prove(&subject, &method) {
+            Ok(evidence) => {
+                json!({ "kind": "evidence", "key": key(Kind::Evidence, &evidence), "evidence": evidence })
+            }
+            Err(error) => json!({ "kind": "refused", "error": error }),
+        },
+        Request::Verify { subject, evidence } => match verify(&subject, &evidence) {
+            Ok(()) => json!({ "valid": true }),
+            Err(error) => json!({ "valid": false, "error": error }),
+        },
         Request::CheckProperty { property } => json!({ "problems": check_property(&property) }),
         Request::Monitor { property, trace } => json!(monitor(&property, &trace)),
         Request::Install { capabilities } => match install(&capabilities) {

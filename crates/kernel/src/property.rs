@@ -199,9 +199,29 @@ pub enum Monitored {
 }
 
 pub fn monitor(property: &Property, trace: &[Value]) -> Monitored {
-    match (0..trace.len()).find(|&i| !holds_at(&property.always, trace, i, &mut Vec::new())) {
+    match first_violation(property, trace, 0) {
         None => Monitored::Holds,
         Some(at) => Monitored::Violated { at },
+    }
+}
+
+/// The first event at or after `from` where `φ` fails, given everything before it.
+pub fn first_violation(property: &Property, trace: &[Value], from: usize) -> Option<usize> {
+    (from..trace.len()).find(|&i| !holds_at(&property.always, trace, i, &mut Vec::new()))
+}
+
+/// Whether the formula has no quantifiers, so the incremental monitor can decide it.
+pub fn quantifier_free(f: &Formula) -> bool {
+    match f {
+        Formula::Atom { .. } => true,
+        Formula::Exists { .. } | Formula::Forall { .. } => false,
+        Formula::Not { of }
+        | Formula::Prev { of }
+        | Formula::Once { of }
+        | Formula::Historically { of } => quantifier_free(of),
+        Formula::And { of } | Formula::Or { of } => of.iter().all(quantifier_free),
+        Formula::Implies { condition, then } => quantifier_free(condition) && quantifier_free(then),
+        Formula::Since { left, right } => quantifier_free(left) && quantifier_free(right),
     }
 }
 
