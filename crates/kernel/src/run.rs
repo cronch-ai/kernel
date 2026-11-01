@@ -8,7 +8,17 @@
 //!   the arguments have its input type and its precondition holds; otherwise it is refused, and `refused(k, op)` is
 //!   queued. The interpreter checks the precondition itself, at the point of the call, so it holds whatever `δ` does.
 //! * `cancel(k)` is passed to the world. It is a request: `k` stays pending and its results may still arrive.
+//! * `spawn(harness, narrow, arg)` gets the next identifier and starts a child run of `harness` with `arg`, against the
+//!   parent's interface narrowed by `narrow`. The child's calls go through the same implementations, its
+//!   preconditions are the parent's strengthened, and it shares the grant state, so a child can never do what its
+//!   parent couldn't, and an approval given to a child widens what its ancestors may do too. When the child halts,
+//!   its value comes back to the parent as `ret(k, v)`, labelled as the child's own evaluation labelled it; if it
+//!   fails, as `failed(k, e)`. A spawn that can't start (an ill-formed harness, a narrowing of something the
+//!   interface lacks, an argument of the wrong type) is refused.
 //! * `halt(v)` ends the run; later actions of the step are discarded.
+//!
+//! Cancelling a spawn revokes the child at once: the interpreter runs it, so unlike a call, there is no world to ask.
+//! A run that ends takes its children with it.
 //!
 //! Queued inputs are delivered before the world gets another turn. An input the environment couldn't admissibly
 //! produce (a result for a call that isn't pending, a value of the wrong type, a result that breaks its operation's
@@ -23,7 +33,8 @@
 //! step produced. The trace is what properties are stated over.
 
 use crate::harness::{
-    Harness, HarnessProblem, Interface, Mode, Operation, check_harness, check_interface,
+    Harness, HarnessProblem, Interface, Mode, Narrowing, Operation, check_harness, check_interface,
+    narrow,
 };
 use crate::ir::{Expr, Type};
 use crate::labeled::{self, EvalError, LValue, Label};
@@ -53,11 +64,11 @@ pub struct Inbound {
 pub enum Outcome {
     Halted {
         value: Value,
+        #[serde(default, skip_serializing_if = "Label::is_empty")]
+        label: Label,
     },
     /// `δ` failed on an input, or gave something that isn't a step. The run can't go on.
-    Failed {
-        error: StepError,
-    },
+    Failed { error: StepError },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -76,7 +87,24 @@ pub struct Run {
     pub started: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub outcome: Option<Outcome>,
+    /// The join of the labels of every input delivered: what the run's behaviour may depend on.
+    #[serde(default, skip_serializing_if = "Label::is_empty")]
+    pub seen: Label,
+    /// Children spawned and still running, in the order they were spawned.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub children: Vec<Child>,
 }
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct Child {
+    /// The identifier of the spawn that started it, which is also its name in delivery paths.
+    pub call: u64,
+    pub run: Run,
+}
+
+/// How many inputs the interpreter may deliver to itself in response to one delivery. A tree of runs that keeps
+/// spawning and answering itself without the world ever moving would otherwise never give the world another turn.
+pub const DRAIN_LIMIT: usize = 4096;
 
 /// A configuration of the whole system: the root run, and the grant state the root principal gave it.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -165,8 +193,10 @@ pub enum StepError {
     Eval { error: Value },
     /// `δ` gave something other than `{state, actions}` with a state of type `S` and a list of actions.
     NotAStep { got: Value },
-    /// An action that isn't `call`, `cancel` or `halt` with the fields they need.
+    /// An action that isn't `call`, `spawn`, `cancel` or `halt` with the fields they need.
     BadAction { action: Value },
+    /// The runs kept answering each other for `DRAIN_LIMIT` inputs without the world getting a turn.
+    Runaway,
 }
 
 fn eval_error(e: EvalError) -> StepError {
@@ -276,7 +306,7 @@ impl System {
             reason,
         };
         let System { root, grant } = self;
-        let Some(run) = (delivery.to.is_empty()).then_some(root) else {
+        let Some(run) = root.find_mut(&delivery.to) else {
             return vec![withheld(Withheld::NoSuchRun)];
         };
         match run.admit(&delivery.input, grant) {
@@ -294,12 +324,20 @@ impl System {
     }
 
     fn drain(&mut self, events: &mut Vec<Event>) {
-        while let Some(inbound) = (self.root.outcome.is_none())
-            .then(|| self.root.queue.pop_front())
-            .flatten()
-        {
-            self.root.step(&[], inbound, &mut self.grant, events);
+        self.root.settle();
+        for _ in 0..DRAIN_LIMIT {
+            let mut path = Vec::new();
+            if !self.root.queued(&mut path) {
+                return;
+            }
+            let run = self.root.find_mut(&path).expect("a queued run exists");
+            let inbound = run.queue.pop_front().expect("its queue isn't empty");
+            run.step(&path, inbound, &mut self.grant, events);
+            self.root.settle();
         }
+        let input = json!({ "kind": "drain", "limit": DRAIN_LIMIT });
+        self.root.fail(&[], input, StepError::Runaway, events);
+        self.root.settle();
     }
 }
 
@@ -328,6 +366,63 @@ impl Run {
             queue: VecDeque::new(),
             started: false,
             outcome: None,
+            seen: Label::new(),
+            children: Vec::new(),
+        }
+    }
+
+    fn find_mut(&mut self, path: &[u64]) -> Option<&mut Run> {
+        match path.split_first() {
+            None => Some(self),
+            Some((first, rest)) => self
+                .children
+                .iter_mut()
+                .find(|c| c.call == *first)
+                .and_then(|c| c.run.find_mut(rest)),
+        }
+    }
+
+    /// The path of the first run, in spawn order, with an input queued.
+    fn queued(&self, path: &mut Vec<u64>) -> bool {
+        if self.outcome.is_none() && !self.queue.is_empty() {
+            return true;
+        }
+        for c in &self.children {
+            path.push(c.call);
+            if c.run.queued(path) {
+                return true;
+            }
+            path.pop();
+        }
+        false
+    }
+
+    /// Hand finished children's outcomes to their parents, and end the children of runs that ended.
+    fn settle(&mut self) {
+        for c in &mut self.children {
+            c.run.settle();
+        }
+        if self.outcome.is_some() {
+            self.children.clear();
+            return;
+        }
+        let (finished, running): (Vec<Child>, Vec<Child>) = std::mem::take(&mut self.children)
+            .into_iter()
+            .partition(|c| c.run.outcome.is_some());
+        self.children = running;
+        for c in finished {
+            let inbound = match c.run.outcome {
+                Some(Outcome::Halted { value, label }) => Inbound {
+                    input: json!({ "kind": "ret", "call": c.call, "value": value }),
+                    label,
+                },
+                Some(Outcome::Failed { error }) => Inbound {
+                    input: json!({ "kind": "failed", "call": c.call, "error": error }),
+                    label: c.run.seen,
+                },
+                None => unreachable!("partitioned on outcome"),
+            };
+            self.queue.push_back(inbound);
         }
     }
 
@@ -462,6 +557,20 @@ impl Run {
         }
     }
 
+    /// The child a spawn action starts, if it can start.
+    fn child(&self, action: &Value, arg: &LValue) -> Option<Run> {
+        let harness: Harness = serde_json::from_value(action.get("harness")?.clone()).ok()?;
+        let narrowings: Vec<Narrowing> = match action.get("narrow") {
+            None => Vec::new(),
+            Some(n) => serde_json::from_value(n.clone()).ok()?,
+        };
+        let interface = narrow(&self.interface, &narrowings).ok()?;
+        let well_formed = check_harness(&harness).is_empty()
+            && check_interface(&interface).is_empty()
+            && inhabits(&arg.value(), &harness.arg);
+        well_formed.then(|| Run::new(harness, interface))
+    }
+
     fn fail(&mut self, origin: &[u64], input: Value, error: StepError, events: &mut Vec<Event>) {
         events.push(Event::Failed {
             origin: origin.to_vec(),
@@ -482,6 +591,7 @@ impl Run {
         if inbound.input["kind"] == "start" {
             self.started = true;
         }
+        self.seen.extend(inbound.label.iter().cloned());
         let input = LValue::new(&inbound.input, &inbound.label);
         let scope = vec![
             ("state".to_string(), self.state.clone()),
@@ -560,14 +670,51 @@ impl Run {
                         });
                     }
                 }
+                Some("spawn") => {
+                    let k = self.next;
+                    self.next += 1;
+                    let arg = action
+                        .field("arg")
+                        .unwrap_or_else(|| LValue::new(&Value::Null, action.top()));
+                    match self.child(&value, &arg) {
+                        Some(mut run) => {
+                            events.push(out(Some(k), true, false, None));
+                            run.queue.push_back(Inbound {
+                                input: json!({ "kind": "start", "value": arg.value() }),
+                                label: arg.label(),
+                            });
+                            self.children.push(Child { call: k, run });
+                        }
+                        None => {
+                            events.push(out(Some(k), false, false, None));
+                            self.queue.push_back(Inbound {
+                                input: json!({ "kind": "refused", "call": k, "op": "spawn" }),
+                                label: Label::new(),
+                            });
+                        }
+                    }
+                }
                 Some("cancel") if value["call"].is_u64() => {
                     let k = value["call"].as_u64().unwrap_or_default();
-                    events.push(out(Some(k), self.pending(k).is_ok(), false, None));
+                    if let Some(i) = self.children.iter().position(|c| c.call == k) {
+                        self.children.remove(i);
+                        events.push(out(Some(k), true, false, None));
+                        self.queue.push_back(Inbound {
+                            input: json!({ "kind": "failed", "call": k, "error": { "cancelled": true } }),
+                            label: Label::new(),
+                        });
+                    } else {
+                        events.push(out(Some(k), self.pending(k).is_ok(), false, None));
+                    }
                 }
                 Some("halt") => {
                     events.push(out(None, true, false, None));
+                    let value = action
+                        .field("value")
+                        .unwrap_or_else(|| LValue::new(&Value::Null, action.top()));
                     self.outcome = Some(Outcome::Halted {
-                        value: value.get("value").cloned().unwrap_or(Value::Null),
+                        value: value.value(),
+                        label: value.label(),
                     });
                     break;
                 }
