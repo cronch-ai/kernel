@@ -22,9 +22,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           version=$(jq -r .version javascript/package.json)
-          if [ "${version%%.*}" = "0" ]; then
-            echo "Version $version is major 0; skipping release."
-            exit 0
-          fi
+          # if [ "${version%%.*}" = "0" ]; then
+          #   echo "Version $version is major 0; skipping release."
+          #   exit 0
+          # fi
           gh release create "v$version" javascript/kernel.wasm javascript/kernel.sha256 \
             --target "$GITHUB_SHA" --generate-notes
