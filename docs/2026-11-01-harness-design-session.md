@@ -1,6 +1,6 @@
 # Harness design session, 2026-11-01
 
-Where the kernel redesign on the `pivot` branch stands after this session. Nothing here is implemented yet, and no kernel code has changed.
+Where the kernel redesign on the `pivot` branch stands after this session. The design below is implemented; see Implementation and Gaps at the end.
 
 ## Sources
 
@@ -93,7 +93,7 @@ Findings:
 
 ## Open questions
 
-1. Whether an "always allow" widens every ancestor's grant up to the root, or stops somewhere lower.
+1. Whether an "always allow" widens every ancestor's grant up to the root, or stops somewhere lower. Implemented as one grant state for the whole tree, so it reaches the root, and siblings too (see gap 5).
 2. The rest of the capability design: how contracts are typed, and how grants compose across siblings.
 3. Whether the Cedar and Lean ports are exports of one proof format or separate backends.
 
@@ -116,18 +116,27 @@ Findings:
 
 The outline mentions a "Rust λΠ rewrite kernel", but nothing like it is in this repo.
 
-## Implementation plan
+## Implementation
 
-Done in pieces. Tests stay green after each piece, and each one is reviewed before the next starts. The Ask-era code stays until piece 8 replaces its API.
+Built in pieces on `pivot`, one commit each, with the tests green after every piece.
 
-1. **Bounded `fold` in `Expr`.** Done: `ir.rs`, `check.rs`, `eval.rs`, tests in `tests/fold.rs`. SMT-LIB refuses it with `NoReading::Fold`.
-2. **The harness and its interpreter:** Harness, interface, inputs and actions, configurations, the step rule, traces.
-3. **Contracts and grants:** `pre` and `post`, refusals, dynamic grant state, the narrowing combinators, footprints.
-4. **Labels:** evaluation over labelled values, the control-flow label, return-label rules.
-5. **Spawning:** the child-run tree, routing through grants, revocation, "always allow" widening grants up the chain.
-6. **Properties:** past-time LTL objects and a monitor over traces.
-7. **Evidence:** counterexample replay, invariant obligations by bounded search, evidence objects, keys.
-8. **Retire the Ask era:** the new API, the JS types, SMT-LIB pointed at the new objects, the README.
-9. **Compliance vectors.**
+| Piece                         | Commit    | What it added                                                                                                                                                                                                                  |
+| ----------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Bounded `fold`                | `b1cb01b` | The only iteration in `Expr`.                                                                                                                                                                                                  |
+| Harnesses and the interpreter | `76d114b` | `harness.rs`, `run.rs`, `labeled.rs`: harnesses, interfaces, the step rule, refusals, concurrency, streams, cancellation, withheld inputs, traces. Labels were built in here instead of as a separate piece.                   |
+| Contracts and grants          | `1636209` | `pre`, `post`, `ret`, `raise`, `effect`, `footprint`, `onCall`, `onResult`; channel labels, `inv`, `onMsg`; dynamic grant state; installing under prefixes; the narrowing combinators.                                         |
+| Spawning                      | `cf9f292` | Child runs against narrowed interfaces, sharing the grant state; labelled results; revocation by cancel or by the parent ending; a limit on runs that only answer each other.                                                  |
+| Properties                    | `122cb32` | `property.rs`: first-order past-time LTL with quantifiers bounded by the trace, an offline evaluator, an incremental monitor for the quantifier-free fragment. `out` events carry the action's labels, shaped like the action. |
+| Evidence                      | `5de23e8` | `evidence.rs`: counterexample replay, bounded search, exhaustive search over reachable configurations, evidence objects with assumptions, verification; keys for every kind of object.                                         |
+| Retire the Ask era            | `f02c4bb` | Asks, Answers, worlds, validators, claims and partial evaluation removed. SMT-LIB now exports typed definitions. New API and JS types.                                                                                         |
+| Compliance vectors            | `09b4037` | Eight cases in `compliance/cases/`, replayed by the Rust kernel and by the WebAssembly build.                                                                                                                                  |
 
-The architecture definition in Linear, to replace the deprecated documents, is still to be written.
+## Gaps the implementation surfaced
+
+1. **Inputs and events are typed `Any`.** The type system has no variants, so `δ`'s input and a property's events are checked when they arrive, not statically. The draft's proof fragment without `Any` needs variant types first. That also blocks exporting `δ` to SMT-LIB, since `Any` has no sort.
+2. **Labels are coarse (Q1).** A harness that dispatches on `input.kind` runs every branch under the input's label, so everything it does after an untrusted result carries that label. Precise harnesses must act in response to trusted inputs, as the planner/quarantine pattern does.
+3. **Exhaustive search needs finitely many configurations.** Every call takes a fresh identifier, so a harness that keeps calling never runs out of configurations, and the search stops at its limit and says so. Proofs over all depths for such harnesses need the next tier: inductive invariants over an abstraction, discharged with checkable certificates (SMT with Alethe or LFSC proofs, or Lean).
+4. **Proofs are relative to an alphabet.** Bounded and exhaustive verdicts quantify only over the inputs the alphabet lists, and the evidence records that as an assumption.
+5. **The grant state is shared by the whole tree.** An "always allow" given to one child widens what its parent and its siblings may do, within their own narrowings. That follows from decision 2, but siblings weren't discussed.
+6. **An atom that fails to evaluate is false.** That is the right polarity under `implies` but makes a property vacuously violated if a guard is written inside the consequent. A surface syntax could make guards explicit.
+7. **Not started:** the Python-like surface language and its elaborator, the Cedar and Lean ports, the Cloudflare runtime, and the architecture definition in Linear to replace the deprecated documents.
