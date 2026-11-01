@@ -93,9 +93,8 @@ Findings:
 
 ## Open questions
 
-1. Whether an "always allow" widens every ancestor's grant up to the root, or stops somewhere lower. Implemented as one grant state for the whole tree, so it reaches the root, and siblings too (see gap 5).
-2. The rest of the capability design: how contracts are typed, and how grants compose across siblings.
-3. Whether the Cedar and Lean ports are exports of one proof format or separate backends.
+1. The rest of the capability design: how contracts are typed, and how grants compose across siblings.
+2. Whether the Cedar and Lean ports are exports of one proof format or separate backends.
 
 ## Kernel modules against the new design
 
@@ -130,13 +129,26 @@ Built in pieces on `pivot`, one commit each, with the tests green after every pi
 | Evidence                      | `5de23e8` | `evidence.rs`: counterexample replay, bounded search, exhaustive search over reachable configurations, evidence objects with assumptions, verification; keys for every kind of object.                                         |
 | Retire the Ask era            | `f02c4bb` | Asks, Answers, worlds, validators, claims and partial evaluation removed. SMT-LIB now exports typed definitions. New API and JS types.                                                                                         |
 | Compliance vectors            | `09b4037` | Eight cases in `compliance/cases/`, replayed by the Rust kernel and by the WebAssembly build.                                                                                                                                  |
+| Per-run grants                | `5d07a4a` | Each run has its own grant state. Trusted results and messages widen the receiving run and its ancestors, never siblings; what a call uses up is used up in every run.                                                         |
+| Variant types                 | `d315c97` | `Variant` types and `match`, in checking, labelled evaluation and SMT-LIB. `δ`'s input is typed by the interface, with results typed per operation.                                                                            |
+| Invariant certificates        | `6f43914` | `induction.rs` and the `invariant` method: certificates the kernel checks by initiation, consecution and safety; consecution of a state invariant as an SMT-LIB query, with solver counterexamples checked by the kernel.      |
+
+## Decided after implementation
+
+- **Siblings.** An approval widens only the run that received it and its ancestors (answer to the earlier open question). Each run keeps its own grant state; a child starts with a copy of its parent's. What a call uses up (`onCall`) is applied in every run, so a one-time approval copied into several runs can still be used only once.
+- **Scope of the pivot.** Variant types and invariant certificates belong to it. The surface language and the Cedar and Lean ports are later work. The Cloudflare runtime belongs to the platform repo.
 
 ## Gaps the implementation surfaced
 
-1. **Inputs and events are typed `Any`.** The type system has no variants, so `δ`'s input and a property's events are checked when they arrive, not statically. The draft's proof fragment without `Any` needs variant types first. That also blocks exporting `δ` to SMT-LIB, since `Any` has no sort.
+1. **Events are still typed `Any`.** `δ`'s input is a variant typed by the interface, and `match` reads it precisely. A spawned child's result is `Any`, because the child's harness is chosen at run time. Reading a field that only some cases have is gradual: it is typed `Any` and checked when it runs. A property's events are not typed yet.
 2. **Labels are coarse (Q1).** A harness that dispatches on `input.kind` runs every branch under the input's label, so everything it does after an untrusted result carries that label. Precise harnesses must act in response to trusted inputs, as the planner/quarantine pattern does.
-3. **Exhaustive search needs finitely many configurations.** Every call takes a fresh identifier, so a harness that keeps calling never runs out of configurations, and the search stops at its limit and says so. Proofs over all depths for such harnesses need the next tier: inductive invariants over an abstraction, discharged with checkable certificates (SMT with Alethe or LFSC proofs, or Lean).
-4. **Proofs are relative to an alphabet.** Bounded and exhaustive verdicts quantify only over the inputs the alphabet lists, and the evidence records that as an assumption.
-5. **The grant state is shared by the whole tree.** An "always allow" given to one child widens what its parent and its siblings may do, within their own narrowings. That follows from decision 2, but siblings weren't discussed.
-6. **An atom that fails to evaluate is false.** That is the right polarity under `implies` but makes a property vacuously violated if a guard is written inside the consequent. A surface syntax could make guards explicit.
-7. **Not started:** the Python-like surface language and its elaborator, the Cedar and Lean ports, the Cloudflare runtime, and the architecture definition in Linear to replace the deprecated documents.
+3. **Certificates are finite; obligations aren't verdicts.** An `invariant` certificate lists the configurations it holds of, so it proves properties for all depths only for harnesses with finitely many reachable configurations. Every call takes a fresh identifier, so harnesses that keep calling need the other route:
+   - An invariant of `δ`'s state, over every state and every well-typed input.
+   - The kernel decides initiation, and exports consecution as an SMT-LIB query.
+   - It checks a solver's counterexamples. Tested end to end with z3: export, `sat`, read back, the kernel confirms.
+   - A solver's `unsat` is not accepted. Accepting it needs a proof certificate the kernel can check (Alethe, LFSC), or Lean.
+   - The query leaves out inputs typed `Any` (spawned results, failures) and says so. It ignores postconditions, so it is stronger than necessary.
+   - Relating a state invariant to a property over events is not done.
+4. **Proofs are relative to an alphabet.** Bounded, exhaustive and certificate verdicts quantify only over the inputs the alphabet lists, and the evidence records that as an assumption.
+5. **An atom that fails to evaluate is false.** That is the right polarity under `implies` but makes a property vacuously violated if a guard is written inside the consequent. A surface syntax could make guards explicit.
+6. **Later work:** the Python-like surface language and its elaborator, and the Cedar and Lean ports. The Cloudflare runtime is in the platform repo.
