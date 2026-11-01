@@ -21,7 +21,7 @@ The kernel gives agent harnesses a formal semantics. A harness is a state machin
 
   Evidence names its harness, interface, grant and property by content key, and lists the assumptions it rests on.
 - **Induction**: for an invariant of a harness's state, the kernel decides initiation and writes consecution as an SMT-LIB query. A solver searches for counterexamples, and the kernel checks any it finds. A solver's `unsat` is never a verdict.
-- **Keys**: SHA-256 of the deterministic CBOR (RFC 8949 §4.2.1) of an object, prefixed by its kind and version. Entries of a run's log are keyed too (`logEntry`), so a host can hash-chain them in the same encoding.
+- **Keys**: SHA-256 of the deterministic CBOR (RFC 8949 §4.2.1) of an object, prefixed by its kind and version. Entries of a run's log are keyed too (`logEntry`), so a host can hash-chain them in the same encoding, and so is capability code a host sandboxes (`module`), which labels and evidence can then name.
 
 The definitions are in [harness.rs](crates/kernel/src/harness.rs), [run.rs](crates/kernel/src/run.rs), [property.rs](crates/kernel/src/property.rs), [evidence.rs](crates/kernel/src/evidence.rs) and [induction.rs](crates/kernel/src/induction.rs), and in [index.d.ts](javascript/index.d.ts) for TypeScript. Each module explains its semantics in its doc comment. The design and its open questions are in [docs/](docs/). Worked examples are in [crates/kernel/tests/](crates/kernel/tests/).
 

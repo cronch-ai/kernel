@@ -25,6 +25,9 @@ pub enum Kind {
     Evidence,
     /// An entry of a run's log: `{ seq, prev, delivery, events }`, where `prev` is the previous entry's key.
     LogEntry,
+    /// A capability's code, `{ main, modules }`, which a host runs in a sandbox. The kernel never reads it: keying it
+    /// here lets anyone with a kernel recompute a key that interfaces and evidence name in their labels.
+    Module,
 }
 
 impl Kind {
@@ -37,6 +40,7 @@ impl Kind {
             Kind::Alphabet => "cronch.alphabet/1",
             Kind::Evidence => "cronch.evidence/1",
             Kind::LogEntry => "cronch.logEntry/1",
+            Kind::Module => "cronch.module/1",
         }
     }
 }

@@ -214,6 +214,10 @@ fn cases() -> Vec<Case> {
                 "delivery": start(json!({})),
                 "events": [],
             } }));
+            r.call(json!({ "op": "objectKey", "kind": "module", "object": {
+                "main": "capability.js",
+                "modules": { "capability.js": "export class Capability {}" },
+            } }));
         }),
         (
             "smtlib",

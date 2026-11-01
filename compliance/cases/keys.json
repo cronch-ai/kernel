@@ -348,6 +348,24 @@
           "key": "sha256:a304be8b7185f41c516e18d503c9d93e88ff15fd6ec768d93d0499d22f22d583"
         }
       }
+    },
+    {
+      "request": {
+        "kind": "module",
+        "object": {
+          "main": "capability.js",
+          "modules": {
+            "capability.js": "export class Capability {}"
+          }
+        },
+        "op": "objectKey"
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "key": "sha256:a29cd85302ca330f08e73f4fd08d977b8f118cf1dfaad8d27b7512d671d7b2fd"
+        }
+      }
     }
   ]
 }
