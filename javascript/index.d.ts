@@ -236,6 +236,8 @@ export interface Run {
   readonly queue: readonly { readonly input: Value; readonly label?: Label }[];
   readonly started: boolean;
   readonly outcome?: Outcome;
+  /** What this run's preconditions read: the root principal's grant at the root, a copy of its parent's in a child. */
+  readonly grant: Value;
   readonly seen?: Label;
   readonly children?: readonly { readonly call: number; readonly run: Run }[];
 }
@@ -243,7 +245,6 @@ export interface Run {
 /** A configuration. Hosts keep it between deliveries and hand it back unchanged. */
 export interface System {
   readonly root: Run;
-  readonly grant: Value;
 }
 
 export type Event =

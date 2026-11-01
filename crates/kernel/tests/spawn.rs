@@ -8,7 +8,7 @@ use serde_json::{Value, json};
 
 fn system() -> Value {
     let ready = call(
-        json!({ "op": "init", "harness": actor(), "interface": tools(), "grant": { "allow": [] } }),
+        json!({ "op": "init", "harness": actor(), "interface": tools(), "grant": { "allow": [], "once": [] } }),
     );
     assert_eq!(ready["kind"], "ready", "{ready}");
     deliver_all(ready["system"].clone(), vec![start(json!({}))]).0
@@ -122,9 +122,53 @@ fn approving_a_child_always_widens_its_ancestors() {
     );
     // The person answers the child's question "always".
     let (system, _) = deliver_all(system, vec![to(vec![1], ret(0, json!("always")))]);
-    assert_eq!(system["grant"]["allow"], json!([publish]));
+    assert_eq!(system["root"]["grant"]["allow"], json!([publish]));
     let (_, events) = deliver_all(system, vec![run]);
     assert_eq!(outs(&events), [(json!([]), true)]);
+}
+
+#[test]
+fn an_approval_never_reaches_a_sibling() {
+    let publish = json!(["npm", "publish"]);
+    // A sibling that stays running: its write is never answered.
+    let (system, _) = deliver_all(
+        system(),
+        vec![
+            spawn("fs.write", json!({ "path": "/workspace/a" }), json!([])),
+            spawn("shell.approve", json!({ "argv": publish }), json!([])),
+        ],
+    );
+    let (system, _) = deliver_all(system, vec![to(vec![1], ret(0, json!("always")))]);
+    assert_eq!(system["root"]["grant"]["allow"], json!([publish]));
+    assert_eq!(
+        system["root"]["children"][0]["run"]["grant"]["allow"],
+        json!([])
+    );
+}
+
+#[test]
+fn what_one_run_uses_up_is_used_up_everywhere() {
+    let publish = json!(["npm", "publish"]);
+    let run = act(json!({ "kind": "call", "op": "shell.run", "args": { "argv": publish } }));
+    let (system, _) = deliver_all(
+        system(),
+        vec![spawn(
+            "shell.approve",
+            json!({ "argv": publish }),
+            json!([]),
+        )],
+    );
+    let (system, _) = deliver_all(system, vec![to(vec![0], ret(0, json!("once")))]);
+    assert_eq!(system["root"]["grant"]["once"], json!([publish]));
+    // A child spawned now copies the approval, and uses it: the parent's copy is gone too.
+    let (system, events) = deliver_all(
+        system,
+        vec![spawn("shell.run", json!({ "argv": publish }), json!([]))],
+    );
+    assert_eq!(outs(&events).last().unwrap(), &(json!([1]), true));
+    assert_eq!(system["root"]["grant"]["once"], json!([]));
+    let (_, events) = deliver_all(system, vec![run]);
+    assert_eq!(outs(&events), [(json!([]), false)]);
 }
 
 #[test]

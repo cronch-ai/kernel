@@ -236,7 +236,7 @@ fn approvals_widen_the_grant_once_or_always() {
         ],
     );
     assert_eq!(calls, [true, false]);
-    assert_eq!(system["grant"]["once"], json!([]));
+    assert_eq!(system["root"]["grant"]["once"], json!([]));
 
     // "Always" allowlists it for good.
     let (system, _) = performed(system, vec![approve(publish.clone())]);
@@ -249,7 +249,7 @@ fn approvals_widen_the_grant_once_or_always() {
         ],
     );
     assert_eq!(calls, [true, true]);
-    assert_eq!(system["grant"]["allow"][1], publish);
+    assert_eq!(system["root"]["grant"]["allow"][1], publish);
 }
 
 #[test]
@@ -268,11 +268,11 @@ fn an_untrusted_answer_grants_nothing() {
     );
     let (system, calls) = performed(system, vec![ret(1, json!("always")), run(publish)]);
     assert_eq!(calls, [false]);
-    assert_eq!(system["grant"]["allow"], json!([["npm", "test"]]));
+    assert_eq!(system["root"]["grant"]["allow"], json!([["npm", "test"]]));
 
     // Nor does an untrusted channel, whatever its contract says it would do.
     let (system, _) = deliver_all(system, vec![msg("spoof", json!("plan"))]);
-    assert_eq!(system["grant"]["mode"], "default");
+    assert_eq!(system["root"]["grant"]["mode"], "default");
 }
 
 #[test]

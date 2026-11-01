@@ -4,7 +4,8 @@
     {
       "request": {
         "grant": {
-          "allow": []
+          "allow": [],
+          "once": []
         },
         "harness": {
           "arg": {
@@ -151,8 +152,60 @@
                 },
                 "e": "if",
                 "else": {
-                  "e": "var",
-                  "name": "grant"
+                  "cond": {
+                    "args": [
+                      {
+                        "e": "var",
+                        "name": "result"
+                      },
+                      {
+                        "e": "lit",
+                        "v": "once"
+                      }
+                    ],
+                    "e": "op",
+                    "op": "eq"
+                  },
+                  "e": "if",
+                  "else": {
+                    "e": "var",
+                    "name": "grant"
+                  },
+                  "then": {
+                    "e": "record",
+                    "fields": {
+                      "allow": {
+                        "e": "get",
+                        "field": "allow",
+                        "of": {
+                          "e": "var",
+                          "name": "grant"
+                        }
+                      },
+                      "once": {
+                        "args": [
+                          {
+                            "e": "get",
+                            "field": "once",
+                            "of": {
+                              "e": "var",
+                              "name": "grant"
+                            }
+                          },
+                          {
+                            "e": "get",
+                            "field": "argv",
+                            "of": {
+                              "e": "var",
+                              "name": "args"
+                            }
+                          }
+                        ],
+                        "e": "op",
+                        "op": "append"
+                      }
+                    }
+                  }
                 },
                 "then": {
                   "e": "record",
@@ -178,6 +231,14 @@
                       ],
                       "e": "op",
                       "op": "append"
+                    },
+                    "once": {
+                      "e": "get",
+                      "field": "once",
+                      "of": {
+                        "e": "var",
+                        "name": "grant"
+                      }
                     }
                   }
                 }
@@ -197,51 +258,148 @@
                   }
                 }
               },
+              "onCall": {
+                "e": "record",
+                "fields": {
+                  "allow": {
+                    "e": "get",
+                    "field": "allow",
+                    "of": {
+                      "e": "var",
+                      "name": "grant"
+                    }
+                  },
+                  "once": {
+                    "acc": "kept",
+                    "body": {
+                      "cond": {
+                        "args": [
+                          {
+                            "e": "var",
+                            "name": "x"
+                          },
+                          {
+                            "e": "get",
+                            "field": "argv",
+                            "of": {
+                              "e": "var",
+                              "name": "args"
+                            }
+                          }
+                        ],
+                        "e": "op",
+                        "op": "eq"
+                      },
+                      "e": "if",
+                      "else": {
+                        "args": [
+                          {
+                            "e": "var",
+                            "name": "kept"
+                          },
+                          {
+                            "e": "var",
+                            "name": "x"
+                          }
+                        ],
+                        "e": "op",
+                        "op": "append"
+                      },
+                      "then": {
+                        "e": "var",
+                        "name": "kept"
+                      }
+                    },
+                    "e": "fold",
+                    "init": {
+                      "e": "list",
+                      "items": []
+                    },
+                    "item": "x",
+                    "over": {
+                      "e": "get",
+                      "field": "once",
+                      "of": {
+                        "e": "var",
+                        "name": "grant"
+                      }
+                    }
+                  }
+                }
+              },
               "output": "String",
               "pre": {
-                "acc": "ok",
-                "body": {
-                  "args": [
-                    {
-                      "e": "var",
-                      "name": "ok"
-                    },
-                    {
+                "args": [
+                  {
+                    "acc": "ok",
+                    "body": {
                       "args": [
                         {
                           "e": "var",
-                          "name": "p"
+                          "name": "ok"
                         },
                         {
-                          "e": "get",
-                          "field": "argv",
-                          "of": {
-                            "e": "var",
-                            "name": "args"
-                          }
+                          "args": [
+                            {
+                              "e": "var",
+                              "name": "p"
+                            },
+                            {
+                              "e": "get",
+                              "field": "argv",
+                              "of": {
+                                "e": "var",
+                                "name": "args"
+                              }
+                            }
+                          ],
+                          "e": "op",
+                          "op": "prefix"
                         }
                       ],
                       "e": "op",
-                      "op": "prefix"
+                      "op": "or"
+                    },
+                    "e": "fold",
+                    "init": {
+                      "e": "lit",
+                      "v": false
+                    },
+                    "item": "p",
+                    "over": {
+                      "e": "get",
+                      "field": "allow",
+                      "of": {
+                        "e": "var",
+                        "name": "grant"
+                      }
                     }
-                  ],
-                  "e": "op",
-                  "op": "or"
-                },
-                "e": "fold",
-                "init": {
-                  "e": "lit",
-                  "v": false
-                },
-                "item": "p",
-                "over": {
-                  "e": "get",
-                  "field": "allow",
-                  "of": {
-                    "e": "var",
-                    "name": "grant"
+                  },
+                  {
+                    "args": [
+                      {
+                        "e": "get",
+                        "field": "once",
+                        "of": {
+                          "e": "var",
+                          "name": "grant"
+                        }
+                      },
+                      {
+                        "e": "get",
+                        "field": "argv",
+                        "of": {
+                          "e": "var",
+                          "name": "args"
+                        }
+                      }
+                    ],
+                    "e": "op",
+                    "op": "contains"
                   }
-                }
+                ],
+                "e": "op",
+                "op": "or"
               }
             }
           }
@@ -253,10 +411,11 @@
         "result": {
           "kind": "ready",
           "system": {
-            "grant": {
-              "allow": []
-            },
             "root": {
+              "grant": {
+                "allow": [],
+                "once": []
+              },
               "harness": {
                 "arg": {
                   "Record": {}
@@ -402,8 +561,60 @@
                       },
                       "e": "if",
                       "else": {
-                        "e": "var",
-                        "name": "grant"
+                        "cond": {
+                          "args": [
+                            {
+                              "e": "var",
+                              "name": "result"
+                            },
+                            {
+                              "e": "lit",
+                              "v": "once"
+                            }
+                          ],
+                          "e": "op",
+                          "op": "eq"
+                        },
+                        "e": "if",
+                        "else": {
+                          "e": "var",
+                          "name": "grant"
+                        },
+                        "then": {
+                          "e": "record",
+                          "fields": {
+                            "allow": {
+                              "e": "get",
+                              "field": "allow",
+                              "of": {
+                                "e": "var",
+                                "name": "grant"
+                              }
+                            },
+                            "once": {
+                              "args": [
+                                {
+                                  "e": "get",
+                                  "field": "once",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "grant"
+                                  }
+                                },
+                                {
+                                  "e": "get",
+                                  "field": "argv",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "args"
+                                  }
+                                }
+                              ],
+                              "e": "op",
+                              "op": "append"
+                            }
+                          }
+                        }
                       },
                       "then": {
                         "e": "record",
@@ -429,6 +640,14 @@
                             ],
                             "e": "op",
                             "op": "append"
+                          },
+                          "once": {
+                            "e": "get",
+                            "field": "once",
+                            "of": {
+                              "e": "var",
+                              "name": "grant"
+                            }
                           }
                         }
                       }
@@ -448,51 +667,148 @@
                         }
                       }
                     },
+                    "onCall": {
+                      "e": "record",
+                      "fields": {
+                        "allow": {
+                          "e": "get",
+                          "field": "allow",
+                          "of": {
+                            "e": "var",
+                            "name": "grant"
+                          }
+                        },
+                        "once": {
+                          "acc": "kept",
+                          "body": {
+                            "cond": {
+                              "args": [
+                                {
+                                  "e": "var",
+                                  "name": "x"
+                                },
+                                {
+                                  "e": "get",
+                                  "field": "argv",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "args"
+                                  }
+                                }
+                              ],
+                              "e": "op",
+                              "op": "eq"
+                            },
+                            "e": "if",
+                            "else": {
+                              "args": [
+                                {
+                                  "e": "var",
+                                  "name": "kept"
+                                },
+                                {
+                                  "e": "var",
+                                  "name": "x"
+                                }
+                              ],
+                              "e": "op",
+                              "op": "append"
+                            },
+                            "then": {
+                              "e": "var",
+                              "name": "kept"
+                            }
+                          },
+                          "e": "fold",
+                          "init": {
+                            "e": "list",
+                            "items": []
+                          },
+                          "item": "x",
+                          "over": {
+                            "e": "get",
+                            "field": "once",
+                            "of": {
+                              "e": "var",
+                              "name": "grant"
+                            }
+                          }
+                        }
+                      }
+                    },
                     "output": "String",
                     "pre": {
-                      "acc": "ok",
-                      "body": {
-                        "args": [
-                          {
-                            "e": "var",
-                            "name": "ok"
-                          },
-                          {
+                      "args": [
+                        {
+                          "acc": "ok",
+                          "body": {
                             "args": [
                               {
                                 "e": "var",
-                                "name": "p"
+                                "name": "ok"
                               },
                               {
-                                "e": "get",
-                                "field": "argv",
-                                "of": {
-                                  "e": "var",
-                                  "name": "args"
-                                }
+                                "args": [
+                                  {
+                                    "e": "var",
+                                    "name": "p"
+                                  },
+                                  {
+                                    "e": "get",
+                                    "field": "argv",
+                                    "of": {
+                                      "e": "var",
+                                      "name": "args"
+                                    }
+                                  }
+                                ],
+                                "e": "op",
+                                "op": "prefix"
                               }
                             ],
                             "e": "op",
-                            "op": "prefix"
+                            "op": "or"
+                          },
+                          "e": "fold",
+                          "init": {
+                            "e": "lit",
+                            "v": false
+                          },
+                          "item": "p",
+                          "over": {
+                            "e": "get",
+                            "field": "allow",
+                            "of": {
+                              "e": "var",
+                              "name": "grant"
+                            }
                           }
-                        ],
-                        "e": "op",
-                        "op": "or"
-                      },
-                      "e": "fold",
-                      "init": {
-                        "e": "lit",
-                        "v": false
-                      },
-                      "item": "p",
-                      "over": {
-                        "e": "get",
-                        "field": "allow",
-                        "of": {
-                          "e": "var",
-                          "name": "grant"
+                        },
+                        {
+                          "args": [
+                            {
+                              "e": "get",
+                              "field": "once",
+                              "of": {
+                                "e": "var",
+                                "name": "grant"
+                              }
+                            },
+                            {
+                              "e": "get",
+                              "field": "argv",
+                              "of": {
+                                "e": "var",
+                                "name": "args"
+                              }
+                            }
+                          ],
+                          "e": "op",
+                          "op": "contains"
                         }
-                      }
+                      ],
+                      "e": "op",
+                      "op": "or"
                     }
                   }
                 }
@@ -521,10 +837,11 @@
         },
         "op": "deliver",
         "system": {
-          "grant": {
-            "allow": []
-          },
           "root": {
+            "grant": {
+              "allow": [],
+              "once": []
+            },
             "harness": {
               "arg": {
                 "Record": {}
@@ -670,8 +987,60 @@
                     },
                     "e": "if",
                     "else": {
-                      "e": "var",
-                      "name": "grant"
+                      "cond": {
+                        "args": [
+                          {
+                            "e": "var",
+                            "name": "result"
+                          },
+                          {
+                            "e": "lit",
+                            "v": "once"
+                          }
+                        ],
+                        "e": "op",
+                        "op": "eq"
+                      },
+                      "e": "if",
+                      "else": {
+                        "e": "var",
+                        "name": "grant"
+                      },
+                      "then": {
+                        "e": "record",
+                        "fields": {
+                          "allow": {
+                            "e": "get",
+                            "field": "allow",
+                            "of": {
+                              "e": "var",
+                              "name": "grant"
+                            }
+                          },
+                          "once": {
+                            "args": [
+                              {
+                                "e": "get",
+                                "field": "once",
+                                "of": {
+                                  "e": "var",
+                                  "name": "grant"
+                                }
+                              },
+                              {
+                                "e": "get",
+                                "field": "argv",
+                                "of": {
+                                  "e": "var",
+                                  "name": "args"
+                                }
+                              }
+                            ],
+                            "e": "op",
+                            "op": "append"
+                          }
+                        }
+                      }
                     },
                     "then": {
                       "e": "record",
@@ -697,6 +1066,14 @@
                           ],
                           "e": "op",
                           "op": "append"
+                        },
+                        "once": {
+                          "e": "get",
+                          "field": "once",
+                          "of": {
+                            "e": "var",
+                            "name": "grant"
+                          }
                         }
                       }
                     }
@@ -716,51 +1093,148 @@
                       }
                     }
                   },
+                  "onCall": {
+                    "e": "record",
+                    "fields": {
+                      "allow": {
+                        "e": "get",
+                        "field": "allow",
+                        "of": {
+                          "e": "var",
+                          "name": "grant"
+                        }
+                      },
+                      "once": {
+                        "acc": "kept",
+                        "body": {
+                          "cond": {
+                            "args": [
+                              {
+                                "e": "var",
+                                "name": "x"
+                              },
+                              {
+                                "e": "get",
+                                "field": "argv",
+                                "of": {
+                                  "e": "var",
+                                  "name": "args"
+                                }
+                              }
+                            ],
+                            "e": "op",
+                            "op": "eq"
+                          },
+                          "e": "if",
+                          "else": {
+                            "args": [
+                              {
+                                "e": "var",
+                                "name": "kept"
+                              },
+                              {
+                                "e": "var",
+                                "name": "x"
+                              }
+                            ],
+                            "e": "op",
+                            "op": "append"
+                          },
+                          "then": {
+                            "e": "var",
+                            "name": "kept"
+                          }
+                        },
+                        "e": "fold",
+                        "init": {
+                          "e": "list",
+                          "items": []
+                        },
+                        "item": "x",
+                        "over": {
+                          "e": "get",
+                          "field": "once",
+                          "of": {
+                            "e": "var",
+                            "name": "grant"
+                          }
+                        }
+                      }
+                    }
+                  },
                   "output": "String",
                   "pre": {
-                    "acc": "ok",
-                    "body": {
-                      "args": [
-                        {
-                          "e": "var",
-                          "name": "ok"
-                        },
-                        {
+                    "args": [
+                      {
+                        "acc": "ok",
+                        "body": {
                           "args": [
                             {
                               "e": "var",
-                              "name": "p"
+                              "name": "ok"
                             },
                             {
-                              "e": "get",
-                              "field": "argv",
-                              "of": {
-                                "e": "var",
-                                "name": "args"
-                              }
+                              "args": [
+                                {
+                                  "e": "var",
+                                  "name": "p"
+                                },
+                                {
+                                  "e": "get",
+                                  "field": "argv",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "args"
+                                  }
+                                }
+                              ],
+                              "e": "op",
+                              "op": "prefix"
                             }
                           ],
                           "e": "op",
-                          "op": "prefix"
+                          "op": "or"
+                        },
+                        "e": "fold",
+                        "init": {
+                          "e": "lit",
+                          "v": false
+                        },
+                        "item": "p",
+                        "over": {
+                          "e": "get",
+                          "field": "allow",
+                          "of": {
+                            "e": "var",
+                            "name": "grant"
+                          }
                         }
-                      ],
-                      "e": "op",
-                      "op": "or"
-                    },
-                    "e": "fold",
-                    "init": {
-                      "e": "lit",
-                      "v": false
-                    },
-                    "item": "p",
-                    "over": {
-                      "e": "get",
-                      "field": "allow",
-                      "of": {
-                        "e": "var",
-                        "name": "grant"
+                      },
+                      {
+                        "args": [
+                          {
+                            "e": "get",
+                            "field": "once",
+                            "of": {
+                              "e": "var",
+                              "name": "grant"
+                            }
+                          },
+                          {
+                            "e": "get",
+                            "field": "argv",
+                            "of": {
+                              "e": "var",
+                              "name": "args"
+                            }
+                          }
+                        ],
+                        "e": "op",
+                        "op": "contains"
                       }
-                    }
+                    ],
+                    "e": "op",
+                    "op": "or"
                   }
                 }
               }
@@ -792,10 +1266,11 @@
             }
           ],
           "system": {
-            "grant": {
-              "allow": []
-            },
             "root": {
+              "grant": {
+                "allow": [],
+                "once": []
+              },
               "harness": {
                 "arg": {
                   "Record": {}
@@ -941,8 +1416,60 @@
                       },
                       "e": "if",
                       "else": {
-                        "e": "var",
-                        "name": "grant"
+                        "cond": {
+                          "args": [
+                            {
+                              "e": "var",
+                              "name": "result"
+                            },
+                            {
+                              "e": "lit",
+                              "v": "once"
+                            }
+                          ],
+                          "e": "op",
+                          "op": "eq"
+                        },
+                        "e": "if",
+                        "else": {
+                          "e": "var",
+                          "name": "grant"
+                        },
+                        "then": {
+                          "e": "record",
+                          "fields": {
+                            "allow": {
+                              "e": "get",
+                              "field": "allow",
+                              "of": {
+                                "e": "var",
+                                "name": "grant"
+                              }
+                            },
+                            "once": {
+                              "args": [
+                                {
+                                  "e": "get",
+                                  "field": "once",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "grant"
+                                  }
+                                },
+                                {
+                                  "e": "get",
+                                  "field": "argv",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "args"
+                                  }
+                                }
+                              ],
+                              "e": "op",
+                              "op": "append"
+                            }
+                          }
+                        }
                       },
                       "then": {
                         "e": "record",
@@ -968,6 +1495,14 @@
                             ],
                             "e": "op",
                             "op": "append"
+                          },
+                          "once": {
+                            "e": "get",
+                            "field": "once",
+                            "of": {
+                              "e": "var",
+                              "name": "grant"
+                            }
                           }
                         }
                       }
@@ -987,51 +1522,148 @@
                         }
                       }
                     },
+                    "onCall": {
+                      "e": "record",
+                      "fields": {
+                        "allow": {
+                          "e": "get",
+                          "field": "allow",
+                          "of": {
+                            "e": "var",
+                            "name": "grant"
+                          }
+                        },
+                        "once": {
+                          "acc": "kept",
+                          "body": {
+                            "cond": {
+                              "args": [
+                                {
+                                  "e": "var",
+                                  "name": "x"
+                                },
+                                {
+                                  "e": "get",
+                                  "field": "argv",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "args"
+                                  }
+                                }
+                              ],
+                              "e": "op",
+                              "op": "eq"
+                            },
+                            "e": "if",
+                            "else": {
+                              "args": [
+                                {
+                                  "e": "var",
+                                  "name": "kept"
+                                },
+                                {
+                                  "e": "var",
+                                  "name": "x"
+                                }
+                              ],
+                              "e": "op",
+                              "op": "append"
+                            },
+                            "then": {
+                              "e": "var",
+                              "name": "kept"
+                            }
+                          },
+                          "e": "fold",
+                          "init": {
+                            "e": "list",
+                            "items": []
+                          },
+                          "item": "x",
+                          "over": {
+                            "e": "get",
+                            "field": "once",
+                            "of": {
+                              "e": "var",
+                              "name": "grant"
+                            }
+                          }
+                        }
+                      }
+                    },
                     "output": "String",
                     "pre": {
-                      "acc": "ok",
-                      "body": {
-                        "args": [
-                          {
-                            "e": "var",
-                            "name": "ok"
-                          },
-                          {
+                      "args": [
+                        {
+                          "acc": "ok",
+                          "body": {
                             "args": [
                               {
                                 "e": "var",
-                                "name": "p"
+                                "name": "ok"
                               },
                               {
-                                "e": "get",
-                                "field": "argv",
-                                "of": {
-                                  "e": "var",
-                                  "name": "args"
-                                }
+                                "args": [
+                                  {
+                                    "e": "var",
+                                    "name": "p"
+                                  },
+                                  {
+                                    "e": "get",
+                                    "field": "argv",
+                                    "of": {
+                                      "e": "var",
+                                      "name": "args"
+                                    }
+                                  }
+                                ],
+                                "e": "op",
+                                "op": "prefix"
                               }
                             ],
                             "e": "op",
-                            "op": "prefix"
+                            "op": "or"
+                          },
+                          "e": "fold",
+                          "init": {
+                            "e": "lit",
+                            "v": false
+                          },
+                          "item": "p",
+                          "over": {
+                            "e": "get",
+                            "field": "allow",
+                            "of": {
+                              "e": "var",
+                              "name": "grant"
+                            }
                           }
-                        ],
-                        "e": "op",
-                        "op": "or"
-                      },
-                      "e": "fold",
-                      "init": {
-                        "e": "lit",
-                        "v": false
-                      },
-                      "item": "p",
-                      "over": {
-                        "e": "get",
-                        "field": "allow",
-                        "of": {
-                          "e": "var",
-                          "name": "grant"
+                        },
+                        {
+                          "args": [
+                            {
+                              "e": "get",
+                              "field": "once",
+                              "of": {
+                                "e": "var",
+                                "name": "grant"
+                              }
+                            },
+                            {
+                              "e": "get",
+                              "field": "argv",
+                              "of": {
+                                "e": "var",
+                                "name": "args"
+                              }
+                            }
+                          ],
+                          "e": "op",
+                          "op": "contains"
                         }
-                      }
+                      ],
+                      "e": "op",
+                      "op": "or"
                     }
                   }
                 }
@@ -1067,10 +1699,11 @@
         },
         "op": "deliver",
         "system": {
-          "grant": {
-            "allow": []
-          },
           "root": {
+            "grant": {
+              "allow": [],
+              "once": []
+            },
             "harness": {
               "arg": {
                 "Record": {}
@@ -1216,8 +1849,60 @@
                     },
                     "e": "if",
                     "else": {
-                      "e": "var",
-                      "name": "grant"
+                      "cond": {
+                        "args": [
+                          {
+                            "e": "var",
+                            "name": "result"
+                          },
+                          {
+                            "e": "lit",
+                            "v": "once"
+                          }
+                        ],
+                        "e": "op",
+                        "op": "eq"
+                      },
+                      "e": "if",
+                      "else": {
+                        "e": "var",
+                        "name": "grant"
+                      },
+                      "then": {
+                        "e": "record",
+                        "fields": {
+                          "allow": {
+                            "e": "get",
+                            "field": "allow",
+                            "of": {
+                              "e": "var",
+                              "name": "grant"
+                            }
+                          },
+                          "once": {
+                            "args": [
+                              {
+                                "e": "get",
+                                "field": "once",
+                                "of": {
+                                  "e": "var",
+                                  "name": "grant"
+                                }
+                              },
+                              {
+                                "e": "get",
+                                "field": "argv",
+                                "of": {
+                                  "e": "var",
+                                  "name": "args"
+                                }
+                              }
+                            ],
+                            "e": "op",
+                            "op": "append"
+                          }
+                        }
+                      }
                     },
                     "then": {
                       "e": "record",
@@ -1243,6 +1928,14 @@
                           ],
                           "e": "op",
                           "op": "append"
+                        },
+                        "once": {
+                          "e": "get",
+                          "field": "once",
+                          "of": {
+                            "e": "var",
+                            "name": "grant"
+                          }
                         }
                       }
                     }
@@ -1262,51 +1955,148 @@
                       }
                     }
                   },
+                  "onCall": {
+                    "e": "record",
+                    "fields": {
+                      "allow": {
+                        "e": "get",
+                        "field": "allow",
+                        "of": {
+                          "e": "var",
+                          "name": "grant"
+                        }
+                      },
+                      "once": {
+                        "acc": "kept",
+                        "body": {
+                          "cond": {
+                            "args": [
+                              {
+                                "e": "var",
+                                "name": "x"
+                              },
+                              {
+                                "e": "get",
+                                "field": "argv",
+                                "of": {
+                                  "e": "var",
+                                  "name": "args"
+                                }
+                              }
+                            ],
+                            "e": "op",
+                            "op": "eq"
+                          },
+                          "e": "if",
+                          "else": {
+                            "args": [
+                              {
+                                "e": "var",
+                                "name": "kept"
+                              },
+                              {
+                                "e": "var",
+                                "name": "x"
+                              }
+                            ],
+                            "e": "op",
+                            "op": "append"
+                          },
+                          "then": {
+                            "e": "var",
+                            "name": "kept"
+                          }
+                        },
+                        "e": "fold",
+                        "init": {
+                          "e": "list",
+                          "items": []
+                        },
+                        "item": "x",
+                        "over": {
+                          "e": "get",
+                          "field": "once",
+                          "of": {
+                            "e": "var",
+                            "name": "grant"
+                          }
+                        }
+                      }
+                    }
+                  },
                   "output": "String",
                   "pre": {
-                    "acc": "ok",
-                    "body": {
-                      "args": [
-                        {
-                          "e": "var",
-                          "name": "ok"
-                        },
-                        {
+                    "args": [
+                      {
+                        "acc": "ok",
+                        "body": {
                           "args": [
                             {
                               "e": "var",
-                              "name": "p"
+                              "name": "ok"
                             },
                             {
-                              "e": "get",
-                              "field": "argv",
-                              "of": {
-                                "e": "var",
-                                "name": "args"
-                              }
+                              "args": [
+                                {
+                                  "e": "var",
+                                  "name": "p"
+                                },
+                                {
+                                  "e": "get",
+                                  "field": "argv",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "args"
+                                  }
+                                }
+                              ],
+                              "e": "op",
+                              "op": "prefix"
                             }
                           ],
                           "e": "op",
-                          "op": "prefix"
+                          "op": "or"
+                        },
+                        "e": "fold",
+                        "init": {
+                          "e": "lit",
+                          "v": false
+                        },
+                        "item": "p",
+                        "over": {
+                          "e": "get",
+                          "field": "allow",
+                          "of": {
+                            "e": "var",
+                            "name": "grant"
+                          }
                         }
-                      ],
-                      "e": "op",
-                      "op": "or"
-                    },
-                    "e": "fold",
-                    "init": {
-                      "e": "lit",
-                      "v": false
-                    },
-                    "item": "p",
-                    "over": {
-                      "e": "get",
-                      "field": "allow",
-                      "of": {
-                        "e": "var",
-                        "name": "grant"
+                      },
+                      {
+                        "args": [
+                          {
+                            "e": "get",
+                            "field": "once",
+                            "of": {
+                              "e": "var",
+                              "name": "grant"
+                            }
+                          },
+                          {
+                            "e": "get",
+                            "field": "argv",
+                            "of": {
+                              "e": "var",
+                              "name": "args"
+                            }
+                          }
+                        ],
+                        "e": "op",
+                        "op": "contains"
                       }
-                    }
+                    ],
+                    "e": "op",
+                    "op": "or"
                   }
                 }
               }
@@ -1376,10 +2166,11 @@
             }
           ],
           "system": {
-            "grant": {
-              "allow": []
-            },
             "root": {
+              "grant": {
+                "allow": [],
+                "once": []
+              },
               "harness": {
                 "arg": {
                   "Record": {}
@@ -1525,8 +2316,60 @@
                       },
                       "e": "if",
                       "else": {
-                        "e": "var",
-                        "name": "grant"
+                        "cond": {
+                          "args": [
+                            {
+                              "e": "var",
+                              "name": "result"
+                            },
+                            {
+                              "e": "lit",
+                              "v": "once"
+                            }
+                          ],
+                          "e": "op",
+                          "op": "eq"
+                        },
+                        "e": "if",
+                        "else": {
+                          "e": "var",
+                          "name": "grant"
+                        },
+                        "then": {
+                          "e": "record",
+                          "fields": {
+                            "allow": {
+                              "e": "get",
+                              "field": "allow",
+                              "of": {
+                                "e": "var",
+                                "name": "grant"
+                              }
+                            },
+                            "once": {
+                              "args": [
+                                {
+                                  "e": "get",
+                                  "field": "once",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "grant"
+                                  }
+                                },
+                                {
+                                  "e": "get",
+                                  "field": "argv",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "args"
+                                  }
+                                }
+                              ],
+                              "e": "op",
+                              "op": "append"
+                            }
+                          }
+                        }
                       },
                       "then": {
                         "e": "record",
@@ -1552,6 +2395,14 @@
                             ],
                             "e": "op",
                             "op": "append"
+                          },
+                          "once": {
+                            "e": "get",
+                            "field": "once",
+                            "of": {
+                              "e": "var",
+                              "name": "grant"
+                            }
                           }
                         }
                       }
@@ -1571,51 +2422,148 @@
                         }
                       }
                     },
+                    "onCall": {
+                      "e": "record",
+                      "fields": {
+                        "allow": {
+                          "e": "get",
+                          "field": "allow",
+                          "of": {
+                            "e": "var",
+                            "name": "grant"
+                          }
+                        },
+                        "once": {
+                          "acc": "kept",
+                          "body": {
+                            "cond": {
+                              "args": [
+                                {
+                                  "e": "var",
+                                  "name": "x"
+                                },
+                                {
+                                  "e": "get",
+                                  "field": "argv",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "args"
+                                  }
+                                }
+                              ],
+                              "e": "op",
+                              "op": "eq"
+                            },
+                            "e": "if",
+                            "else": {
+                              "args": [
+                                {
+                                  "e": "var",
+                                  "name": "kept"
+                                },
+                                {
+                                  "e": "var",
+                                  "name": "x"
+                                }
+                              ],
+                              "e": "op",
+                              "op": "append"
+                            },
+                            "then": {
+                              "e": "var",
+                              "name": "kept"
+                            }
+                          },
+                          "e": "fold",
+                          "init": {
+                            "e": "list",
+                            "items": []
+                          },
+                          "item": "x",
+                          "over": {
+                            "e": "get",
+                            "field": "once",
+                            "of": {
+                              "e": "var",
+                              "name": "grant"
+                            }
+                          }
+                        }
+                      }
+                    },
                     "output": "String",
                     "pre": {
-                      "acc": "ok",
-                      "body": {
-                        "args": [
-                          {
-                            "e": "var",
-                            "name": "ok"
-                          },
-                          {
+                      "args": [
+                        {
+                          "acc": "ok",
+                          "body": {
                             "args": [
                               {
                                 "e": "var",
-                                "name": "p"
+                                "name": "ok"
                               },
                               {
-                                "e": "get",
-                                "field": "argv",
-                                "of": {
-                                  "e": "var",
-                                  "name": "args"
-                                }
+                                "args": [
+                                  {
+                                    "e": "var",
+                                    "name": "p"
+                                  },
+                                  {
+                                    "e": "get",
+                                    "field": "argv",
+                                    "of": {
+                                      "e": "var",
+                                      "name": "args"
+                                    }
+                                  }
+                                ],
+                                "e": "op",
+                                "op": "prefix"
                               }
                             ],
                             "e": "op",
-                            "op": "prefix"
+                            "op": "or"
+                          },
+                          "e": "fold",
+                          "init": {
+                            "e": "lit",
+                            "v": false
+                          },
+                          "item": "p",
+                          "over": {
+                            "e": "get",
+                            "field": "allow",
+                            "of": {
+                              "e": "var",
+                              "name": "grant"
+                            }
                           }
-                        ],
-                        "e": "op",
-                        "op": "or"
-                      },
-                      "e": "fold",
-                      "init": {
-                        "e": "lit",
-                        "v": false
-                      },
-                      "item": "p",
-                      "over": {
-                        "e": "get",
-                        "field": "allow",
-                        "of": {
-                          "e": "var",
-                          "name": "grant"
+                        },
+                        {
+                          "args": [
+                            {
+                              "e": "get",
+                              "field": "once",
+                              "of": {
+                                "e": "var",
+                                "name": "grant"
+                              }
+                            },
+                            {
+                              "e": "get",
+                              "field": "argv",
+                              "of": {
+                                "e": "var",
+                                "name": "args"
+                              }
+                            }
+                          ],
+                          "e": "op",
+                          "op": "contains"
                         }
-                      }
+                      ],
+                      "e": "op",
+                      "op": "or"
                     }
                   }
                 }
@@ -1865,10 +2813,11 @@
         },
         "op": "deliver",
         "system": {
-          "grant": {
-            "allow": []
-          },
           "root": {
+            "grant": {
+              "allow": [],
+              "once": []
+            },
             "harness": {
               "arg": {
                 "Record": {}
@@ -2014,8 +2963,60 @@
                     },
                     "e": "if",
                     "else": {
-                      "e": "var",
-                      "name": "grant"
+                      "cond": {
+                        "args": [
+                          {
+                            "e": "var",
+                            "name": "result"
+                          },
+                          {
+                            "e": "lit",
+                            "v": "once"
+                          }
+                        ],
+                        "e": "op",
+                        "op": "eq"
+                      },
+                      "e": "if",
+                      "else": {
+                        "e": "var",
+                        "name": "grant"
+                      },
+                      "then": {
+                        "e": "record",
+                        "fields": {
+                          "allow": {
+                            "e": "get",
+                            "field": "allow",
+                            "of": {
+                              "e": "var",
+                              "name": "grant"
+                            }
+                          },
+                          "once": {
+                            "args": [
+                              {
+                                "e": "get",
+                                "field": "once",
+                                "of": {
+                                  "e": "var",
+                                  "name": "grant"
+                                }
+                              },
+                              {
+                                "e": "get",
+                                "field": "argv",
+                                "of": {
+                                  "e": "var",
+                                  "name": "args"
+                                }
+                              }
+                            ],
+                            "e": "op",
+                            "op": "append"
+                          }
+                        }
+                      }
                     },
                     "then": {
                       "e": "record",
@@ -2041,6 +3042,14 @@
                           ],
                           "e": "op",
                           "op": "append"
+                        },
+                        "once": {
+                          "e": "get",
+                          "field": "once",
+                          "of": {
+                            "e": "var",
+                            "name": "grant"
+                          }
                         }
                       }
                     }
@@ -2060,51 +3069,148 @@
                       }
                     }
                   },
+                  "onCall": {
+                    "e": "record",
+                    "fields": {
+                      "allow": {
+                        "e": "get",
+                        "field": "allow",
+                        "of": {
+                          "e": "var",
+                          "name": "grant"
+                        }
+                      },
+                      "once": {
+                        "acc": "kept",
+                        "body": {
+                          "cond": {
+                            "args": [
+                              {
+                                "e": "var",
+                                "name": "x"
+                              },
+                              {
+                                "e": "get",
+                                "field": "argv",
+                                "of": {
+                                  "e": "var",
+                                  "name": "args"
+                                }
+                              }
+                            ],
+                            "e": "op",
+                            "op": "eq"
+                          },
+                          "e": "if",
+                          "else": {
+                            "args": [
+                              {
+                                "e": "var",
+                                "name": "kept"
+                              },
+                              {
+                                "e": "var",
+                                "name": "x"
+                              }
+                            ],
+                            "e": "op",
+                            "op": "append"
+                          },
+                          "then": {
+                            "e": "var",
+                            "name": "kept"
+                          }
+                        },
+                        "e": "fold",
+                        "init": {
+                          "e": "list",
+                          "items": []
+                        },
+                        "item": "x",
+                        "over": {
+                          "e": "get",
+                          "field": "once",
+                          "of": {
+                            "e": "var",
+                            "name": "grant"
+                          }
+                        }
+                      }
+                    }
+                  },
                   "output": "String",
                   "pre": {
-                    "acc": "ok",
-                    "body": {
-                      "args": [
-                        {
-                          "e": "var",
-                          "name": "ok"
-                        },
-                        {
+                    "args": [
+                      {
+                        "acc": "ok",
+                        "body": {
                           "args": [
                             {
                               "e": "var",
-                              "name": "p"
+                              "name": "ok"
                             },
                             {
-                              "e": "get",
-                              "field": "argv",
-                              "of": {
-                                "e": "var",
-                                "name": "args"
-                              }
+                              "args": [
+                                {
+                                  "e": "var",
+                                  "name": "p"
+                                },
+                                {
+                                  "e": "get",
+                                  "field": "argv",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "args"
+                                  }
+                                }
+                              ],
+                              "e": "op",
+                              "op": "prefix"
                             }
                           ],
                           "e": "op",
-                          "op": "prefix"
+                          "op": "or"
+                        },
+                        "e": "fold",
+                        "init": {
+                          "e": "lit",
+                          "v": false
+                        },
+                        "item": "p",
+                        "over": {
+                          "e": "get",
+                          "field": "allow",
+                          "of": {
+                            "e": "var",
+                            "name": "grant"
+                          }
                         }
-                      ],
-                      "e": "op",
-                      "op": "or"
-                    },
-                    "e": "fold",
-                    "init": {
-                      "e": "lit",
-                      "v": false
-                    },
-                    "item": "p",
-                    "over": {
-                      "e": "get",
-                      "field": "allow",
-                      "of": {
-                        "e": "var",
-                        "name": "grant"
+                      },
+                      {
+                        "args": [
+                          {
+                            "e": "get",
+                            "field": "once",
+                            "of": {
+                              "e": "var",
+                              "name": "grant"
+                            }
+                          },
+                          {
+                            "e": "get",
+                            "field": "argv",
+                            "of": {
+                              "e": "var",
+                              "name": "args"
+                            }
+                          }
+                        ],
+                        "e": "op",
+                        "op": "contains"
                       }
-                    }
+                    ],
+                    "e": "op",
+                    "op": "or"
                   }
                 }
               }
@@ -2841,14 +3947,15 @@
             }
           ],
           "system": {
-            "grant": {
-              "allow": []
-            },
             "root": {
               "children": [
                 {
                   "call": 1,
                   "run": {
+                    "grant": {
+                      "allow": [],
+                      "once": []
+                    },
                     "harness": {
                       "arg": {
                         "Record": {
@@ -3091,8 +4198,60 @@
                             },
                             "e": "if",
                             "else": {
-                              "e": "var",
-                              "name": "grant"
+                              "cond": {
+                                "args": [
+                                  {
+                                    "e": "var",
+                                    "name": "result"
+                                  },
+                                  {
+                                    "e": "lit",
+                                    "v": "once"
+                                  }
+                                ],
+                                "e": "op",
+                                "op": "eq"
+                              },
+                              "e": "if",
+                              "else": {
+                                "e": "var",
+                                "name": "grant"
+                              },
+                              "then": {
+                                "e": "record",
+                                "fields": {
+                                  "allow": {
+                                    "e": "get",
+                                    "field": "allow",
+                                    "of": {
+                                      "e": "var",
+                                      "name": "grant"
+                                    }
+                                  },
+                                  "once": {
+                                    "args": [
+                                      {
+                                        "e": "get",
+                                        "field": "once",
+                                        "of": {
+                                          "e": "var",
+                                          "name": "grant"
+                                        }
+                                      },
+                                      {
+                                        "e": "get",
+                                        "field": "argv",
+                                        "of": {
+                                          "e": "var",
+                                          "name": "args"
+                                        }
+                                      }
+                                    ],
+                                    "e": "op",
+                                    "op": "append"
+                                  }
+                                }
+                              }
                             },
                             "then": {
                               "e": "record",
@@ -3118,6 +4277,14 @@
                                   ],
                                   "e": "op",
                                   "op": "append"
+                                },
+                                "once": {
+                                  "e": "get",
+                                  "field": "once",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "grant"
+                                  }
                                 }
                               }
                             }
@@ -3169,6 +4336,10 @@
                   }
                 }
               ],
+              "grant": {
+                "allow": [],
+                "once": []
+              },
               "harness": {
                 "arg": {
                   "Record": {}
@@ -3314,8 +4485,60 @@
                       },
                       "e": "if",
                       "else": {
-                        "e": "var",
-                        "name": "grant"
+                        "cond": {
+                          "args": [
+                            {
+                              "e": "var",
+                              "name": "result"
+                            },
+                            {
+                              "e": "lit",
+                              "v": "once"
+                            }
+                          ],
+                          "e": "op",
+                          "op": "eq"
+                        },
+                        "e": "if",
+                        "else": {
+                          "e": "var",
+                          "name": "grant"
+                        },
+                        "then": {
+                          "e": "record",
+                          "fields": {
+                            "allow": {
+                              "e": "get",
+                              "field": "allow",
+                              "of": {
+                                "e": "var",
+                                "name": "grant"
+                              }
+                            },
+                            "once": {
+                              "args": [
+                                {
+                                  "e": "get",
+                                  "field": "once",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "grant"
+                                  }
+                                },
+                                {
+                                  "e": "get",
+                                  "field": "argv",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "args"
+                                  }
+                                }
+                              ],
+                              "e": "op",
+                              "op": "append"
+                            }
+                          }
+                        }
                       },
                       "then": {
                         "e": "record",
@@ -3341,6 +4564,14 @@
                             ],
                             "e": "op",
                             "op": "append"
+                          },
+                          "once": {
+                            "e": "get",
+                            "field": "once",
+                            "of": {
+                              "e": "var",
+                              "name": "grant"
+                            }
                           }
                         }
                       }
@@ -3360,51 +4591,148 @@
                         }
                       }
                     },
+                    "onCall": {
+                      "e": "record",
+                      "fields": {
+                        "allow": {
+                          "e": "get",
+                          "field": "allow",
+                          "of": {
+                            "e": "var",
+                            "name": "grant"
+                          }
+                        },
+                        "once": {
+                          "acc": "kept",
+                          "body": {
+                            "cond": {
+                              "args": [
+                                {
+                                  "e": "var",
+                                  "name": "x"
+                                },
+                                {
+                                  "e": "get",
+                                  "field": "argv",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "args"
+                                  }
+                                }
+                              ],
+                              "e": "op",
+                              "op": "eq"
+                            },
+                            "e": "if",
+                            "else": {
+                              "args": [
+                                {
+                                  "e": "var",
+                                  "name": "kept"
+                                },
+                                {
+                                  "e": "var",
+                                  "name": "x"
+                                }
+                              ],
+                              "e": "op",
+                              "op": "append"
+                            },
+                            "then": {
+                              "e": "var",
+                              "name": "kept"
+                            }
+                          },
+                          "e": "fold",
+                          "init": {
+                            "e": "list",
+                            "items": []
+                          },
+                          "item": "x",
+                          "over": {
+                            "e": "get",
+                            "field": "once",
+                            "of": {
+                              "e": "var",
+                              "name": "grant"
+                            }
+                          }
+                        }
+                      }
+                    },
                     "output": "String",
                     "pre": {
-                      "acc": "ok",
-                      "body": {
-                        "args": [
-                          {
-                            "e": "var",
-                            "name": "ok"
-                          },
-                          {
+                      "args": [
+                        {
+                          "acc": "ok",
+                          "body": {
                             "args": [
                               {
                                 "e": "var",
-                                "name": "p"
+                                "name": "ok"
                               },
                               {
-                                "e": "get",
-                                "field": "argv",
-                                "of": {
-                                  "e": "var",
-                                  "name": "args"
-                                }
+                                "args": [
+                                  {
+                                    "e": "var",
+                                    "name": "p"
+                                  },
+                                  {
+                                    "e": "get",
+                                    "field": "argv",
+                                    "of": {
+                                      "e": "var",
+                                      "name": "args"
+                                    }
+                                  }
+                                ],
+                                "e": "op",
+                                "op": "prefix"
                               }
                             ],
                             "e": "op",
-                            "op": "prefix"
+                            "op": "or"
+                          },
+                          "e": "fold",
+                          "init": {
+                            "e": "lit",
+                            "v": false
+                          },
+                          "item": "p",
+                          "over": {
+                            "e": "get",
+                            "field": "allow",
+                            "of": {
+                              "e": "var",
+                              "name": "grant"
+                            }
                           }
-                        ],
-                        "e": "op",
-                        "op": "or"
-                      },
-                      "e": "fold",
-                      "init": {
-                        "e": "lit",
-                        "v": false
-                      },
-                      "item": "p",
-                      "over": {
-                        "e": "get",
-                        "field": "allow",
-                        "of": {
-                          "e": "var",
-                          "name": "grant"
+                        },
+                        {
+                          "args": [
+                            {
+                              "e": "get",
+                              "field": "once",
+                              "of": {
+                                "e": "var",
+                                "name": "grant"
+                              }
+                            },
+                            {
+                              "e": "get",
+                              "field": "argv",
+                              "of": {
+                                "e": "var",
+                                "name": "args"
+                              }
+                            }
+                          ],
+                          "e": "op",
+                          "op": "contains"
                         }
-                      }
+                      ],
+                      "e": "op",
+                      "op": "or"
                     }
                   }
                 }
@@ -3435,14 +4763,15 @@
         },
         "op": "deliver",
         "system": {
-          "grant": {
-            "allow": []
-          },
           "root": {
             "children": [
               {
                 "call": 1,
                 "run": {
+                  "grant": {
+                    "allow": [],
+                    "once": []
+                  },
                   "harness": {
                     "arg": {
                       "Record": {
@@ -3685,8 +5014,60 @@
                           },
                           "e": "if",
                           "else": {
-                            "e": "var",
-                            "name": "grant"
+                            "cond": {
+                              "args": [
+                                {
+                                  "e": "var",
+                                  "name": "result"
+                                },
+                                {
+                                  "e": "lit",
+                                  "v": "once"
+                                }
+                              ],
+                              "e": "op",
+                              "op": "eq"
+                            },
+                            "e": "if",
+                            "else": {
+                              "e": "var",
+                              "name": "grant"
+                            },
+                            "then": {
+                              "e": "record",
+                              "fields": {
+                                "allow": {
+                                  "e": "get",
+                                  "field": "allow",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "grant"
+                                  }
+                                },
+                                "once": {
+                                  "args": [
+                                    {
+                                      "e": "get",
+                                      "field": "once",
+                                      "of": {
+                                        "e": "var",
+                                        "name": "grant"
+                                      }
+                                    },
+                                    {
+                                      "e": "get",
+                                      "field": "argv",
+                                      "of": {
+                                        "e": "var",
+                                        "name": "args"
+                                      }
+                                    }
+                                  ],
+                                  "e": "op",
+                                  "op": "append"
+                                }
+                              }
+                            }
                           },
                           "then": {
                             "e": "record",
@@ -3712,6 +5093,14 @@
                                 ],
                                 "e": "op",
                                 "op": "append"
+                              },
+                              "once": {
+                                "e": "get",
+                                "field": "once",
+                                "of": {
+                                  "e": "var",
+                                  "name": "grant"
+                                }
                               }
                             }
                           }
@@ -3763,6 +5152,10 @@
                 }
               }
             ],
+            "grant": {
+              "allow": [],
+              "once": []
+            },
             "harness": {
               "arg": {
                 "Record": {}
@@ -3908,8 +5301,60 @@
                     },
                     "e": "if",
                     "else": {
-                      "e": "var",
-                      "name": "grant"
+                      "cond": {
+                        "args": [
+                          {
+                            "e": "var",
+                            "name": "result"
+                          },
+                          {
+                            "e": "lit",
+                            "v": "once"
+                          }
+                        ],
+                        "e": "op",
+                        "op": "eq"
+                      },
+                      "e": "if",
+                      "else": {
+                        "e": "var",
+                        "name": "grant"
+                      },
+                      "then": {
+                        "e": "record",
+                        "fields": {
+                          "allow": {
+                            "e": "get",
+                            "field": "allow",
+                            "of": {
+                              "e": "var",
+                              "name": "grant"
+                            }
+                          },
+                          "once": {
+                            "args": [
+                              {
+                                "e": "get",
+                                "field": "once",
+                                "of": {
+                                  "e": "var",
+                                  "name": "grant"
+                                }
+                              },
+                              {
+                                "e": "get",
+                                "field": "argv",
+                                "of": {
+                                  "e": "var",
+                                  "name": "args"
+                                }
+                              }
+                            ],
+                            "e": "op",
+                            "op": "append"
+                          }
+                        }
+                      }
                     },
                     "then": {
                       "e": "record",
@@ -3935,6 +5380,14 @@
                           ],
                           "e": "op",
                           "op": "append"
+                        },
+                        "once": {
+                          "e": "get",
+                          "field": "once",
+                          "of": {
+                            "e": "var",
+                            "name": "grant"
+                          }
                         }
                       }
                     }
@@ -3954,51 +5407,148 @@
                       }
                     }
                   },
+                  "onCall": {
+                    "e": "record",
+                    "fields": {
+                      "allow": {
+                        "e": "get",
+                        "field": "allow",
+                        "of": {
+                          "e": "var",
+                          "name": "grant"
+                        }
+                      },
+                      "once": {
+                        "acc": "kept",
+                        "body": {
+                          "cond": {
+                            "args": [
+                              {
+                                "e": "var",
+                                "name": "x"
+                              },
+                              {
+                                "e": "get",
+                                "field": "argv",
+                                "of": {
+                                  "e": "var",
+                                  "name": "args"
+                                }
+                              }
+                            ],
+                            "e": "op",
+                            "op": "eq"
+                          },
+                          "e": "if",
+                          "else": {
+                            "args": [
+                              {
+                                "e": "var",
+                                "name": "kept"
+                              },
+                              {
+                                "e": "var",
+                                "name": "x"
+                              }
+                            ],
+                            "e": "op",
+                            "op": "append"
+                          },
+                          "then": {
+                            "e": "var",
+                            "name": "kept"
+                          }
+                        },
+                        "e": "fold",
+                        "init": {
+                          "e": "list",
+                          "items": []
+                        },
+                        "item": "x",
+                        "over": {
+                          "e": "get",
+                          "field": "once",
+                          "of": {
+                            "e": "var",
+                            "name": "grant"
+                          }
+                        }
+                      }
+                    }
+                  },
                   "output": "String",
                   "pre": {
-                    "acc": "ok",
-                    "body": {
-                      "args": [
-                        {
-                          "e": "var",
-                          "name": "ok"
-                        },
-                        {
+                    "args": [
+                      {
+                        "acc": "ok",
+                        "body": {
                           "args": [
                             {
                               "e": "var",
-                              "name": "p"
+                              "name": "ok"
                             },
                             {
-                              "e": "get",
-                              "field": "argv",
-                              "of": {
-                                "e": "var",
-                                "name": "args"
-                              }
+                              "args": [
+                                {
+                                  "e": "var",
+                                  "name": "p"
+                                },
+                                {
+                                  "e": "get",
+                                  "field": "argv",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "args"
+                                  }
+                                }
+                              ],
+                              "e": "op",
+                              "op": "prefix"
                             }
                           ],
                           "e": "op",
-                          "op": "prefix"
+                          "op": "or"
+                        },
+                        "e": "fold",
+                        "init": {
+                          "e": "lit",
+                          "v": false
+                        },
+                        "item": "p",
+                        "over": {
+                          "e": "get",
+                          "field": "allow",
+                          "of": {
+                            "e": "var",
+                            "name": "grant"
+                          }
                         }
-                      ],
-                      "e": "op",
-                      "op": "or"
-                    },
-                    "e": "fold",
-                    "init": {
-                      "e": "lit",
-                      "v": false
-                    },
-                    "item": "p",
-                    "over": {
-                      "e": "get",
-                      "field": "allow",
-                      "of": {
-                        "e": "var",
-                        "name": "grant"
+                      },
+                      {
+                        "args": [
+                          {
+                            "e": "get",
+                            "field": "once",
+                            "of": {
+                              "e": "var",
+                              "name": "grant"
+                            }
+                          },
+                          {
+                            "e": "get",
+                            "field": "argv",
+                            "of": {
+                              "e": "var",
+                              "name": "args"
+                            }
+                          }
+                        ],
+                        "e": "op",
+                        "op": "contains"
                       }
-                    }
+                    ],
+                    "e": "op",
+                    "op": "or"
                   }
                 }
               }
@@ -4055,10 +5605,11 @@
             }
           ],
           "system": {
-            "grant": {
-              "allow": [["npm", "publish"]]
-            },
             "root": {
+              "grant": {
+                "allow": [["npm", "publish"]],
+                "once": []
+              },
               "harness": {
                 "arg": {
                   "Record": {}
@@ -4204,8 +5755,60 @@
                       },
                       "e": "if",
                       "else": {
-                        "e": "var",
-                        "name": "grant"
+                        "cond": {
+                          "args": [
+                            {
+                              "e": "var",
+                              "name": "result"
+                            },
+                            {
+                              "e": "lit",
+                              "v": "once"
+                            }
+                          ],
+                          "e": "op",
+                          "op": "eq"
+                        },
+                        "e": "if",
+                        "else": {
+                          "e": "var",
+                          "name": "grant"
+                        },
+                        "then": {
+                          "e": "record",
+                          "fields": {
+                            "allow": {
+                              "e": "get",
+                              "field": "allow",
+                              "of": {
+                                "e": "var",
+                                "name": "grant"
+                              }
+                            },
+                            "once": {
+                              "args": [
+                                {
+                                  "e": "get",
+                                  "field": "once",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "grant"
+                                  }
+                                },
+                                {
+                                  "e": "get",
+                                  "field": "argv",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "args"
+                                  }
+                                }
+                              ],
+                              "e": "op",
+                              "op": "append"
+                            }
+                          }
+                        }
                       },
                       "then": {
                         "e": "record",
@@ -4231,6 +5834,14 @@
                             ],
                             "e": "op",
                             "op": "append"
+                          },
+                          "once": {
+                            "e": "get",
+                            "field": "once",
+                            "of": {
+                              "e": "var",
+                              "name": "grant"
+                            }
                           }
                         }
                       }
@@ -4250,51 +5861,148 @@
                         }
                       }
                     },
+                    "onCall": {
+                      "e": "record",
+                      "fields": {
+                        "allow": {
+                          "e": "get",
+                          "field": "allow",
+                          "of": {
+                            "e": "var",
+                            "name": "grant"
+                          }
+                        },
+                        "once": {
+                          "acc": "kept",
+                          "body": {
+                            "cond": {
+                              "args": [
+                                {
+                                  "e": "var",
+                                  "name": "x"
+                                },
+                                {
+                                  "e": "get",
+                                  "field": "argv",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "args"
+                                  }
+                                }
+                              ],
+                              "e": "op",
+                              "op": "eq"
+                            },
+                            "e": "if",
+                            "else": {
+                              "args": [
+                                {
+                                  "e": "var",
+                                  "name": "kept"
+                                },
+                                {
+                                  "e": "var",
+                                  "name": "x"
+                                }
+                              ],
+                              "e": "op",
+                              "op": "append"
+                            },
+                            "then": {
+                              "e": "var",
+                              "name": "kept"
+                            }
+                          },
+                          "e": "fold",
+                          "init": {
+                            "e": "list",
+                            "items": []
+                          },
+                          "item": "x",
+                          "over": {
+                            "e": "get",
+                            "field": "once",
+                            "of": {
+                              "e": "var",
+                              "name": "grant"
+                            }
+                          }
+                        }
+                      }
+                    },
                     "output": "String",
                     "pre": {
-                      "acc": "ok",
-                      "body": {
-                        "args": [
-                          {
-                            "e": "var",
-                            "name": "ok"
-                          },
-                          {
+                      "args": [
+                        {
+                          "acc": "ok",
+                          "body": {
                             "args": [
                               {
                                 "e": "var",
-                                "name": "p"
+                                "name": "ok"
                               },
                               {
-                                "e": "get",
-                                "field": "argv",
-                                "of": {
-                                  "e": "var",
-                                  "name": "args"
-                                }
+                                "args": [
+                                  {
+                                    "e": "var",
+                                    "name": "p"
+                                  },
+                                  {
+                                    "e": "get",
+                                    "field": "argv",
+                                    "of": {
+                                      "e": "var",
+                                      "name": "args"
+                                    }
+                                  }
+                                ],
+                                "e": "op",
+                                "op": "prefix"
                               }
                             ],
                             "e": "op",
-                            "op": "prefix"
+                            "op": "or"
+                          },
+                          "e": "fold",
+                          "init": {
+                            "e": "lit",
+                            "v": false
+                          },
+                          "item": "p",
+                          "over": {
+                            "e": "get",
+                            "field": "allow",
+                            "of": {
+                              "e": "var",
+                              "name": "grant"
+                            }
                           }
-                        ],
-                        "e": "op",
-                        "op": "or"
-                      },
-                      "e": "fold",
-                      "init": {
-                        "e": "lit",
-                        "v": false
-                      },
-                      "item": "p",
-                      "over": {
-                        "e": "get",
-                        "field": "allow",
-                        "of": {
-                          "e": "var",
-                          "name": "grant"
+                        },
+                        {
+                          "args": [
+                            {
+                              "e": "get",
+                              "field": "once",
+                              "of": {
+                                "e": "var",
+                                "name": "grant"
+                              }
+                            },
+                            {
+                              "e": "get",
+                              "field": "argv",
+                              "of": {
+                                "e": "var",
+                                "name": "args"
+                              }
+                            }
+                          ],
+                          "e": "op",
+                          "op": "contains"
                         }
-                      }
+                      ],
+                      "e": "op",
+                      "op": "or"
                     }
                   }
                 }
@@ -4330,10 +6038,11 @@
         },
         "op": "deliver",
         "system": {
-          "grant": {
-            "allow": [["npm", "publish"]]
-          },
           "root": {
+            "grant": {
+              "allow": [["npm", "publish"]],
+              "once": []
+            },
             "harness": {
               "arg": {
                 "Record": {}
@@ -4479,8 +6188,60 @@
                     },
                     "e": "if",
                     "else": {
-                      "e": "var",
-                      "name": "grant"
+                      "cond": {
+                        "args": [
+                          {
+                            "e": "var",
+                            "name": "result"
+                          },
+                          {
+                            "e": "lit",
+                            "v": "once"
+                          }
+                        ],
+                        "e": "op",
+                        "op": "eq"
+                      },
+                      "e": "if",
+                      "else": {
+                        "e": "var",
+                        "name": "grant"
+                      },
+                      "then": {
+                        "e": "record",
+                        "fields": {
+                          "allow": {
+                            "e": "get",
+                            "field": "allow",
+                            "of": {
+                              "e": "var",
+                              "name": "grant"
+                            }
+                          },
+                          "once": {
+                            "args": [
+                              {
+                                "e": "get",
+                                "field": "once",
+                                "of": {
+                                  "e": "var",
+                                  "name": "grant"
+                                }
+                              },
+                              {
+                                "e": "get",
+                                "field": "argv",
+                                "of": {
+                                  "e": "var",
+                                  "name": "args"
+                                }
+                              }
+                            ],
+                            "e": "op",
+                            "op": "append"
+                          }
+                        }
+                      }
                     },
                     "then": {
                       "e": "record",
@@ -4506,6 +6267,14 @@
                           ],
                           "e": "op",
                           "op": "append"
+                        },
+                        "once": {
+                          "e": "get",
+                          "field": "once",
+                          "of": {
+                            "e": "var",
+                            "name": "grant"
+                          }
                         }
                       }
                     }
@@ -4525,51 +6294,148 @@
                       }
                     }
                   },
+                  "onCall": {
+                    "e": "record",
+                    "fields": {
+                      "allow": {
+                        "e": "get",
+                        "field": "allow",
+                        "of": {
+                          "e": "var",
+                          "name": "grant"
+                        }
+                      },
+                      "once": {
+                        "acc": "kept",
+                        "body": {
+                          "cond": {
+                            "args": [
+                              {
+                                "e": "var",
+                                "name": "x"
+                              },
+                              {
+                                "e": "get",
+                                "field": "argv",
+                                "of": {
+                                  "e": "var",
+                                  "name": "args"
+                                }
+                              }
+                            ],
+                            "e": "op",
+                            "op": "eq"
+                          },
+                          "e": "if",
+                          "else": {
+                            "args": [
+                              {
+                                "e": "var",
+                                "name": "kept"
+                              },
+                              {
+                                "e": "var",
+                                "name": "x"
+                              }
+                            ],
+                            "e": "op",
+                            "op": "append"
+                          },
+                          "then": {
+                            "e": "var",
+                            "name": "kept"
+                          }
+                        },
+                        "e": "fold",
+                        "init": {
+                          "e": "list",
+                          "items": []
+                        },
+                        "item": "x",
+                        "over": {
+                          "e": "get",
+                          "field": "once",
+                          "of": {
+                            "e": "var",
+                            "name": "grant"
+                          }
+                        }
+                      }
+                    }
+                  },
                   "output": "String",
                   "pre": {
-                    "acc": "ok",
-                    "body": {
-                      "args": [
-                        {
-                          "e": "var",
-                          "name": "ok"
-                        },
-                        {
+                    "args": [
+                      {
+                        "acc": "ok",
+                        "body": {
                           "args": [
                             {
                               "e": "var",
-                              "name": "p"
+                              "name": "ok"
                             },
                             {
-                              "e": "get",
-                              "field": "argv",
-                              "of": {
-                                "e": "var",
-                                "name": "args"
-                              }
+                              "args": [
+                                {
+                                  "e": "var",
+                                  "name": "p"
+                                },
+                                {
+                                  "e": "get",
+                                  "field": "argv",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "args"
+                                  }
+                                }
+                              ],
+                              "e": "op",
+                              "op": "prefix"
                             }
                           ],
                           "e": "op",
-                          "op": "prefix"
+                          "op": "or"
+                        },
+                        "e": "fold",
+                        "init": {
+                          "e": "lit",
+                          "v": false
+                        },
+                        "item": "p",
+                        "over": {
+                          "e": "get",
+                          "field": "allow",
+                          "of": {
+                            "e": "var",
+                            "name": "grant"
+                          }
                         }
-                      ],
-                      "e": "op",
-                      "op": "or"
-                    },
-                    "e": "fold",
-                    "init": {
-                      "e": "lit",
-                      "v": false
-                    },
-                    "item": "p",
-                    "over": {
-                      "e": "get",
-                      "field": "allow",
-                      "of": {
-                        "e": "var",
-                        "name": "grant"
+                      },
+                      {
+                        "args": [
+                          {
+                            "e": "get",
+                            "field": "once",
+                            "of": {
+                              "e": "var",
+                              "name": "grant"
+                            }
+                          },
+                          {
+                            "e": "get",
+                            "field": "argv",
+                            "of": {
+                              "e": "var",
+                              "name": "args"
+                            }
+                          }
+                        ],
+                        "e": "op",
+                        "op": "contains"
                       }
-                    }
+                    ],
+                    "e": "op",
+                    "op": "or"
                   }
                 }
               }
@@ -4630,10 +6496,11 @@
             }
           ],
           "system": {
-            "grant": {
-              "allow": [["npm", "publish"]]
-            },
             "root": {
+              "grant": {
+                "allow": [["npm", "publish"]],
+                "once": []
+              },
               "harness": {
                 "arg": {
                   "Record": {}
@@ -4779,8 +6646,60 @@
                       },
                       "e": "if",
                       "else": {
-                        "e": "var",
-                        "name": "grant"
+                        "cond": {
+                          "args": [
+                            {
+                              "e": "var",
+                              "name": "result"
+                            },
+                            {
+                              "e": "lit",
+                              "v": "once"
+                            }
+                          ],
+                          "e": "op",
+                          "op": "eq"
+                        },
+                        "e": "if",
+                        "else": {
+                          "e": "var",
+                          "name": "grant"
+                        },
+                        "then": {
+                          "e": "record",
+                          "fields": {
+                            "allow": {
+                              "e": "get",
+                              "field": "allow",
+                              "of": {
+                                "e": "var",
+                                "name": "grant"
+                              }
+                            },
+                            "once": {
+                              "args": [
+                                {
+                                  "e": "get",
+                                  "field": "once",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "grant"
+                                  }
+                                },
+                                {
+                                  "e": "get",
+                                  "field": "argv",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "args"
+                                  }
+                                }
+                              ],
+                              "e": "op",
+                              "op": "append"
+                            }
+                          }
+                        }
                       },
                       "then": {
                         "e": "record",
@@ -4806,6 +6725,14 @@
                             ],
                             "e": "op",
                             "op": "append"
+                          },
+                          "once": {
+                            "e": "get",
+                            "field": "once",
+                            "of": {
+                              "e": "var",
+                              "name": "grant"
+                            }
                           }
                         }
                       }
@@ -4825,51 +6752,148 @@
                         }
                       }
                     },
+                    "onCall": {
+                      "e": "record",
+                      "fields": {
+                        "allow": {
+                          "e": "get",
+                          "field": "allow",
+                          "of": {
+                            "e": "var",
+                            "name": "grant"
+                          }
+                        },
+                        "once": {
+                          "acc": "kept",
+                          "body": {
+                            "cond": {
+                              "args": [
+                                {
+                                  "e": "var",
+                                  "name": "x"
+                                },
+                                {
+                                  "e": "get",
+                                  "field": "argv",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "args"
+                                  }
+                                }
+                              ],
+                              "e": "op",
+                              "op": "eq"
+                            },
+                            "e": "if",
+                            "else": {
+                              "args": [
+                                {
+                                  "e": "var",
+                                  "name": "kept"
+                                },
+                                {
+                                  "e": "var",
+                                  "name": "x"
+                                }
+                              ],
+                              "e": "op",
+                              "op": "append"
+                            },
+                            "then": {
+                              "e": "var",
+                              "name": "kept"
+                            }
+                          },
+                          "e": "fold",
+                          "init": {
+                            "e": "list",
+                            "items": []
+                          },
+                          "item": "x",
+                          "over": {
+                            "e": "get",
+                            "field": "once",
+                            "of": {
+                              "e": "var",
+                              "name": "grant"
+                            }
+                          }
+                        }
+                      }
+                    },
                     "output": "String",
                     "pre": {
-                      "acc": "ok",
-                      "body": {
-                        "args": [
-                          {
-                            "e": "var",
-                            "name": "ok"
-                          },
-                          {
+                      "args": [
+                        {
+                          "acc": "ok",
+                          "body": {
                             "args": [
                               {
                                 "e": "var",
-                                "name": "p"
+                                "name": "ok"
                               },
                               {
-                                "e": "get",
-                                "field": "argv",
-                                "of": {
-                                  "e": "var",
-                                  "name": "args"
-                                }
+                                "args": [
+                                  {
+                                    "e": "var",
+                                    "name": "p"
+                                  },
+                                  {
+                                    "e": "get",
+                                    "field": "argv",
+                                    "of": {
+                                      "e": "var",
+                                      "name": "args"
+                                    }
+                                  }
+                                ],
+                                "e": "op",
+                                "op": "prefix"
                               }
                             ],
                             "e": "op",
-                            "op": "prefix"
+                            "op": "or"
+                          },
+                          "e": "fold",
+                          "init": {
+                            "e": "lit",
+                            "v": false
+                          },
+                          "item": "p",
+                          "over": {
+                            "e": "get",
+                            "field": "allow",
+                            "of": {
+                              "e": "var",
+                              "name": "grant"
+                            }
                           }
-                        ],
-                        "e": "op",
-                        "op": "or"
-                      },
-                      "e": "fold",
-                      "init": {
-                        "e": "lit",
-                        "v": false
-                      },
-                      "item": "p",
-                      "over": {
-                        "e": "get",
-                        "field": "allow",
-                        "of": {
-                          "e": "var",
-                          "name": "grant"
+                        },
+                        {
+                          "args": [
+                            {
+                              "e": "get",
+                              "field": "once",
+                              "of": {
+                                "e": "var",
+                                "name": "grant"
+                              }
+                            },
+                            {
+                              "e": "get",
+                              "field": "argv",
+                              "of": {
+                                "e": "var",
+                                "name": "args"
+                              }
+                            }
+                          ],
+                          "e": "op",
+                          "op": "contains"
                         }
-                      }
+                      ],
+                      "e": "op",
+                      "op": "or"
                     }
                   }
                 }

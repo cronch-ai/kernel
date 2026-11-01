@@ -190,7 +190,8 @@ pub fn worker() -> Value {
     })
 }
 
-/// Writes within /workspace/, fetches, and runs argvs a grant allowlists, which a person's "always" extends.
+/// Writes within /workspace/, fetches, and runs argvs a grant allowlists or approved once. A person's "always" extends
+/// the allowlist, and "once" approves one run, which the run uses up.
 pub fn tools() -> Value {
     let within = |dir: &str| op("prefix", vec![lit(json!(dir)), path("args", &["path"])]);
     let allowed = fold(
@@ -206,24 +207,51 @@ pub fn tools() -> Value {
             ],
         ),
     );
-    let always = if_(
+    let argv_of = || path("args", &["argv"]);
+    let grant = |allow: Value, once: Value| rec(vec![("allow", allow), ("once", once)]);
+    let answered = if_(
         eq(var("result"), lit(json!("always"))),
-        rec(vec![(
-            "allow",
-            op(
-                "append",
-                vec![path("grant", &["allow"]), path("args", &["argv"])],
+        grant(
+            op("append", vec![path("grant", &["allow"]), argv_of()]),
+            path("grant", &["once"]),
+        ),
+        if_(
+            eq(var("result"), lit(json!("once"))),
+            grant(
+                path("grant", &["allow"]),
+                op("append", vec![path("grant", &["once"]), argv_of()]),
             ),
-        )]),
-        var("grant"),
+            var("grant"),
+        ),
+    );
+    let allowed = op(
+        "or",
+        vec![
+            allowed,
+            op("contains", vec![path("grant", &["once"]), argv_of()]),
+        ],
+    );
+    let used_up = grant(
+        path("grant", &["allow"]),
+        fold(
+            path("grant", &["once"]),
+            list(vec![]),
+            "kept",
+            "x",
+            if_(
+                eq(var("x"), argv_of()),
+                var("kept"),
+                op("append", vec![var("kept"), var("x")]),
+            ),
+        ),
     );
     let argv = json!({ "Record": { "argv": { "List": "String" } } });
     json!({
         "operations": {
             "fs.write": { "input": { "Record": { "path": "String" } }, "output": "Int", "effect": true, "pre": within("/workspace/") },
             "net.fetch": { "input": { "Record": { "url": "String" } }, "output": "String", "ret": list(vec![lit(json!("web"))]) },
-            "shell.run": { "input": argv, "output": "String", "effect": true, "pre": allowed },
-            "shell.approve": { "input": argv, "output": "String", "ret": list(vec![]), "onResult": always },
+            "shell.run": { "input": argv, "output": "String", "effect": true, "pre": allowed, "onCall": used_up },
+            "shell.approve": { "input": argv, "output": "String", "ret": list(vec![]), "onResult": answered },
         },
         "channels": { "act": { "type": { "Record": { "kind": "String" } } } }
     })

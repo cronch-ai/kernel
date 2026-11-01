@@ -10,8 +10,8 @@
 //! * `cancel(k)` is passed to the world. It is a request: `k` stays pending and its results may still arrive.
 //! * `spawn(harness, narrow, arg)` gets the next identifier and starts a child run of `harness` with `arg`, against the
 //!   parent's interface narrowed by `narrow`. The child's calls go through the same implementations, its
-//!   preconditions are the parent's strengthened, and it shares the grant state, so a child can never do what its
-//!   parent couldn't, and an approval given to a child widens what its ancestors may do too. When the child halts,
+//!   preconditions are the parent's strengthened, and it starts with its parent's grant state, so a child can never
+//!   do what its parent couldn't. When the child halts,
 //!   its value comes back to the parent as `ret(k, v)`, labelled as the child's own evaluation labelled it; if it
 //!   fails, as `failed(k, e)`. A spawn that can't start (an ill-formed harness, a narrowing of something the
 //!   interface lacks, an argument of the wrong type) is refused.
@@ -25,9 +25,12 @@
 //! postcondition) is recorded as withheld and changes nothing: the run stays a run under an admissible environment,
 //! one that hasn't delivered that input yet. A withheld result is evidence against the capability's publisher.
 //!
-//! The grant state is the interpreter's, not `δ`'s: preconditions read it, and only contracts change it. A result's
-//! `onResult` and a message's `onMsg` apply only when what arrived is trusted, so a harness can't grant itself
-//! anything, and neither can anything untrusted it talks to.
+//! Each run has a grant state, which is the interpreter's, not `δ`'s: preconditions read it, and only contracts change
+//! it. A result's `onResult` and a message's `onMsg` apply only when what arrived is trusted, so a harness can't grant
+//! itself anything, and neither can anything untrusted it talks to. They apply to the run that received it and to
+//! every ancestor, so an approval given to a child widens what its parents may do, and never what its siblings may.
+//! A call's `onCall` applies to every run, so what one run uses up (an approval for one call) is used up everywhere,
+//! and no copy of a grant state can use it again.
 //!
 //! Every step is recorded as events: one for the input, then one per processed action, each carrying the state the
 //! step produced. The trace is what properties are stated over.
@@ -87,6 +90,9 @@ pub struct Run {
     pub started: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub outcome: Option<Outcome>,
+    /// What this run's preconditions read: the root principal's grant at the root, a copy of its parent's in a child.
+    #[serde(default)]
+    pub grant: Value,
     /// The join of the labels of every input delivered: what the run's behaviour may depend on.
     #[serde(default, skip_serializing_if = "Label::is_empty")]
     pub seen: Label,
@@ -106,12 +112,10 @@ pub struct Child {
 /// spawning and answering itself without the world ever moving would otherwise never give the world another turn.
 pub const DRAIN_LIMIT: usize = 4096;
 
-/// A configuration of the whole system: the root run, and the grant state the root principal gave it.
+/// A configuration of the whole system: the tree of runs.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct System {
     pub root: Run,
-    #[serde(default)]
-    pub grant: Value,
 }
 
 /// What the environment delivers, and to which run. `to` is a path of spawn identifiers from the root; `[]` is the
@@ -276,10 +280,28 @@ fn result_label(op: &Operation, args: &LValue) -> Option<Label> {
     Some(label)
 }
 
-/// An input `δ` will receive, and the grant state its arrival leaves.
+/// A change a contract makes to grant states: its expression, and its variables other than `grant`.
+#[derive(Clone)]
+struct Update {
+    expr: Expr,
+    vars: Vec<(&'static str, LValue)>,
+}
+
+impl Update {
+    /// The grant state after the change. One that fails to evaluate leaves it as it was.
+    fn apply(&self, grant: &mut Value) {
+        let mut vars = self.vars.clone();
+        vars.push(("grant", LValue::trusted(grant)));
+        if let Some(next) = contract(&self.expr, vars) {
+            *grant = next.value();
+        }
+    }
+}
+
+/// An input `δ` will receive, and the change to grant states its arrival makes.
 struct Admitted {
     inbound: Inbound,
-    grant: Option<Value>,
+    update: Option<Update>,
 }
 
 impl System {
@@ -293,10 +315,20 @@ impl System {
         if !problems.is_empty() {
             return Err(InitError::Interface { problems });
         }
-        Ok(System {
-            root: Run::new(harness, interface),
-            grant,
-        })
+        let mut root = Run::new(harness, interface);
+        root.grant = grant;
+        Ok(System { root })
+    }
+
+    /// Apply what a step's calls used up to every run but the one that made them, which already has.
+    fn spread(&mut self, updates: Vec<(Vec<u64>, Update)>) {
+        for (origin, update) in updates {
+            self.root.each(&mut Vec::new(), &mut |path, run| {
+                if path != origin.as_slice() {
+                    update.apply(&mut run.grant);
+                }
+            });
+        }
     }
 
     /// Deliver one input from the environment, then every input the interpreter queued in response.
@@ -307,18 +339,21 @@ impl System {
             input: delivery.input.clone(),
             reason,
         };
-        let System { root, grant } = self;
-        let Some(run) = root.find_mut(&delivery.to) else {
+        let Some(run) = self.root.find_mut(&delivery.to) else {
             return vec![withheld(Withheld::NoSuchRun)];
         };
-        match run.admit(&delivery.input, grant) {
+        match run.admit(&delivery.input) {
             Err(reason) => events.push(withheld(reason)),
             Ok(admitted) => {
-                if let Some(g) = admitted.grant {
-                    *grant = g;
+                if let Some(update) = &admitted.update {
+                    self.root
+                        .along(&delivery.to, &mut |run| update.apply(&mut run.grant));
                 }
-                run.step(&delivery.to, admitted.inbound, grant, &mut events);
+                let mut used = Vec::new();
+                let run = self.root.find_mut(&delivery.to).expect("admitted by it");
+                run.step(&delivery.to, admitted.inbound, &mut used, &mut events);
                 run.end(&delivery.input);
+                self.spread(used);
             }
         }
         self.drain(&mut events);
@@ -334,7 +369,9 @@ impl System {
             }
             let run = self.root.find_mut(&path).expect("a queued run exists");
             let inbound = run.queue.pop_front().expect("its queue isn't empty");
-            run.step(&path, inbound, &mut self.grant, events);
+            let mut used = Vec::new();
+            run.step(&path, inbound, &mut used, events);
+            self.spread(used);
             self.root.settle();
         }
         let input = json!({ "kind": "drain", "limit": DRAIN_LIMIT });
@@ -368,8 +405,29 @@ impl Run {
             queue: VecDeque::new(),
             started: false,
             outcome: None,
+            grant: Value::Null,
             seen: Label::new(),
             children: Vec::new(),
+        }
+    }
+
+    /// Visit this run and every ancestor on the way to it from here, outermost first.
+    fn along(&mut self, path: &[u64], f: &mut impl FnMut(&mut Run)) {
+        f(self);
+        if let Some((first, rest)) = path.split_first()
+            && let Some(c) = self.children.iter_mut().find(|c| c.call == *first)
+        {
+            c.run.along(rest, f);
+        }
+    }
+
+    /// Visit every run in the tree, with its path.
+    fn each(&mut self, path: &mut Vec<u64>, f: &mut impl FnMut(&[u64], &mut Run)) {
+        f(path, self);
+        for c in &mut self.children {
+            path.push(c.call);
+            c.run.each(path, f);
+            path.pop();
         }
     }
 
@@ -440,16 +498,16 @@ impl Run {
     }
 
     /// The input as `δ` will receive it, if the environment could admissibly produce it now.
-    fn admit(&self, input: &WorldInput, grant: &Value) -> Result<Admitted, Withheld> {
+    fn admit(&self, input: &WorldInput) -> Result<Admitted, Withheld> {
         if self.outcome.is_some() {
             return Err(Withheld::Ended);
         }
-        let admitted = |label, grant| Admitted {
+        let admitted = |label, update| Admitted {
             inbound: Inbound {
                 input: input_value(input),
                 label,
             },
-            grant,
+            update,
         };
         if let WorldInput::Start { value, label } = input {
             if self.started {
@@ -461,7 +519,6 @@ impl Run {
         if !self.started {
             return Err(Withheld::NotStarted);
         }
-        let trusted_grant = || LValue::trusted(grant);
         match input {
             WorldInput::Start { .. } => unreachable!("handled above"),
             WorldInput::Ret { call, value } => {
@@ -480,13 +537,9 @@ impl Run {
                     .on_result
                     .as_ref()
                     .filter(|_| label.is_empty())
-                    .and_then(|e| {
-                        let vars = vec![
-                            ("args", pending.args.clone()),
-                            ("result", result),
-                            ("grant", trusted_grant()),
-                        ];
-                        contract(e, vars).map(|g| g.value())
+                    .map(|e| Update {
+                        expr: e.clone(),
+                        vars: vec![("args", pending.args.clone()), ("result", result)],
                     });
                 Ok(admitted(label, update))
             }
@@ -522,9 +575,9 @@ impl Run {
                     .on_msg
                     .as_ref()
                     .filter(|_| declared.label.is_empty())
-                    .and_then(|e| {
-                        contract(e, vec![("value", message), ("grant", trusted_grant())])
-                            .map(|g| g.value())
+                    .map(|e| Update {
+                        expr: e.clone(),
+                        vars: vec![("value", message)],
                     });
                 Ok(admitted(declared.label.clone(), update))
             }
@@ -570,7 +623,11 @@ impl Run {
         let well_formed = check_harness(&harness).is_empty()
             && check_interface(&interface).is_empty()
             && inhabits(&arg.value(), &harness.arg);
-        well_formed.then(|| Run::new(harness, interface))
+        well_formed.then(|| {
+            let mut run = Run::new(harness, interface);
+            run.grant = self.grant.clone();
+            run
+        })
     }
 
     fn fail(&mut self, origin: &[u64], input: Value, error: StepError, events: &mut Vec<Event>) {
@@ -587,7 +644,7 @@ impl Run {
         &mut self,
         origin: &[u64],
         inbound: Inbound,
-        grant: &mut Value,
+        used: &mut Vec<(Vec<u64>, Update)>,
         events: &mut Vec<Event>,
     ) {
         if inbound.input["kind"] == "start" {
@@ -646,7 +703,10 @@ impl Run {
                         inhabits(&args.value(), &o.input)
                             && holds(
                                 &o.pre,
-                                vec![("args", args.clone()), ("grant", LValue::trusted(grant))],
+                                vec![
+                                    ("args", args.clone()),
+                                    ("grant", LValue::trusted(&self.grant)),
+                                ],
                             )
                     });
                     if let Some(o) = declared {
@@ -656,13 +716,13 @@ impl Run {
                             .and_then(|e| contract(e, vec![("args", args.clone())]))
                             .map(|f| f.value());
                         events.push(out(Some(k), true, o.effect, footprint));
-                        if let Some(next) = o.on_call.as_ref().and_then(|e| {
-                            contract(
-                                e,
-                                vec![("args", args.clone()), ("grant", LValue::trusted(grant))],
-                            )
-                        }) {
-                            *grant = next.value();
+                        if let Some(e) = &o.on_call {
+                            let update = Update {
+                                expr: e.clone(),
+                                vars: vec![("args", args.clone())],
+                            };
+                            update.apply(&mut self.grant);
+                            used.push((origin.to_vec(), update));
                         }
                         self.pending.push(Pending { call: k, op, args });
                     } else {

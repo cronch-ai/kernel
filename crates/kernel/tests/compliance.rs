@@ -93,7 +93,7 @@ fn cases() -> Vec<Case> {
             "grants",
             "A child narrowed and approved: an \"always\" in the child widens its parent.",
             |r| {
-                let system = r.init(actor(), tools(), json!({ "allow": [] }));
+                let system = r.init(actor(), tools(), json!({ "allow": [], "once": [] }));
                 let (system, _) = r.deliver(system, start(json!({})));
                 let publish = json!(["npm", "publish"]);
                 let run = msg(
