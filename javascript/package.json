@@ -12,6 +12,7 @@
   },
   "files": [
     "index.js",
+    "cbor.js",
     "index.d.ts",
     "kernel.wasm",
     "kernel.sha256"

@@ -1,0 +1,74 @@
+{
+  "description": "Integer and float arithmetic, mixed; let, if, rounding, Euclidean division; numeric validators.",
+  "ask": {
+    "spec": {
+      "name": "Score",
+      "params": [{ "name": "n", "type": "Int" }, { "name": "x", "type": "Float" }],
+      "output": "Float",
+      "validators": [{ "kind": "min", "value": -100 }, { "kind": "max", "value": 1000 }]
+    },
+    "args": { "n": 4, "x": 0.1 }
+  },
+  "answer": {
+    "procedure": {
+      "e": "let",
+      "name": "s",
+      "be": {
+        "e": "op",
+        "op": "mul",
+        "args": [{ "e": "var", "name": "n" }, { "e": "var", "name": "n" }]
+      },
+      "in": {
+        "e": "if",
+        "cond": {
+          "e": "op",
+          "op": "gt",
+          "args": [{ "e": "var", "name": "s" }, { "e": "lit", "v": 10 }]
+        },
+        "then": {
+          "e": "op",
+          "op": "add",
+          "args": [
+            {
+              "e": "op",
+              "op": "round",
+              "args": [
+                {
+                  "e": "op",
+                  "op": "div",
+                  "args": [{ "e": "var", "name": "x" }, { "e": "lit", "v": 3 }]
+                },
+                { "e": "lit", "v": 2 }
+              ]
+            },
+            {
+              "e": "op",
+              "op": "mod",
+              "args": [{ "e": "var", "name": "s" }, { "e": "lit", "v": 7 }]
+            }
+          ]
+        },
+        "else": {
+          "e": "op",
+          "op": "sub",
+          "args": [
+            { "e": "op", "op": "neg", "args": [{ "e": "var", "name": "x" }] },
+            {
+              "e": "op",
+              "op": "idiv",
+              "args": [{ "e": "var", "name": "n" }, { "e": "lit", "v": -2 }]
+            }
+          ]
+        }
+      }
+    }
+  },
+  "inputs": [
+    { "n": 4, "x": 0.1 },
+    { "n": -5, "x": 2.5 },
+    { "n": 0, "x": -0.3 },
+    { "n": 3, "x": 1e10 },
+    { "n": -3, "x": 7 },
+    { "n": 11, "x": 1.005 }
+  ]
+}
