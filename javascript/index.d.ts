@@ -326,6 +326,17 @@ export type Monitored =
   | { readonly verdict: "holds" }
   | { readonly verdict: "violated"; readonly at: number };
 
+/** The incremental monitor's state: each subformula's value at the last event. Hosts hand it back unchanged. */
+export interface MonitorState {
+  readonly last?: readonly boolean[];
+}
+
+export type MonitorError =
+  /** Quantifiers need the values seen so far: such properties are checked on whole traces. */
+  | { readonly kind: "quantified" }
+  /** The state isn't one this property's monitor could be in. */
+  | { readonly kind: "state"; readonly expected: number; readonly got: number };
+
 // Evidence (`crates/kernel/src/evidence.rs`).
 
 export interface Subject {
@@ -406,7 +417,15 @@ export type InitError =
   | { readonly kind: "harness"; readonly problems: readonly HarnessProblem[] }
   | { readonly kind: "interface"; readonly problems: readonly HarnessProblem[] };
 
-export type Kind = "harness" | "interface" | "property" | "grant" | "alphabet" | "evidence";
+/** `logEntry`: an entry of a run's log, `{ seq, prev, delivery, events }`. */
+export type Kind =
+  | "harness"
+  | "interface"
+  | "property"
+  | "grant"
+  | "alphabet"
+  | "evidence"
+  | "logEntry";
 
 // SMT-LIB (`crates/kernel/src/smtlib`).
 
@@ -491,6 +510,20 @@ export interface Kernel {
   ): { readonly system: System; readonly events: readonly Event[] };
   checkProperty(property: Property): readonly PropertyProblem[];
   monitor(property: Property, trace: readonly Event[]): Monitored;
+  /** The incremental monitor before any event, for a quantifier-free property. */
+  monitorStart(
+    property: Property,
+  ):
+    | { readonly kind: "started"; readonly state: MonitorState }
+    | { readonly kind: "refused"; readonly error: MonitorError };
+  /** The monitor over more events. On a violation it stops there, with `at` counted from the first of `events`. */
+  monitorStep(
+    property: Property,
+    state: MonitorState,
+    events: readonly Event[],
+  ):
+    | ({ readonly kind: "stepped"; readonly state: MonitorState } & Monitored)
+    | { readonly kind: "refused"; readonly error: MonitorError };
   prove(
     subject: Subject,
     method: Method,

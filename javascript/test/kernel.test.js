@@ -113,6 +113,49 @@ test("proves and re-checks evidence", () => {
   assert.deepEqual(kernel.verify(subject, proved.evidence), { valid: true });
 });
 
+test("monitors a run step by step as it would the whole trace", () => {
+  const property = {
+    name: "staysInWorkspace",
+    always: {
+      f: "not",
+      of: {
+        f: "atom",
+        holds: {
+          e: "op",
+          op: "and",
+          args: [
+            eq(get(v("event"), "kind"), lit("out")),
+            {
+              e: "op",
+              op: "not",
+              args: [
+                {
+                  e: "op",
+                  op: "prefix",
+                  args: [lit("/workspace/"), get(get(get(v("event"), "action"), "args"), "path")],
+                },
+              ],
+            },
+          ],
+        },
+      },
+    },
+  };
+  const { system } = kernel.init({ harness: writer, interface: files });
+  const started = kernel.monitorStart(property);
+  assert.equal(started.kind, "started");
+  const outside = kernel.deliver(system, { input: { kind: "start", value: "/etc/passwd" } });
+  const stepped = kernel.monitorStep(property, started.state, outside.events);
+  assert.equal(stepped.kind, "stepped");
+  assert.deepEqual(
+    { verdict: stepped.verdict, at: stepped.at },
+    kernel.monitor(property, outside.events),
+  );
+  const wrong = kernel.monitorStep(property, { last: [true] }, outside.events);
+  assert.equal(wrong.kind, "refused");
+  assert.equal(wrong.error.kind, "state");
+});
+
 test("types, evaluates and exports expressions", () => {
   const sum = { e: "op", op: "add", args: [v("x"), lit(1)] };
   assert.deepEqual(kernel.infer(sum, { x: "Int" }), { type: "Int", problems: [] });
@@ -126,6 +169,8 @@ test("keys content, not requests", () => {
   assert.equal(kernel.key("harness", writer), kernel.key("harness", { ...writer }));
   assert.notEqual(kernel.key("harness", writer), kernel.key("property", writer));
   assert.match(kernel.key("harness", writer), /^sha256:[0-9a-f]{64}$/);
+  const entry = { seq: 0, prev: `sha256:${"0".repeat(64)}`, delivery: {}, events: [] };
+  assert.notEqual(kernel.key("logEntry", entry), kernel.key("harness", entry));
 });
 
 test("throws on requests it doesn't understand", () => {

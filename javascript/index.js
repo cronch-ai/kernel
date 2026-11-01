@@ -57,6 +57,9 @@ export async function instantiate(source) {
     deliver: (system, delivery) => call({ op: "deliver", system, delivery }),
     checkProperty: (property) => call({ op: "checkProperty", property }).problems,
     monitor: (property, trace) => call({ op: "monitor", property, trace }),
+    monitorStart: (property) => call({ op: "monitorStart", property }),
+    monitorStep: (property, state, events) =>
+      call({ op: "monitorStep", property, state: state ?? {}, events }),
     prove: (subject, method) => call({ op: "prove", ...subject, method }),
     verify: (subject, evidence) => call({ op: "verify", ...subject, evidence }),
     certificate: (subject, alphabet, limit) =>

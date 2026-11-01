@@ -23,6 +23,8 @@ pub enum Kind {
     Grant,
     Alphabet,
     Evidence,
+    /// An entry of a run's log: `{ seq, prev, delivery, events }`, where `prev` is the previous entry's key.
+    LogEntry,
 }
 
 impl Kind {
@@ -34,6 +36,7 @@ impl Kind {
             Kind::Grant => "cronch.grant/1",
             Kind::Alphabet => "cronch.alphabet/1",
             Kind::Evidence => "cronch.evidence/1",
+            Kind::LogEntry => "cronch.logEntry/1",
         }
     }
 }

@@ -115,7 +115,7 @@ fn cases() -> Vec<Case> {
         ),
         (
             "monitoring",
-            "Properties monitored over traces: a leak, and effects after stop.",
+            "Properties monitored over traces, whole and step by step: a leak, and effects after stop.",
             |r| {
                 let system = r.init(leaky(), interface(), Value::Null);
                 let (system, a) = r.deliver(system, start(json!({})));
@@ -131,6 +131,14 @@ fn cases() -> Vec<Case> {
                 r.call(
                     json!({ "op": "monitor", "property": results_answer_calls(), "trace": trace }),
                 );
+                // The same verdict, one delivery's events at a time; `at` counts from the step's first event.
+                let started =
+                    r.call(json!({ "op": "monitorStart", "property": no_untrusted_send() }));
+                let first = r.call(json!({ "op": "monitorStep", "property": no_untrusted_send(), "state": started["state"], "events": a }));
+                r.call(json!({ "op": "monitorStep", "property": no_untrusted_send(), "state": first["state"], "events": b }));
+                // Refused: a quantified property, and a state that isn't this property's.
+                r.call(json!({ "op": "monitorStart", "property": results_answer_calls() }));
+                r.call(json!({ "op": "monitorStep", "property": no_untrusted_send(), "state": { "last": [true] }, "events": b }));
             },
         ),
         (
@@ -200,6 +208,12 @@ fn cases() -> Vec<Case> {
             r.call(json!({ "op": "objectKey", "kind": "harness", "object": careful() }));
             r.call(json!({ "op": "objectKey", "kind": "property", "object": no_untrusted_send() }));
             r.call(json!({ "op": "objectKey", "kind": "interface", "object": interface() }));
+            r.call(json!({ "op": "objectKey", "kind": "logEntry", "object": {
+                "seq": 0,
+                "prev": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+                "delivery": start(json!({})),
+                "events": [],
+            } }));
         }),
         (
             "smtlib",
