@@ -4,19 +4,28 @@
 //! interpreter produced itself. The environment delivers one input at a time; the interpreter checks that the input
 //! is one the environment could admissibly produce, steps `δ` on it, and processes the actions in order:
 //!
-//! * `call(op, args)` gets the next identifier. It is performed and becomes pending if the interface has the operation
-//!   and the arguments have its input type; otherwise it is refused, and `refused(k, op)` is queued.
+//! * `call(op, args)` gets the next identifier. It is performed and becomes pending if the interface has the operation,
+//!   the arguments have its input type and its precondition holds; otherwise it is refused, and `refused(k, op)` is
+//!   queued. The interpreter checks the precondition itself, at the point of the call, so it holds whatever `δ` does.
 //! * `cancel(k)` is passed to the world. It is a request: `k` stays pending and its results may still arrive.
 //! * `halt(v)` ends the run; later actions of the step are discarded.
 //!
 //! Queued inputs are delivered before the world gets another turn. An input the environment couldn't admissibly
-//! produce (a result for a call that isn't pending, a value of the wrong type) is recorded as withheld and changes
-//! nothing: the run stays a run under an admissible environment, one that hasn't delivered that input yet.
+//! produce (a result for a call that isn't pending, a value of the wrong type, a result that breaks its operation's
+//! postcondition) is recorded as withheld and changes nothing: the run stays a run under an admissible environment,
+//! one that hasn't delivered that input yet. A withheld result is evidence against the capability's publisher.
+//!
+//! The grant state is the interpreter's, not `δ`'s: preconditions read it, and only contracts change it. A result's
+//! `onResult` and a message's `onMsg` apply only when what arrived is trusted, so a harness can't grant itself
+//! anything, and neither can anything untrusted it talks to.
 //!
 //! Every step is recorded as events: one for the input, then one per processed action, each carrying the state the
 //! step produced. The trace is what properties are stated over.
 
-use crate::harness::{Harness, HarnessProblem, Interface, Mode, check_harness};
+use crate::harness::{
+    Harness, HarnessProblem, Interface, Mode, Operation, check_harness, check_interface,
+};
+use crate::ir::{Expr, Type};
 use crate::labeled::{self, EvalError, LValue, Label};
 use crate::types::inhabits;
 use serde::{Deserialize, Serialize};
@@ -69,10 +78,12 @@ pub struct Run {
     pub outcome: Option<Outcome>,
 }
 
-/// A configuration of the whole system.
+/// A configuration of the whole system: the root run, and the grant state the root principal gave it.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct System {
     pub root: Run,
+    #[serde(default)]
+    pub grant: Value,
 }
 
 /// What the environment delivers, and to which run. `to` is a path of spawn identifiers from the root; `[]` is the
@@ -130,8 +141,20 @@ pub enum Withheld {
     },
     /// The value doesn't have the type the interface or the harness declares.
     Mismatch {
-        expected: crate::ir::Type,
+        expected: Type,
         got: Value,
+    },
+    /// The result doesn't satisfy the operation's postcondition.
+    Postcondition {
+        call: u64,
+    },
+    /// The message doesn't satisfy the channel's invariant.
+    Invariant {
+        channel: String,
+    },
+    /// The operation's return label doesn't evaluate to a list of sources.
+    ReturnLabel {
+        call: u64,
     },
 }
 
@@ -169,6 +192,10 @@ pub enum Event {
         call: Option<u64>,
         action: Value,
         performed: bool,
+        #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+        effect: bool,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        footprint: Option<Value>,
         state: Value,
     },
     Withheld {
@@ -187,26 +214,57 @@ pub enum Event {
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum InitError {
     Harness { problems: Vec<HarnessProblem> },
+    Interface { problems: Vec<HarnessProblem> },
+}
+
+/// The value of a contract's expression, or `None` if it fails to evaluate.
+fn contract(expr: &Expr, vars: Vec<(&str, LValue)>) -> Option<LValue> {
+    let scope = vars.into_iter().map(|(n, v)| (n.to_string(), v)).collect();
+    labeled::eval(expr, scope).ok()
+}
+
+/// Whether a contract's condition holds. Absent: it does. One that fails to evaluate doesn't: checks fail closed.
+fn holds(expr: &Option<Expr>, vars: Vec<(&str, LValue)>) -> bool {
+    expr.as_ref()
+        .is_none_or(|e| contract(e, vars).is_some_and(|v| v.value() == Value::Bool(true)))
+}
+
+/// The label of what a call of this operation delivers.
+fn result_label(op: &Operation, args: &LValue) -> Option<Label> {
+    let mut label = match &op.ret {
+        None => args.label(),
+        Some(e) => contract(e, vec![("args", args.clone())])?
+            .value()
+            .as_array()?
+            .iter()
+            .map(|s| s.as_str().map(str::to_string))
+            .collect::<Option<Label>>()?,
+    };
+    label.extend(op.raise.iter().cloned());
+    Some(label)
+}
+
+/// An input `δ` will receive, and the grant state its arrival leaves.
+struct Admitted {
+    inbound: Inbound,
+    grant: Option<Value>,
 }
 
 impl System {
-    /// A system that hasn't started: the harness at `s₀`, against the interface.
-    pub fn new(harness: Harness, interface: Interface) -> Result<System, InitError> {
+    /// A system that hasn't started: the harness at `s₀`, against the interface, with the root grant state.
+    pub fn new(harness: Harness, interface: Interface, grant: Value) -> Result<System, InitError> {
         let problems = check_harness(&harness);
         if !problems.is_empty() {
             return Err(InitError::Harness { problems });
         }
+        let problems = check_interface(&interface);
+        if !problems.is_empty() {
+            return Err(InitError::Interface { problems });
+        }
         Ok(System {
             root: Run::new(harness, interface),
+            grant,
         })
-    }
-
-    fn run_mut(&mut self, path: &[u64]) -> Option<&mut Run> {
-        if path.is_empty() {
-            Some(&mut self.root)
-        } else {
-            None
-        }
     }
 
     /// Deliver one input from the environment, then every input the interpreter queued in response.
@@ -217,13 +275,17 @@ impl System {
             input: delivery.input.clone(),
             reason,
         };
-        let Some(run) = self.run_mut(&delivery.to) else {
+        let System { root, grant } = self;
+        let Some(run) = (delivery.to.is_empty()).then_some(root) else {
             return vec![withheld(Withheld::NoSuchRun)];
         };
-        match run.admit(&delivery.input) {
+        match run.admit(&delivery.input, grant) {
             Err(reason) => events.push(withheld(reason)),
-            Ok(inbound) => {
-                run.step(&delivery.to, inbound, &mut events);
+            Ok(admitted) => {
+                if let Some(g) = admitted.grant {
+                    *grant = g;
+                }
+                run.step(&delivery.to, admitted.inbound, grant, &mut events);
                 run.end(&delivery.input);
             }
         }
@@ -236,7 +298,7 @@ impl System {
             .then(|| self.root.queue.pop_front())
             .flatten()
         {
-            self.root.step(&[], inbound, events);
+            self.root.step(&[], inbound, &mut self.grant, events);
         }
     }
 }
@@ -269,7 +331,7 @@ impl Run {
         }
     }
 
-    fn typed(value: &Value, expected: &crate::ir::Type) -> Result<(), Withheld> {
+    fn typed(value: &Value, expected: &Type) -> Result<(), Withheld> {
         if inhabits(value, expected) {
             Ok(())
         } else {
@@ -281,38 +343,71 @@ impl Run {
     }
 
     /// The input as `δ` will receive it, if the environment could admissibly produce it now.
-    fn admit(&self, input: &WorldInput) -> Result<Inbound, Withheld> {
+    fn admit(&self, input: &WorldInput, grant: &Value) -> Result<Admitted, Withheld> {
         if self.outcome.is_some() {
             return Err(Withheld::Ended);
         }
+        let admitted = |label, grant| Admitted {
+            inbound: Inbound {
+                input: input_value(input),
+                label,
+            },
+            grant,
+        };
         if let WorldInput::Start { value, label } = input {
             if self.started {
                 return Err(Withheld::AlreadyStarted);
             }
             Self::typed(value, &self.harness.arg)?;
-            return Ok(Inbound {
-                input: input_value(input),
-                label: label.clone(),
-            });
+            return Ok(admitted(label.clone(), None));
         }
         if !self.started {
             return Err(Withheld::NotStarted);
         }
-        let label = match input {
+        let trusted_grant = || LValue::trusted(grant);
+        match input {
             WorldInput::Start { .. } => unreachable!("handled above"),
             WorldInput::Ret { call, value } => {
-                let pending = self.pending(*call)?;
-                Self::typed(value, &self.interface.operations[&pending.op].output)?;
-                pending.args.label()
+                let (pending, op) = self.call(*call)?;
+                Self::typed(value, &op.output)?;
+                let result = LValue::trusted(value);
+                if !holds(
+                    &op.post,
+                    vec![("args", pending.args.clone()), ("result", result.clone())],
+                ) {
+                    return Err(Withheld::Postcondition { call: *call });
+                }
+                let label =
+                    result_label(op, &pending.args).ok_or(Withheld::ReturnLabel { call: *call })?;
+                let update = op
+                    .on_result
+                    .as_ref()
+                    .filter(|_| label.is_empty())
+                    .and_then(|e| {
+                        let vars = vec![
+                            ("args", pending.args.clone()),
+                            ("result", result),
+                            ("grant", trusted_grant()),
+                        ];
+                        contract(e, vars).map(|g| g.value())
+                    });
+                Ok(admitted(label, update))
             }
             WorldInput::End { call } => {
-                let pending = self.pending(*call)?;
-                if self.interface.operations[&pending.op].mode != Mode::Stream {
+                let (pending, op) = self.call(*call)?;
+                if op.mode != Mode::Stream {
                     return Err(Withheld::NotAStream { call: *call });
                 }
-                pending.args.label()
+                let label =
+                    result_label(op, &pending.args).ok_or(Withheld::ReturnLabel { call: *call })?;
+                Ok(admitted(label, None))
             }
-            WorldInput::Failed { call, .. } => self.pending(*call)?.args.label(),
+            WorldInput::Failed { call, .. } => {
+                let (pending, op) = self.call(*call)?;
+                let label =
+                    result_label(op, &pending.args).ok_or(Withheld::ReturnLabel { call: *call })?;
+                Ok(admitted(label, None))
+            }
             WorldInput::Msg { channel, value } => {
                 let declared = self.interface.channels.get(channel).ok_or_else(|| {
                     Withheld::NoSuchChannel {
@@ -320,13 +415,29 @@ impl Run {
                     }
                 })?;
                 Self::typed(value, &declared.ty)?;
-                Label::new()
+                let message = LValue::new(value, &declared.label);
+                if !holds(&declared.inv, vec![("value", message.clone())]) {
+                    return Err(Withheld::Invariant {
+                        channel: channel.clone(),
+                    });
+                }
+                let update = declared
+                    .on_msg
+                    .as_ref()
+                    .filter(|_| declared.label.is_empty())
+                    .and_then(|e| {
+                        contract(e, vec![("value", message), ("grant", trusted_grant())])
+                            .map(|g| g.value())
+                    });
+                Ok(admitted(declared.label.clone(), update))
             }
-        };
-        Ok(Inbound {
-            input: input_value(input),
-            label,
-        })
+        }
+    }
+
+    /// A pending call and its operation.
+    fn call(&self, call: u64) -> Result<(&Pending, &Operation), Withheld> {
+        let pending = self.pending(call)?;
+        Ok((pending, &self.interface.operations[&pending.op]))
     }
 
     fn pending(&self, call: u64) -> Result<&Pending, Withheld> {
@@ -361,7 +472,13 @@ impl Run {
     }
 
     /// One step of `δ` on an admitted input, then its actions in order.
-    fn step(&mut self, origin: &[u64], inbound: Inbound, events: &mut Vec<Event>) {
+    fn step(
+        &mut self,
+        origin: &[u64],
+        inbound: Inbound,
+        grant: &mut Value,
+        events: &mut Vec<Event>,
+    ) {
         if inbound.input["kind"] == "start" {
             self.started = true;
         }
@@ -394,11 +511,13 @@ impl Run {
         });
         for action in items {
             let action = action.raised(&label);
-            let out = |call, performed| Event::Out {
+            let out = |call, performed, effect, footprint| Event::Out {
                 origin: origin.to_vec(),
                 call,
                 action: action.value(),
                 performed,
+                effect,
+                footprint,
                 state: state.clone(),
             };
             let value = action.value();
@@ -410,15 +529,31 @@ impl Run {
                         .unwrap_or_else(|| LValue::new(&Value::Null, action.top()));
                     let k = self.next;
                     self.next += 1;
-                    let performed = self
-                        .interface
-                        .operations
-                        .get(&op)
-                        .is_some_and(|o| inhabits(&args.value(), &o.input));
-                    events.push(out(Some(k), performed));
-                    if performed {
+                    let declared = self.interface.operations.get(&op).filter(|o| {
+                        inhabits(&args.value(), &o.input)
+                            && holds(
+                                &o.pre,
+                                vec![("args", args.clone()), ("grant", LValue::trusted(grant))],
+                            )
+                    });
+                    if let Some(o) = declared {
+                        let footprint = o
+                            .footprint
+                            .as_ref()
+                            .and_then(|e| contract(e, vec![("args", args.clone())]))
+                            .map(|f| f.value());
+                        events.push(out(Some(k), true, o.effect, footprint));
+                        if let Some(next) = o.on_call.as_ref().and_then(|e| {
+                            contract(
+                                e,
+                                vec![("args", args.clone()), ("grant", LValue::trusted(grant))],
+                            )
+                        }) {
+                            *grant = next.value();
+                        }
                         self.pending.push(Pending { call: k, op, args });
                     } else {
+                        events.push(out(Some(k), false, false, None));
                         self.queue.push_back(Inbound {
                             input: json!({ "kind": "refused", "call": k, "op": op }),
                             label: Label::new(),
@@ -427,10 +562,10 @@ impl Run {
                 }
                 Some("cancel") if value["call"].is_u64() => {
                     let k = value["call"].as_u64().unwrap_or_default();
-                    events.push(out(Some(k), self.pending(k).is_ok()));
+                    events.push(out(Some(k), self.pending(k).is_ok(), false, None));
                 }
                 Some("halt") => {
-                    events.push(out(None, true));
+                    events.push(out(None, true, false, None));
                     self.outcome = Some(Outcome::Halted {
                         value: value.get("value").cloned().unwrap_or(Value::Null),
                     });

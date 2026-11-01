@@ -6,7 +6,9 @@ use crate::check::check_ask;
 use crate::claim::{
     Assessment, Claim, Verdict as ClaimVerdict, Witness, assess_claim, check_claim, claim_key,
 };
-use crate::harness::{Harness, Interface, check_harness};
+use crate::harness::{
+    Harness, Installation, Interface, Narrowing, check_harness, check_interface, install, narrow,
+};
 use crate::ir::{Answer, Ask, AskSpec, World};
 use crate::key::{ask_key, spec_key};
 use crate::run::{Delivery, System};
@@ -82,6 +84,18 @@ pub enum Request {
         harness: Harness,
         #[serde(default)]
         interface: Interface,
+        /// The grant state the root principal starts the run with.
+        #[serde(default)]
+        grant: Value,
+    },
+    /// The interface of several capabilities, each under its prefix.
+    Install { capabilities: Vec<Installation> },
+    /// Problems with an interface's contracts.
+    CheckInterface { interface: Interface },
+    /// An interface narrowed for a child.
+    Narrow {
+        interface: Interface,
+        narrowings: Vec<Narrowing>,
     },
     /// Deliver one input to a system: the next configuration, and what happened.
     Deliver { system: System, delivery: Delivery },
@@ -156,7 +170,25 @@ fn respond(request: Request) -> Value {
             Assessment::Assessed { .. } => assessed(&claim, &answer, &witness),
         },
         Request::CheckHarness { harness } => json!({ "problems": check_harness(&harness) }),
-        Request::Init { harness, interface } => match System::new(harness, interface) {
+        Request::Install { capabilities } => match install(&capabilities) {
+            Ok(interface) => json!({ "kind": "installed", "interface": interface }),
+            Err(error) => json!({ "kind": "refused", "error": error }),
+        },
+        Request::CheckInterface { interface } => {
+            json!({ "problems": check_interface(&interface) })
+        }
+        Request::Narrow {
+            interface,
+            narrowings,
+        } => match narrow(&interface, &narrowings) {
+            Ok(interface) => json!({ "kind": "narrowed", "interface": interface }),
+            Err(error) => json!({ "kind": "refused", "error": error }),
+        },
+        Request::Init {
+            harness,
+            interface,
+            grant,
+        } => match System::new(harness, interface, grant) {
             Ok(system) => json!({ "kind": "ready", "system": system }),
             Err(error) => json!({ "kind": "refused", "error": error }),
         },
