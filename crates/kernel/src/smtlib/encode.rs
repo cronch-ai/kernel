@@ -347,6 +347,9 @@ impl Encoder {
 
     /// The variant sort's name, unquoted, declaring it (after the sorts its cases use) on first sight.
     fn variant(&mut self, tag: &str, cases: &BTreeMap<String, Type>) -> Read<String> {
+        if cases.is_empty() {
+            return Err(NoReading::EmptyVariant);
+        }
         let name = variant_names(tag, cases);
         if !self.datatypes.iter().any(|(n, _)| *n == name) {
             for (case, ty) in cases {

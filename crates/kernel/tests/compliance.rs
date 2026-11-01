@@ -167,6 +167,35 @@ fn cases() -> Vec<Case> {
                 ));
             },
         ),
+        (
+            "induction",
+            "An invariant certificate checked, and consecution as a query whose counterexample the kernel checks.",
+            |r| {
+                let alphabet = json!([
+                    { "input": { "kind": "start", "value": {} } },
+                    { "input": { "kind": "ret", "value": "page", "op": "net.fetch" } },
+                    { "input": { "kind": "ret", "value": 200, "op": "net.send" } },
+                ]);
+                let mut request = json!({ "op": "certificate", "harness": careful(), "interface": interface(), "property": no_untrusted_send(), "alphabet": alphabet });
+                let found = r.call(request.clone());
+                request["op"] = json!("prove");
+                request["method"] = json!({ "kind": "invariant", "invariant": lit(json!(true)), "configurations": found["configurations"], "alphabet": alphabet });
+                r.call(request);
+                let count = json!({ "operations": { "count": { "input": { "Record": {} }, "output": "Int" } } });
+                let counter = json!({
+                    "arg": { "Record": {} }, "state": { "Record": { "n": "Int" } }, "init": { "n": 0 },
+                    "step": match_(var("input"), "kind", vec![
+                        ("ret", "r", match_(var("r"), "op", vec![
+                            ("count", "c", step(rec(vec![("n", op("add", vec![path("state", &["n"]), path("c", &["value"])]))]), vec![])),
+                        ], Some(step(var("state"), vec![])))),
+                    ], Some(step(var("state"), vec![]))),
+                });
+                let invariant = op("ge", vec![path("state", &["n"]), lit(json!(0))]);
+                r.call(json!({ "op": "obligation", "harness": counter, "interface": count, "invariant": invariant }));
+                r.call(json!({ "op": "checkInduction", "harness": counter, "interface": count, "invariant": invariant,
+                           "state": { "n": 0 }, "input": { "kind": "ret", "op": "count", "call": 0, "value": -1 } }));
+            },
+        ),
         ("keys", "Content keys of harness objects.", |r| {
             r.call(json!({ "op": "objectKey", "kind": "harness", "object": careful() }));
             r.call(json!({ "op": "objectKey", "kind": "property", "object": no_untrusted_send() }));

@@ -74,6 +74,8 @@ pub enum NoReading {
     Fold,
     /// A label: an export reads values, not their provenance.
     Label,
+    /// A variant with no cases: SMT-LIB has no datatype without constructors.
+    EmptyVariant,
     /// `round` to a number of digits that isn't a literal from 0 to 22, whose scale is exact as a float.
     RoundingDigits,
     /// A record's size counts fields its type doesn't declare.
@@ -145,6 +147,142 @@ pub fn export(definitions: &[Definition], floats: Floats) -> Result<String, Refu
             script::Section {
                 heading: "Definitions.",
                 entries,
+            },
+        ],
+    };
+    Ok(script.to_string())
+}
+
+/// Consecution for an invariant of a step's state, as a query: `sat` exactly where some state satisfies the
+/// invariant, `next` is defined on it and some input, and the invariant fails of the result. `get-value` asks for
+/// that state and input, which the kernel can then check (`induction::check_step`).
+pub fn induction(
+    state: &Type,
+    input: &Type,
+    invariant: &Expr,
+    next: &Expr,
+    excluded: &[String],
+    floats: Floats,
+) -> Result<String, Refusal> {
+    let param = |name: &str, ty: &Type| Param {
+        name: name.to_string(),
+        ty: ty.clone(),
+    };
+    let definitions = [
+        Definition {
+            name: "invariant".into(),
+            params: vec![param("state", state)],
+            body: invariant.clone(),
+            description: "The invariant, of a state.".into(),
+        },
+        Definition {
+            name: "next".into(),
+            params: vec![param("state", state), param("input", input)],
+            body: next.clone(),
+            description: "The state the step gives.".into(),
+        },
+    ];
+    let mut encoder = Encoder::new().reading(floats);
+    let mut entries = Vec::new();
+    let mut partial = Vec::new();
+    for def in &definitions {
+        let refused = |error| Refusal {
+            definition: def.name.clone(),
+            error: Box::new(error),
+        };
+        let scope = def
+            .params
+            .iter()
+            .map(|p| (p.name.clone(), p.ty.clone()))
+            .collect();
+        let (_, problems) = infer(&def.body, scope);
+        if !problems.is_empty() {
+            return Err(refused(ExportError::IllFormed { problems }));
+        }
+        let encoded = encoder.definition(def).map_err(refused)?;
+        partial.push(encoded.len() > 1);
+        entries.extend(encoded);
+    }
+    let refused = |error| Refusal {
+        definition: String::new(),
+        error: Box::new(error),
+    };
+    let at = |reason| {
+        refused(ExportError::NoReading {
+            place: Place::Body { at: String::new() },
+            reason: Box::new(reason),
+        })
+    };
+    let state_sort = encoder.sort(state).map_err(at)?;
+    let input_sort = encoder.sort(input).map_err(at)?;
+    let records = encoder.records().map_err(refused)?;
+    let name = |prefix: &str, n: &str| script::Term::symbol(prefix, n).map_err(at);
+    let (s, i) = (name("q:", "state")?, name("q:", "input")?);
+    // Where a function errs in the kernel, it holds of nothing: the invariant is false, the step doesn't happen.
+    let holds_of = |of: script::Term| -> Result<script::Term, Refusal> {
+        let held = script::Term::app(name("def:", "invariant")?, vec![of.clone()]);
+        Ok(if partial[0] {
+            let defined = script::Term::app(name("defined:", "invariant")?, vec![of]);
+            script::Term::call("and", vec![defined, held])
+        } else {
+            held
+        })
+    };
+    let after = script::Term::app(name("def:", "next")?, vec![s.clone(), i.clone()]);
+    let mut asserts = vec![holds_of(s.clone())?];
+    if partial[1] {
+        asserts.push(script::Term::app(
+            name("defined:", "next")?,
+            vec![s.clone(), i.clone()],
+        ));
+    }
+    asserts.push(script::Term::call("not", vec![holds_of(after)?]));
+    let command = |c| script::Entry {
+        comments: vec![],
+        command: Some(c),
+    };
+    let mut query = vec![
+        command(script::Command::DeclareConst {
+            name: s.clone(),
+            sort: state_sort,
+        }),
+        command(script::Command::DeclareConst {
+            name: i.clone(),
+            sort: input_sort,
+        }),
+    ];
+    query.extend(
+        asserts
+            .into_iter()
+            .map(|a| command(script::Command::Assert(a))),
+    );
+    query.push(command(script::Command::CheckSat));
+    query.push(command(script::Command::GetValue(vec![s, i])));
+    let mut preamble = vec![
+        "Consecution: sat exactly where the invariant holds of a state and fails after one step."
+            .into(),
+        "A model is a counterexample to induction for the kernel to check; unsat is not a verdict."
+            .into(),
+    ];
+    if !excluded.is_empty() {
+        preamble.push(format!(
+            "Inputs left out, whose types have no sort: {}.",
+            excluded.join(", ")
+        ));
+    }
+    let script = Script {
+        preamble,
+        options: vec![(":produce-models", "true")],
+        logic: "ALL",
+        sections: vec![
+            records,
+            script::Section {
+                heading: "Definitions.",
+                entries,
+            },
+            script::Section {
+                heading: "A counterexample to induction.",
+                entries: query,
             },
         ],
     };

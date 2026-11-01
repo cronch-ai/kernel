@@ -16,12 +16,19 @@
 //!   is reached, which is inconclusive). No violation: the property holds at every depth, for that alphabet. This
 //!   needs the incremental monitor, so the property must be quantifier-free.
 //!
+//! * `invariant`: a certificate, an inductive invariant with the configurations it holds of, which the kernel checks
+//!   without searching: initiation, consecution and safety, step by step. Finding the configurations is anyone's job
+//!   (`certificate` finds them by search); checking them is the kernel's.
+//!
 //! The alphabet is an assumption about the environment, stated in the evidence: a proof over it says nothing about
-//! inputs outside it. Proofs over all inputs, by inductive invariants discharged with certificates, are the next tier.
+//! inputs outside it. For invariants of `δ` over every state and every well-typed input, see `obligation`: a solver
+//! looks for a counterexample to induction, and the kernel checks what it finds.
 
 use crate::harness::{Harness, Interface};
+use crate::ir::Expr;
 use crate::key::{Kind, digest, key};
 use crate::labeled::Label;
+use crate::labeled::{self, LValue};
 use crate::property::{
     MonitorState, Property, PropertyProblem, advance, check_property, first_violation,
     quantifier_free,
@@ -29,7 +36,7 @@ use crate::property::{
 use crate::run::{Delivery, Event, InitError, Run, System, Withheld, WorldInput};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
-use std::collections::{BTreeMap, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 /// What a statement is about.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -101,6 +108,12 @@ pub enum Method {
         #[serde(default = "default_limit")]
         limit: usize,
     },
+    /// An inductive invariant over configurations (the variable `config`), with the configurations it holds of.
+    Invariant {
+        invariant: Expr,
+        configurations: Vec<Configuration>,
+        alphabet: Alphabet,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -164,6 +177,26 @@ pub enum ProveError {
     /// The search reached its limit before finishing.
     Inconclusive {
         explored: usize,
+    },
+    /// A certificate was asked for, and the property fails.
+    Refuted {
+        counterexample: Vec<Delivery>,
+    },
+    /// The certificate's configurations don't include the initial one.
+    Initiation,
+    /// The invariant doesn't hold of a configuration the certificate lists.
+    NotInvariant {
+        index: usize,
+    },
+    /// A step from a listed configuration leads outside the certificate.
+    NotClosed {
+        index: usize,
+        delivery: Delivery,
+    },
+    /// The property fails at an event of a step from a listed configuration.
+    Unsafe {
+        index: usize,
+        delivery: Delivery,
     },
 }
 
@@ -349,21 +382,56 @@ fn bounded(subject: &Subject, depth: usize, alphabet: &Alphabet) -> Result<Verdi
     })
 }
 
-fn exhaustive(subject: &Subject, alphabet: &Alphabet, limit: usize) -> Result<Verdict, ProveError> {
+/// A configuration as a certificate lists it: the system, and the property's monitor after the events so far.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct Configuration {
+    pub system: System,
+    #[serde(default)]
+    pub monitor: MonitorState,
+}
+
+fn configuration_key(c: &Configuration) -> String {
+    digest(&json!(c))
+}
+
+/// The monitor after a step's events, or `None` if the property fails at one of them.
+fn monitored(
+    formula: &crate::property::Formula,
+    monitor: &MonitorState,
+    events: &[Event],
+) -> Result<Option<MonitorState>, ProveError> {
+    let mut m = monitor.clone();
+    for e in events_as_values(events) {
+        let (after, holds) = advance(formula, &m, &e).map_err(|_| ProveError::Quantified)?;
+        if !holds {
+            return Ok(None);
+        }
+        m = after;
+    }
+    Ok(Some(m))
+}
+
+/// Every configuration reachable under the alphabet, or a counterexample.
+enum Explored {
+    Closed(Vec<Configuration>),
+    Refuted(Vec<Delivery>),
+}
+
+fn explore(subject: &Subject, alphabet: &Alphabet, limit: usize) -> Result<Explored, ProveError> {
     let formula = &subject.property.always;
     if !quantifier_free(formula) {
         return Err(ProveError::Quantified);
     }
-    let state_key = |system: &System, monitor: &MonitorState| {
-        digest(&json!({ "system": system, "monitor": monitor }))
+    let initial = Configuration {
+        system: start(subject)?,
+        monitor: MonitorState::default(),
     };
-    let system = start(subject)?;
-    let monitor = MonitorState::default();
-    let first = state_key(&system, &monitor);
+    let first = configuration_key(&initial);
     // Each configuration seen, with the configuration and delivery it was first reached from.
     let mut seen: BTreeMap<String, Option<(String, Delivery)>> =
         BTreeMap::from([(first.clone(), None)]);
-    let mut queue = VecDeque::from([(system, monitor, first)]);
+    let mut found = vec![initial.clone()];
+    let mut queue = VecDeque::from([(initial, first)]);
     let path_to = |seen: &BTreeMap<String, Option<(String, Delivery)>>, mut at: String| {
         let mut deliveries = Vec::new();
         while let Some(Some((parent, d))) = seen.get(&at) {
@@ -373,33 +441,91 @@ fn exhaustive(subject: &Subject, alphabet: &Alphabet, limit: usize) -> Result<Ve
         deliveries.reverse();
         deliveries
     };
-    while let Some((system, monitor, here)) = queue.pop_front() {
-        for (d, next, events) in successors(&system, alphabet) {
-            let mut m = monitor.clone();
-            let mut violated = false;
-            for e in events_as_values(&events) {
-                let (after, holds) =
-                    advance(formula, &m, &e).map_err(|_| ProveError::Quantified)?;
-                m = after;
-                if !holds {
-                    violated = true;
-                    break;
-                }
-            }
-            if violated {
-                let mut counterexample = path_to(&seen, here.clone());
+    while let Some((here, here_key)) = queue.pop_front() {
+        for (d, system, events) in successors(&here.system, alphabet) {
+            let Some(monitor) = monitored(formula, &here.monitor, &events)? else {
+                let mut counterexample = path_to(&seen, here_key.clone());
                 counterexample.push(d);
-                return replay(subject, &counterexample);
-            }
-            let k = state_key(&next, &m);
+                return Ok(Explored::Refuted(counterexample));
+            };
+            let next = Configuration { system, monitor };
+            let k = configuration_key(&next);
             if !seen.contains_key(&k) {
                 if seen.len() >= limit {
                     return Err(ProveError::Inconclusive {
                         explored: seen.len(),
                     });
                 }
-                seen.insert(k.clone(), Some((here.clone(), d)));
-                queue.push_back((next, m, k));
+                seen.insert(k.clone(), Some((here_key.clone(), d)));
+                found.push(next.clone());
+                queue.push_back((next, k));
+            }
+        }
+    }
+    Ok(Explored::Closed(found))
+}
+
+fn exhaustive(subject: &Subject, alphabet: &Alphabet, limit: usize) -> Result<Verdict, ProveError> {
+    match explore(subject, alphabet, limit)? {
+        Explored::Closed(_) => Ok(Verdict::Holds),
+        Explored::Refuted(counterexample) => replay(subject, &counterexample),
+    }
+}
+
+/// The configurations an `invariant` certificate needs: every one reachable under the alphabet, found by search.
+/// Anyone may find them another way; the kernel only checks what it is given.
+pub fn certificate(
+    subject: &Subject,
+    alphabet: &Alphabet,
+    limit: usize,
+) -> Result<Vec<Configuration>, ProveError> {
+    let problems = check_property(&subject.property);
+    if !problems.is_empty() {
+        return Err(ProveError::Property { problems });
+    }
+    match explore(subject, alphabet, limit)? {
+        Explored::Closed(found) => Ok(found),
+        Explored::Refuted(counterexample) => Err(ProveError::Refuted { counterexample }),
+    }
+}
+
+/// Check an inductive invariant with the configurations it holds of: the initial configuration is one of them,
+/// the invariant holds of each, every step the alphabet allows from one leads to another, and the property holds at
+/// every event of those steps. Then, by induction on the length of a run, every configuration reachable under the
+/// alphabet is one of them, and the property holds at every event of every run, at every depth.
+fn invariant(
+    subject: &Subject,
+    expr: &Expr,
+    configurations: &[Configuration],
+    alphabet: &Alphabet,
+) -> Result<Verdict, ProveError> {
+    let formula = &subject.property.always;
+    if !quantifier_free(formula) {
+        return Err(ProveError::Quantified);
+    }
+    let holds_of = |c: &Configuration| {
+        let config = LValue::trusted(&json!(c));
+        labeled::eval(expr, vec![("config".to_string(), config)])
+            .is_ok_and(|v| v.value() == Value::Bool(true))
+    };
+    let keys: BTreeSet<String> = configurations.iter().map(configuration_key).collect();
+    let initial = Configuration {
+        system: start(subject)?,
+        monitor: MonitorState::default(),
+    };
+    if !keys.contains(&configuration_key(&initial)) {
+        return Err(ProveError::Initiation);
+    }
+    for (index, c) in configurations.iter().enumerate() {
+        if !holds_of(c) {
+            return Err(ProveError::NotInvariant { index });
+        }
+        for (delivery, system, events) in successors(&c.system, alphabet) {
+            let Some(monitor) = monitored(formula, &c.monitor, &events)? else {
+                return Err(ProveError::Unsafe { index, delivery });
+            };
+            if !keys.contains(&configuration_key(&Configuration { system, monitor })) {
+                return Err(ProveError::NotClosed { index, delivery });
             }
         }
     }
@@ -415,6 +541,11 @@ fn verdict(subject: &Subject, method: &Method) -> Result<Verdict, ProveError> {
         Method::Counterexample { deliveries } => replay(subject, deliveries),
         Method::Bounded { depth, alphabet } => bounded(subject, *depth, alphabet),
         Method::Exhaustive { alphabet, limit } => exhaustive(subject, alphabet, *limit),
+        Method::Invariant {
+            invariant: expr,
+            configurations,
+            alphabet,
+        } => invariant(subject, expr, configurations, alphabet),
     }
 }
 
@@ -431,7 +562,12 @@ pub fn prove(subject: &Subject, method: &Method) -> Result<Evidence, ProveError>
     ];
     match (method, &verdict) {
         (_, Verdict::Refuted { .. }) => {}
-        (Method::Bounded { alphabet, .. } | Method::Exhaustive { alphabet, .. }, _) => {
+        (
+            Method::Bounded { alphabet, .. }
+            | Method::Exhaustive { alphabet, .. }
+            | Method::Invariant { alphabet, .. },
+            _,
+        ) => {
             assumptions.push(Assumption::Environment {
                 alphabet: key(Kind::Alphabet, alphabet),
             });

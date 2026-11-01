@@ -59,6 +59,18 @@ export async function instantiate(source) {
     monitor: (property, trace) => call({ op: "monitor", property, trace }),
     prove: (subject, method) => call({ op: "prove", ...subject, method }),
     verify: (subject, evidence) => call({ op: "verify", ...subject, evidence }),
+    certificate: (subject, alphabet, limit) =>
+      call({ op: "certificate", ...subject, alphabet, limit: limit ?? 10000 }),
+    obligation: ({ harness, interface: iface, invariant, floats }) =>
+      call({
+        op: "obligation",
+        harness,
+        interface: iface ?? {},
+        invariant,
+        floats: floats ?? "exact",
+      }),
+    checkInduction: ({ harness, interface: iface, invariant, state, input }) =>
+      call({ op: "checkInduction", harness, interface: iface ?? {}, invariant, state, input }),
     key: (kind, object) => call({ op: "objectKey", kind, object }).key,
     smtlib: (definitions, floats) => call({ op: "smtlib", definitions, floats: floats ?? "exact" }),
     readValues: (reply, types) => call({ op: "readValues", reply, types }),

@@ -347,10 +347,23 @@ export interface Choice {
   readonly input: Template;
 }
 
+/** A configuration as a certificate lists it. */
+export interface Configuration {
+  readonly system: System;
+  readonly monitor?: { readonly last?: readonly boolean[] };
+}
+
 export type Method =
   | { readonly kind: "counterexample"; readonly deliveries: readonly Delivery[] }
   | { readonly kind: "bounded"; readonly depth: number; readonly alphabet: readonly Choice[] }
-  | { readonly kind: "exhaustive"; readonly alphabet: readonly Choice[]; readonly limit?: number };
+  | { readonly kind: "exhaustive"; readonly alphabet: readonly Choice[]; readonly limit?: number }
+  /** An inductive invariant over `config`, with the configurations it holds of. */
+  | {
+      readonly kind: "invariant";
+      readonly invariant: Expr;
+      readonly configurations: readonly Configuration[];
+      readonly alphabet: readonly Choice[];
+    };
 
 export type Verdict =
   | {
@@ -382,7 +395,12 @@ export type ProveError =
   | { readonly kind: "inadmissible"; readonly index: number; readonly reason: Withheld }
   | { readonly kind: "notViolated" }
   | { readonly kind: "quantified" }
-  | { readonly kind: "inconclusive"; readonly explored: number };
+  | { readonly kind: "inconclusive"; readonly explored: number }
+  | { readonly kind: "refuted"; readonly counterexample: readonly Delivery[] }
+  | { readonly kind: "initiation" }
+  | { readonly kind: "notInvariant"; readonly index: number }
+  | { readonly kind: "notClosed"; readonly index: number; readonly delivery: Delivery }
+  | { readonly kind: "unsafe"; readonly index: number; readonly delivery: Delivery };
 
 export type InitError =
   | { readonly kind: "harness"; readonly problems: readonly HarnessProblem[] }
@@ -409,6 +427,7 @@ export type NoReading =
   | { readonly kind: "text"; readonly of: Type }
   | { readonly kind: "fold" }
   | { readonly kind: "label" }
+  | { readonly kind: "emptyVariant" }
   | { readonly kind: "roundingDigits" }
   | { readonly kind: "recordSize" }
   | { readonly kind: "undeclaredField"; readonly field: string }
@@ -482,6 +501,44 @@ export interface Kernel {
     subject: Subject,
     evidence: Evidence,
   ): { readonly valid: true } | { readonly valid: false; readonly error: unknown };
+  /** The configurations an `invariant` certificate lists, found by search. */
+  certificate(
+    subject: Subject,
+    alphabet: readonly Choice[],
+    limit?: number,
+  ):
+    | { readonly kind: "certificate"; readonly configurations: readonly Configuration[] }
+    | { readonly kind: "refused"; readonly error: ProveError };
+  /** Initiation, decided, and consecution as an SMT-LIB query whose models are counterexamples to induction. */
+  obligation(input: {
+    readonly harness: Harness;
+    readonly interface?: Interface;
+    readonly invariant: Expr;
+    readonly floats?: Floats;
+  }):
+    | {
+        readonly kind: "obligation";
+        readonly initiation: boolean;
+        readonly text: string;
+        readonly excluded: readonly string[];
+        /** The types to read a model's state and input at. */
+        readonly reads: readonly [Type, Type];
+      }
+    | { readonly kind: "refused"; readonly error: unknown };
+  /** The kernel's check of a solver's counterexample to induction. */
+  checkInduction(input: {
+    readonly harness: Harness;
+    readonly interface?: Interface;
+    readonly invariant: Expr;
+    readonly state: Value;
+    readonly input: Value;
+  }):
+    | { readonly kind: "preserved"; readonly next: Value }
+    | { readonly kind: "notInductive"; readonly next: Value }
+    | {
+        readonly kind: "refused";
+        readonly error: { readonly kind: "invariant" | "state" | "input" | "notHeld" | "step" };
+      };
   key(kind: Kind, object: unknown): string;
   smtlib(
     definitions: readonly Definition[],

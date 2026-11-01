@@ -15,6 +15,7 @@ pub mod cbor;
 pub mod check;
 pub mod evidence;
 pub mod harness;
+pub mod induction;
 pub mod ir;
 pub mod key;
 pub mod labeled;

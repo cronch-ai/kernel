@@ -2,11 +2,12 @@
 
 use crate::cbor::{self, DecodeError};
 use crate::check::infer;
-use crate::evidence::{Evidence, Method, Subject, prove, verify};
+use crate::evidence::{Alphabet, Evidence, Method, Subject, certificate, prove, verify};
 use crate::harness::{
     Harness, Installation, Interface, Narrowing, check_harness, check_interface, input_type,
     install, narrow,
 };
+use crate::induction::{check_step, obligation};
 use crate::ir::{Expr, Type};
 use crate::key::{Kind, key};
 use crate::labeled::{self, LValue};
@@ -85,6 +86,32 @@ pub enum Request {
         subject: Subject,
         evidence: Evidence,
     },
+    /// The configurations an `invariant` certificate lists: every one reachable under the alphabet.
+    Certificate {
+        #[serde(flatten)]
+        subject: Subject,
+        alphabet: Alphabet,
+        #[serde(default = "certificate_limit")]
+        limit: usize,
+    },
+    /// Initiation for an invariant of a harness's state, decided, and consecution, as an SMT-LIB query.
+    Obligation {
+        harness: Harness,
+        #[serde(default)]
+        interface: Interface,
+        invariant: Expr,
+        #[serde(default)]
+        floats: Floats,
+    },
+    /// One step from a state where the invariant holds: whether it still holds after this input.
+    CheckInduction {
+        harness: Harness,
+        #[serde(default)]
+        interface: Interface,
+        invariant: Expr,
+        state: Value,
+        input: Value,
+    },
     /// The content key of a harness object.
     ObjectKey { kind: Kind, object: Value },
     /// Definitions as an SMT-LIB 2 script, or why they have no faithful reading.
@@ -104,6 +131,10 @@ pub enum RequestError {
     Undecodable { error: DecodeError },
     /// The request decodes, but isn't one the kernel understands. `detail` is the deserializer's explanation.
     Malformed { detail: String },
+}
+
+fn certificate_limit() -> usize {
+    10_000
 }
 
 fn refused_or<T: Serialize, E: Serialize>(kind: &str, field: &str, result: Result<T, E>) -> Value {
@@ -168,6 +199,36 @@ fn respond(request: Request) -> Value {
         Request::Verify { subject, evidence } => match verify(&subject, &evidence) {
             Ok(()) => json!({ "valid": true }),
             Err(error) => json!({ "valid": false, "error": error }),
+        },
+        Request::Certificate {
+            subject,
+            alphabet,
+            limit,
+        } => refused_or(
+            "certificate",
+            "configurations",
+            certificate(&subject, &alphabet, limit),
+        ),
+        Request::Obligation {
+            harness,
+            interface,
+            invariant,
+            floats,
+        } => match obligation(&harness, &interface, &invariant, floats) {
+            Ok(o) => {
+                json!({ "kind": "obligation", "initiation": o.initiation, "text": o.text, "excluded": o.excluded, "reads": o.reads })
+            }
+            Err(error) => json!({ "kind": "refused", "error": error }),
+        },
+        Request::CheckInduction {
+            harness,
+            interface,
+            invariant,
+            state,
+            input,
+        } => match check_step(&harness, &interface, &invariant, &state, &input) {
+            Ok(verdict) => json!(verdict),
+            Err(error) => json!({ "kind": "refused", "error": error }),
         },
         Request::ObjectKey { kind, object } => json!({ "key": key(kind, &object) }),
         Request::Smtlib {
