@@ -1,72 +1,28 @@
-//! Static checking of an Answer against its Ask: is it a valid construction?
+//! Static checking of expressions: what type an expression has, given the types of its variables, and what is wrong
+//! with it if it has none.
 //!
-//! A construction is valid when it type-checks against the Ask's signature. Checking also lists its holes:
-//! the computational ones (nested Asks, which the runtime can try to close) and the epistemic ones (assumptions, opaque
-//! inputs and world facts, whose justification is outside what Cronch checks). Being valid says nothing about whether
-//! the holes can be filled, or whether filling them satisfies the Ask: construction is not satisfaction.
+//! Checking is structural and gradual: `Any` conforms both ways, so shapes the interpreter checks when they arrive
+//! pass here. Lists and the branches of an `if` take the join of their parts' types, so a list of records of different
+//! shapes has the fields they share.
 
-use crate::ir::{Answer, Ask, AskSpec, Expr, Form, Type, World};
+use crate::ir::{Expr, Type};
 use crate::ops::{self, Op, OpTypeError};
-use crate::types::{conforms, inhabits, of_value};
+use crate::types::{conforms, join, of_value, record_view};
 use serde::Serialize;
-use serde_json::Value;
 use std::collections::BTreeMap;
 
-/// Where in a Procedure something is: a `/`-separated path of fields from the body's root (`""`).
+/// Where in an expression something is: a `/`-separated path of fields from the root (`""`).
 pub type Path = String;
 
 fn child(at: &str, segment: &str) -> Path {
     format!("{at}/{segment}")
 }
 
-/// Why an epistemic hole is not allowed where a derivation is required.
-#[derive(Serialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub enum Underived {
-    RawValue,
-    Assumption,
-    Opaque,
-}
-
-/// What makes an Ask or a construction ill-formed.
+/// What makes an expression ill-typed.
 #[derive(Serialize, Clone, Debug, PartialEq)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum Problem {
-    /// A closed Ask lacks a value for one of its parameters.
-    MissingArgument {
-        ask: String,
-        param: String,
-    },
-    /// A closed Ask, or an Ask inside a Procedure, has an argument its spec doesn't declare.
-    UnexpectedArgument {
-        at: Path,
-        ask: String,
-        arg: String,
-    },
-    /// A closed Ask's argument doesn't inhabit its parameter's type.
-    ArgumentMismatch {
-        ask: String,
-        param: String,
-        expected: Type,
-        got: Value,
-    },
-    /// A spec declares two parameters with one name.
-    DuplicateParameter {
-        at: Path,
-        ask: String,
-        param: String,
-    },
-    /// An Ask inside a Procedure lacks an argument expression for a parameter.
-    MissingHoleArgument {
-        at: Path,
-        ask: String,
-        param: String,
-    },
     UnknownVariable {
-        at: Path,
-        name: String,
-    },
-    UnknownFact {
         at: Path,
         name: String,
     },
@@ -93,182 +49,46 @@ pub enum Problem {
         field: String,
         of: Type,
     },
-    /// An assumed value doesn't inhabit the type it is assumed at.
-    AssumptionMismatch {
+    NotAList {
         at: Path,
-        expected: Type,
-        got: Value,
+        got: Type,
     },
-    /// The Ask requires a derivation, and this part of the Answer is opaque.
-    NotDerived {
+    /// A `match` on something that isn't a variant tagged by its `on` field.
+    NotAVariant {
         at: Path,
-        reason: Underived,
+        on: String,
+        got: Type,
     },
-}
-
-/// A computational hole: an Ask inside a Procedure.
-#[derive(Serialize, Clone, Debug, PartialEq)]
-pub struct Hole {
-    pub at: Path,
-    pub spec: AskSpec,
-}
-
-/// An epistemic hole: something the result rests on that Cronch has not checked.
-#[derive(Serialize, Clone, Debug, PartialEq)]
-#[serde(tag = "kind", rename_all = "camelCase")]
-pub enum Assumption {
-    /// The Answer is a raw value: the responder's word, with no derivation (the degenerate Procedure `assume(v)`).
-    RawValue { value: Value },
-    /// The responder assumes a value inside its Procedure.
-    Assumed {
+    NoSuchCase {
         at: Path,
-        #[serde(rename = "type")]
-        ty: Type,
-        value: Value,
-        #[serde(skip_serializing_if = "String::is_empty")]
-        note: String,
-        #[serde(skip_serializing_if = "String::is_empty")]
-        source: String,
+        case: String,
     },
-    /// An input with no value at all, like `sorry`: the Procedure can't be evaluated past it.
-    Opaque {
+    /// A `match` that covers neither every case nor has an `otherwise`.
+    NotExhaustive {
         at: Path,
-        #[serde(rename = "type")]
-        ty: Type,
-        #[serde(skip_serializing_if = "String::is_empty")]
-        note: String,
-    },
-    /// An environmental input from the requester's declared world.
-    Fact {
-        name: String,
-        value: Value,
-        #[serde(skip_serializing_if = "String::is_empty")]
-        source: String,
+        missing: Vec<String>,
     },
 }
 
-/// The outcome of static checking.
-#[derive(Serialize, Clone, Debug, PartialEq, Default)]
-pub struct Construction {
-    pub problems: Vec<Problem>,
-    pub holes: Vec<Hole>,
-    pub assumptions: Vec<Assumption>,
+/// The type of an expression with these variables in scope, and what is wrong with it.
+pub fn infer(expr: &Expr, scope: Vec<(String, Type)>) -> (Option<Type>, Vec<Problem>) {
+    let mut checker = Checker {
+        scope,
+        problems: Vec::new(),
+    };
+    let ty = checker.infer(expr, "");
+    (ty, checker.problems)
 }
 
-/// Problems with a closed Ask itself: arguments that are missing, unexpected or of the wrong type.
-pub fn check_ask(ask: &Ask) -> Vec<Problem> {
-    let mut problems = check_spec(&ask.spec);
-    let name = &ask.spec.name;
-    for p in &ask.spec.params {
-        match ask.args.get(&p.name) {
-            None => problems.push(Problem::MissingArgument {
-                ask: name.clone(),
-                param: p.name.clone(),
-            }),
-            Some(v) if !inhabits(v, &p.ty) => problems.push(Problem::ArgumentMismatch {
-                ask: name.clone(),
-                param: p.name.clone(),
-                expected: p.ty.clone(),
-                got: v.clone(),
-            }),
-            Some(_) => {}
-        }
-    }
-    for arg in ask.args.keys() {
-        if !ask.spec.params.iter().any(|p| &p.name == arg) {
-            problems.push(Problem::UnexpectedArgument {
-                at: String::new(),
-                ask: name.clone(),
-                arg: arg.clone(),
-            });
-        }
-    }
-    problems
-}
-
-/// Problems with a spec alone: parameters declared twice.
-pub fn check_spec(spec: &AskSpec) -> Vec<Problem> {
-    duplicate_params("", spec)
-}
-
-fn duplicate_params(at: &str, spec: &AskSpec) -> Vec<Problem> {
-    let mut seen = Vec::new();
-    let mut problems = Vec::new();
-    for p in &spec.params {
-        if seen.contains(&&p.name) {
-            problems.push(Problem::DuplicateParameter {
-                at: at.to_string(),
-                ask: spec.name.clone(),
-                param: p.name.clone(),
-            });
-        }
-        seen.push(&p.name);
-    }
-    problems
-}
-
-/// Check an Answer against the Ask it answers, in the requester's declared world.
-pub fn check(ask: &Ask, world: &World, answer: &Answer) -> Construction {
-    let derivation = ask.spec.form == Form::Derivation;
-    match answer {
-        Answer::Value(value) => {
-            let mut c = Construction::default();
-            if derivation {
-                c.problems.push(Problem::NotDerived {
-                    at: String::new(),
-                    reason: Underived::RawValue,
-                });
-            }
-            if !inhabits(value, &ask.spec.output) {
-                c.problems.push(Problem::Mismatch {
-                    at: String::new(),
-                    expected: ask.spec.output.clone(),
-                    got: of_value(value),
-                });
-            }
-            c.assumptions.push(Assumption::RawValue {
-                value: value.clone(),
-            });
-            c
-        }
-        Answer::Procedure(body) => {
-            let scope = ask
-                .spec
-                .params
-                .iter()
-                .map(|p| (p.name.clone(), p.ty.clone()))
-                .collect();
-            let mut checker = Checker {
-                world,
-                derivation,
-                scope,
-                out: Construction::default(),
-            };
-            if let Some(got) = checker.infer(body, "")
-                && !conforms(&got, &ask.spec.output)
-            {
-                checker.out.problems.push(Problem::Mismatch {
-                    at: String::new(),
-                    expected: ask.spec.output.clone(),
-                    got,
-                });
-            }
-            checker.out
-        }
-    }
-}
-
-struct Checker<'w> {
-    world: &'w World,
-    derivation: bool,
-    /// Variables in scope, innermost last: the Ask's parameters, then enclosing `let`s.
+struct Checker {
+    /// Variables in scope, innermost last.
     scope: Vec<(String, Type)>,
-    out: Construction,
+    problems: Vec<Problem>,
 }
 
-impl Checker<'_> {
+impl Checker {
     fn problem(&mut self, p: Problem) -> Option<Type> {
-        self.out.problems.push(p);
+        self.problems.push(p);
         None
     }
 
@@ -279,27 +99,6 @@ impl Checker<'_> {
             Expr::Var { name } => match self.scope.iter().rev().find(|(n, _)| n == name) {
                 Some((_, t)) => Some(t.clone()),
                 None => self.problem(Problem::UnknownVariable {
-                    at: at.to_string(),
-                    name: name.clone(),
-                }),
-            },
-            Expr::Fact { name } => match self.world.facts.get(name) {
-                Some(fact) => {
-                    if !self
-                        .out
-                        .assumptions
-                        .iter()
-                        .any(|a| matches!(a, Assumption::Fact { name: n, .. } if n == name))
-                    {
-                        self.out.assumptions.push(Assumption::Fact {
-                            name: name.clone(),
-                            value: fact.value.clone(),
-                            source: fact.source.clone(),
-                        });
-                    }
-                    Some(fact.ty.clone().unwrap_or_else(|| of_value(&fact.value)))
-                }
-                None => self.problem(Problem::UnknownFact {
                     at: at.to_string(),
                     name: name.clone(),
                 }),
@@ -326,88 +125,6 @@ impl Checker<'_> {
                     }),
                 }
             }
-            Expr::Ask { spec, args } => {
-                self.out.problems.extend(duplicate_params(at, spec));
-                for p in &spec.params {
-                    let arg_at = child(at, &format!("args/{}", p.name));
-                    match args.get(&p.name) {
-                        None => {
-                            self.problem(Problem::MissingHoleArgument {
-                                at: at.to_string(),
-                                ask: spec.name.clone(),
-                                param: p.name.clone(),
-                            });
-                        }
-                        Some(arg) => {
-                            if let Some(got) = self.infer(arg, &arg_at)
-                                && !conforms(&got, &p.ty)
-                            {
-                                self.problem(Problem::Mismatch {
-                                    at: arg_at,
-                                    expected: p.ty.clone(),
-                                    got,
-                                });
-                            }
-                        }
-                    }
-                }
-                for arg in args.keys() {
-                    if !spec.params.iter().any(|p| &p.name == arg) {
-                        self.problem(Problem::UnexpectedArgument {
-                            at: at.to_string(),
-                            ask: spec.name.clone(),
-                            arg: arg.clone(),
-                        });
-                    }
-                }
-                self.out.holes.push(Hole {
-                    at: at.to_string(),
-                    spec: spec.clone(),
-                });
-                Some(spec.output.clone())
-            }
-            Expr::Assume {
-                v,
-                ty,
-                note,
-                source,
-            } => {
-                if self.derivation {
-                    self.problem(Problem::NotDerived {
-                        at: at.to_string(),
-                        reason: Underived::Assumption,
-                    });
-                }
-                if !inhabits(v, ty) {
-                    self.problem(Problem::AssumptionMismatch {
-                        at: at.to_string(),
-                        expected: ty.clone(),
-                        got: v.clone(),
-                    });
-                }
-                self.out.assumptions.push(Assumption::Assumed {
-                    at: at.to_string(),
-                    ty: ty.clone(),
-                    value: v.clone(),
-                    note: note.clone(),
-                    source: source.clone(),
-                });
-                Some(ty.clone())
-            }
-            Expr::Opaque { ty, note } => {
-                if self.derivation {
-                    self.problem(Problem::NotDerived {
-                        at: at.to_string(),
-                        reason: Underived::Opaque,
-                    });
-                }
-                self.out.assumptions.push(Assumption::Opaque {
-                    at: at.to_string(),
-                    ty: ty.clone(),
-                    note: note.clone(),
-                });
-                Some(ty.clone())
-            }
             Expr::Let { name, be, body } => {
                 let bound = self.infer(be, &child(at, "be"));
                 self.scope.push((name.clone(), bound.unwrap_or(Type::Any)));
@@ -433,13 +150,14 @@ impl Checker<'_> {
                 let t = self.infer(then, &child(at, "then"));
                 let e = self.infer(otherwise, &child(at, "else"));
                 match (t, e) {
-                    (Some(t), Some(e)) if conforms(&e, &t) => Some(t),
-                    (Some(t), Some(e)) if conforms(&t, &e) => Some(e),
-                    (Some(t), Some(e)) => self.problem(Problem::Mismatch {
-                        at: child(at, "else"),
-                        expected: t,
-                        got: e,
-                    }),
+                    (Some(t), Some(e)) => match join(&t, &e) {
+                        Some(j) => Some(j),
+                        None => self.problem(Problem::Mismatch {
+                            at: child(at, "else"),
+                            expected: t,
+                            got: e,
+                        }),
+                    },
                     _ => None,
                 }
             }
@@ -463,20 +181,28 @@ impl Checker<'_> {
                     .map(|(i, e)| self.infer(e, &child(at, &format!("items/{i}"))))
                     .collect();
                 let types: Vec<Type> = types.into_iter().collect::<Option<_>>()?;
-                let first = types.first().cloned().unwrap_or(Type::Any);
+                let mut element = types.first().cloned().unwrap_or(Type::Any);
                 for (i, t) in types.iter().enumerate().skip(1) {
-                    if !conforms(t, &first) {
-                        return self.problem(Problem::Mismatch {
-                            at: child(at, &format!("items/{i}")),
-                            expected: first,
-                            got: t.clone(),
-                        });
+                    match join(&element, t) {
+                        Some(j) => element = j,
+                        None => {
+                            return self.problem(Problem::Mismatch {
+                                at: child(at, &format!("items/{i}")),
+                                expected: element,
+                                got: t.clone(),
+                            });
+                        }
                     }
                 }
-                Some(Type::List(Box::new(first)))
+                Some(Type::List(Box::new(element)))
             }
             Expr::Get { of, field } => match self.infer(of, &child(at, "of"))? {
                 Type::Any => Some(Type::Any),
+                // A field every case has is typed; one only some cases have is read gradually, and checked when it is.
+                variant @ Type::Variant { .. } => match record_view(&variant) {
+                    Type::Record(fields) => Some(fields.get(field).cloned().unwrap_or(Type::Any)),
+                    _ => Some(Type::Any),
+                },
                 Type::Record(fields) => match fields.get(field) {
                     Some(t) => Some(t.clone()),
                     None => self.problem(Problem::NoSuchField {
@@ -490,6 +216,188 @@ impl Checker<'_> {
                     got,
                 }),
             },
+            Expr::Label { of } => {
+                self.infer(of, &child(at, "of"))?;
+                Some(Type::List(Box::new(Type::String)))
+            }
+            Expr::Match {
+                of,
+                on,
+                cases,
+                otherwise,
+            } => {
+                let of_at = child(at, "of");
+                let of_ty = self.infer(of, &of_at);
+                // Each case's binding type: the variant's case, or `Any` if what is matched is unchecked.
+                let declared: Option<BTreeMap<String, Type>> = match &of_ty {
+                    None | Some(Type::Any) => None,
+                    Some(Type::Variant {
+                        tag,
+                        cases: declared,
+                    }) if tag == on => Some(declared.clone()),
+                    Some(got) => {
+                        return self.problem(Problem::NotAVariant {
+                            at: of_at,
+                            on: on.clone(),
+                            got: got.clone(),
+                        });
+                    }
+                };
+                if let Some(declared) = &declared {
+                    for name in cases.keys().filter(|c| !declared.contains_key(*c)) {
+                        self.problem(Problem::NoSuchCase {
+                            at: child(at, &format!("cases/{name}")),
+                            case: name.clone(),
+                        });
+                    }
+                    let missing: Vec<String> = declared
+                        .keys()
+                        .filter(|c| !cases.contains_key(*c))
+                        .cloned()
+                        .collect();
+                    if otherwise.is_none() && !missing.is_empty() {
+                        self.problem(Problem::NotExhaustive {
+                            at: at.to_string(),
+                            missing,
+                        });
+                    }
+                } else if otherwise.is_none() && of_ty.is_some() {
+                    // Matching an unchecked value: only a default covers what it might be.
+                    self.problem(Problem::NotExhaustive {
+                        at: at.to_string(),
+                        missing: vec![],
+                    });
+                }
+                let mut result: Option<Option<Type>> = None;
+                let mut merge = |this: &mut Self, t: Option<Type>, body_at: String| {
+                    result = Some(match (result.take(), t) {
+                        (None, t) => t,
+                        (Some(Some(acc)), Some(t)) => match join(&acc, &t) {
+                            Some(j) => Some(j),
+                            None => this.problem(Problem::Mismatch {
+                                at: body_at,
+                                expected: acc,
+                                got: t,
+                            }),
+                        },
+                        _ => None,
+                    });
+                };
+                for (name, case) in cases {
+                    let bound = declared
+                        .as_ref()
+                        .and_then(|d| d.get(name).cloned())
+                        .unwrap_or(Type::Any);
+                    self.scope.push((case.bind.clone(), bound));
+                    let body_at = child(at, &format!("cases/{name}/body"));
+                    let t = self.infer(&case.body, &body_at);
+                    self.scope.pop();
+                    merge(self, t, body_at);
+                }
+                if let Some(o) = otherwise {
+                    let body_at = child(at, "otherwise");
+                    let t = self.infer(o, &body_at);
+                    merge(self, t, body_at);
+                }
+                result.flatten()
+            }
+            Expr::Fold {
+                over,
+                init,
+                acc,
+                item,
+                body,
+            } => {
+                let over_at = child(at, "over");
+                let item_ty = match self.infer(over, &over_at) {
+                    Some(Type::List(t)) => Some(*t),
+                    Some(Type::Any) => Some(Type::Any),
+                    Some(got) => self.problem(Problem::NotAList { at: over_at, got }),
+                    None => None,
+                };
+                let acc_ty = self.infer(init, &child(at, "init"));
+                self.scope
+                    .push((acc.clone(), acc_ty.clone().unwrap_or(Type::Any)));
+                self.scope
+                    .push((item.clone(), item_ty.unwrap_or(Type::Any)));
+                let body_ty = self.infer(body, &child(at, "body"));
+                self.scope.truncate(self.scope.len() - 2);
+                let (acc_ty, body_ty) = (acc_ty?, body_ty?);
+                if !conforms(&body_ty, &acc_ty) {
+                    return self.problem(Problem::Mismatch {
+                        at: child(at, "body"),
+                        expected: acc_ty,
+                        got: body_ty,
+                    });
+                }
+                Some(acc_ty)
+            }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    fn infer_json(e: serde_json::Value, scope: Vec<(&str, Type)>) -> (Option<Type>, Vec<Problem>) {
+        let scope = scope.into_iter().map(|(n, t)| (n.to_string(), t)).collect();
+        infer(&serde_json::from_value(e).unwrap(), scope)
+    }
+
+    #[test]
+    fn folds_must_be_over_lists_and_keep_their_accumulators_type() {
+        let sum = json!({ "e": "fold", "over": { "e": "var", "name": "xs" }, "init": { "e": "lit", "v": 0 },
+                          "acc": "a", "item": "x", "body": { "e": "op", "op": "add", "args": [{ "e": "var", "name": "a" }, { "e": "var", "name": "x" }] } });
+        let ints = Type::List(Box::new(Type::Int));
+        assert_eq!(
+            infer_json(sum, vec![("xs", ints.clone())]),
+            (Some(Type::Int), vec![])
+        );
+
+        let over_int = json!({ "e": "fold", "over": { "e": "lit", "v": 3 }, "init": { "e": "lit", "v": 0 },
+                               "acc": "a", "item": "x", "body": { "e": "var", "name": "a" } });
+        assert_eq!(
+            infer_json(over_int, vec![]).1,
+            [Problem::NotAList {
+                at: "/over".into(),
+                got: Type::Int
+            }]
+        );
+
+        let changes_type = json!({ "e": "fold", "over": { "e": "var", "name": "xs" }, "init": { "e": "lit", "v": 0 },
+                                   "acc": "a", "item": "x", "body": { "e": "lit", "v": "text" } });
+        assert_eq!(
+            infer_json(changes_type, vec![("xs", ints)]).1,
+            [Problem::Mismatch {
+                at: "/body".into(),
+                expected: Type::Int,
+                got: Type::String
+            }]
+        );
+    }
+
+    #[test]
+    fn lists_and_branches_join_their_parts() {
+        let actions = json!({ "e": "list", "items": [
+            { "e": "record", "fields": { "kind": { "e": "lit", "v": "call" }, "op": { "e": "lit", "v": "x" } } },
+            { "e": "record", "fields": { "kind": { "e": "lit", "v": "halt" }, "value": { "e": "lit", "v": 1 } } },
+        ]});
+        let kind_only = Type::Record(BTreeMap::from([("kind".to_string(), Type::String)]));
+        assert_eq!(
+            infer_json(actions, vec![]).0,
+            Some(Type::List(Box::new(kind_only)))
+        );
+
+        let mixed = json!({ "e": "if", "cond": { "e": "lit", "v": true }, "then": { "e": "lit", "v": 1 }, "else": { "e": "lit", "v": "one" } });
+        assert_eq!(
+            infer_json(mixed, vec![]).1[0],
+            Problem::Mismatch {
+                at: "/else".into(),
+                expected: Type::Int,
+                got: Type::String
+            }
+        );
     }
 }

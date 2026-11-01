@@ -1,0 +1,3561 @@
+{
+  "description": "A run that fetches and sends, a refusal, and withheld inputs.",
+  "exchanges": [
+    {
+      "request": {
+        "grant": null,
+        "harness": {
+          "arg": {
+            "Record": {}
+          },
+          "init": {},
+          "state": {
+            "Record": {}
+          },
+          "step": {
+            "cond": {
+              "args": [
+                {
+                  "e": "get",
+                  "field": "kind",
+                  "of": {
+                    "e": "var",
+                    "name": "input"
+                  }
+                },
+                {
+                  "e": "lit",
+                  "v": "start"
+                }
+              ],
+              "e": "op",
+              "op": "eq"
+            },
+            "e": "if",
+            "else": {
+              "cond": {
+                "args": [
+                  {
+                    "e": "get",
+                    "field": "kind",
+                    "of": {
+                      "e": "var",
+                      "name": "input"
+                    }
+                  },
+                  {
+                    "e": "lit",
+                    "v": "ret"
+                  }
+                ],
+                "e": "op",
+                "op": "eq"
+              },
+              "e": "if",
+              "else": {
+                "e": "record",
+                "fields": {
+                  "actions": {
+                    "e": "list",
+                    "items": []
+                  },
+                  "state": {
+                    "e": "var",
+                    "name": "state"
+                  }
+                }
+              },
+              "then": {
+                "cond": {
+                  "args": [
+                    {
+                      "e": "get",
+                      "field": "call",
+                      "of": {
+                        "e": "var",
+                        "name": "input"
+                      }
+                    },
+                    {
+                      "e": "lit",
+                      "v": 0
+                    }
+                  ],
+                  "e": "op",
+                  "op": "eq"
+                },
+                "e": "if",
+                "else": {
+                  "e": "record",
+                  "fields": {
+                    "actions": {
+                      "e": "list",
+                      "items": []
+                    },
+                    "state": {
+                      "e": "var",
+                      "name": "state"
+                    }
+                  }
+                },
+                "then": {
+                  "e": "record",
+                  "fields": {
+                    "actions": {
+                      "e": "list",
+                      "items": [
+                        {
+                          "e": "record",
+                          "fields": {
+                            "args": {
+                              "e": "record",
+                              "fields": {
+                                "body": {
+                                  "e": "get",
+                                  "field": "value",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "input"
+                                  }
+                                },
+                                "url": {
+                                  "e": "lit",
+                                  "v": "https://example.com"
+                                }
+                              }
+                            },
+                            "kind": {
+                              "e": "lit",
+                              "v": "call"
+                            },
+                            "op": {
+                              "e": "lit",
+                              "v": "net.send"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    "state": {
+                      "e": "var",
+                      "name": "state"
+                    }
+                  }
+                }
+              }
+            },
+            "then": {
+              "e": "record",
+              "fields": {
+                "actions": {
+                  "e": "list",
+                  "items": [
+                    {
+                      "e": "record",
+                      "fields": {
+                        "args": {
+                          "e": "record",
+                          "fields": {
+                            "url": {
+                              "e": "lit",
+                              "v": "https://example.com/page"
+                            }
+                          }
+                        },
+                        "kind": {
+                          "e": "lit",
+                          "v": "call"
+                        },
+                        "op": {
+                          "e": "lit",
+                          "v": "net.fetch"
+                        }
+                      }
+                    }
+                  ]
+                },
+                "state": {
+                  "e": "var",
+                  "name": "state"
+                }
+              }
+            }
+          }
+        },
+        "interface": {
+          "channels": {
+            "act": {
+              "type": {
+                "Record": {
+                  "kind": "String"
+                }
+              }
+            },
+            "user": {
+              "type": "String"
+            }
+          },
+          "operations": {
+            "fs.write": {
+              "effect": true,
+              "input": {
+                "Record": {
+                  "path": "String"
+                }
+              },
+              "output": "Int"
+            },
+            "net.fetch": {
+              "input": {
+                "Record": {
+                  "url": "String"
+                }
+              },
+              "output": "String",
+              "ret": {
+                "e": "list",
+                "items": [
+                  {
+                    "e": "lit",
+                    "v": "web"
+                  }
+                ]
+              }
+            },
+            "net.send": {
+              "effect": true,
+              "input": {
+                "Record": {
+                  "body": "String",
+                  "url": "String"
+                }
+              },
+              "output": "Int"
+            }
+          }
+        },
+        "op": "init"
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "kind": "ready",
+          "system": {
+            "root": {
+              "grant": null,
+              "harness": {
+                "arg": {
+                  "Record": {}
+                },
+                "init": {},
+                "state": {
+                  "Record": {}
+                },
+                "step": {
+                  "cond": {
+                    "args": [
+                      {
+                        "e": "get",
+                        "field": "kind",
+                        "of": {
+                          "e": "var",
+                          "name": "input"
+                        }
+                      },
+                      {
+                        "e": "lit",
+                        "v": "start"
+                      }
+                    ],
+                    "e": "op",
+                    "op": "eq"
+                  },
+                  "e": "if",
+                  "else": {
+                    "cond": {
+                      "args": [
+                        {
+                          "e": "get",
+                          "field": "kind",
+                          "of": {
+                            "e": "var",
+                            "name": "input"
+                          }
+                        },
+                        {
+                          "e": "lit",
+                          "v": "ret"
+                        }
+                      ],
+                      "e": "op",
+                      "op": "eq"
+                    },
+                    "e": "if",
+                    "else": {
+                      "e": "record",
+                      "fields": {
+                        "actions": {
+                          "e": "list",
+                          "items": []
+                        },
+                        "state": {
+                          "e": "var",
+                          "name": "state"
+                        }
+                      }
+                    },
+                    "then": {
+                      "cond": {
+                        "args": [
+                          {
+                            "e": "get",
+                            "field": "call",
+                            "of": {
+                              "e": "var",
+                              "name": "input"
+                            }
+                          },
+                          {
+                            "e": "lit",
+                            "v": 0
+                          }
+                        ],
+                        "e": "op",
+                        "op": "eq"
+                      },
+                      "e": "if",
+                      "else": {
+                        "e": "record",
+                        "fields": {
+                          "actions": {
+                            "e": "list",
+                            "items": []
+                          },
+                          "state": {
+                            "e": "var",
+                            "name": "state"
+                          }
+                        }
+                      },
+                      "then": {
+                        "e": "record",
+                        "fields": {
+                          "actions": {
+                            "e": "list",
+                            "items": [
+                              {
+                                "e": "record",
+                                "fields": {
+                                  "args": {
+                                    "e": "record",
+                                    "fields": {
+                                      "body": {
+                                        "e": "get",
+                                        "field": "value",
+                                        "of": {
+                                          "e": "var",
+                                          "name": "input"
+                                        }
+                                      },
+                                      "url": {
+                                        "e": "lit",
+                                        "v": "https://example.com"
+                                      }
+                                    }
+                                  },
+                                  "kind": {
+                                    "e": "lit",
+                                    "v": "call"
+                                  },
+                                  "op": {
+                                    "e": "lit",
+                                    "v": "net.send"
+                                  }
+                                }
+                              }
+                            ]
+                          },
+                          "state": {
+                            "e": "var",
+                            "name": "state"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "then": {
+                    "e": "record",
+                    "fields": {
+                      "actions": {
+                        "e": "list",
+                        "items": [
+                          {
+                            "e": "record",
+                            "fields": {
+                              "args": {
+                                "e": "record",
+                                "fields": {
+                                  "url": {
+                                    "e": "lit",
+                                    "v": "https://example.com/page"
+                                  }
+                                }
+                              },
+                              "kind": {
+                                "e": "lit",
+                                "v": "call"
+                              },
+                              "op": {
+                                "e": "lit",
+                                "v": "net.fetch"
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      "state": {
+                        "e": "var",
+                        "name": "state"
+                      }
+                    }
+                  }
+                }
+              },
+              "interface": {
+                "channels": {
+                  "act": {
+                    "type": {
+                      "Record": {
+                        "kind": "String"
+                      }
+                    }
+                  },
+                  "user": {
+                    "type": "String"
+                  }
+                },
+                "operations": {
+                  "fs.write": {
+                    "effect": true,
+                    "input": {
+                      "Record": {
+                        "path": "String"
+                      }
+                    },
+                    "output": "Int"
+                  },
+                  "net.fetch": {
+                    "input": {
+                      "Record": {
+                        "url": "String"
+                      }
+                    },
+                    "output": "String",
+                    "ret": {
+                      "e": "list",
+                      "items": [
+                        {
+                          "e": "lit",
+                          "v": "web"
+                        }
+                      ]
+                    }
+                  },
+                  "net.send": {
+                    "effect": true,
+                    "input": {
+                      "Record": {
+                        "body": "String",
+                        "url": "String"
+                      }
+                    },
+                    "output": "Int"
+                  }
+                }
+              },
+              "next": 0,
+              "pending": [],
+              "queue": [],
+              "started": false,
+              "state": {
+                "record": {
+                  "fields": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "delivery": {
+          "input": {
+            "kind": "start",
+            "value": {}
+          }
+        },
+        "op": "deliver",
+        "system": {
+          "root": {
+            "grant": null,
+            "harness": {
+              "arg": {
+                "Record": {}
+              },
+              "init": {},
+              "state": {
+                "Record": {}
+              },
+              "step": {
+                "cond": {
+                  "args": [
+                    {
+                      "e": "get",
+                      "field": "kind",
+                      "of": {
+                        "e": "var",
+                        "name": "input"
+                      }
+                    },
+                    {
+                      "e": "lit",
+                      "v": "start"
+                    }
+                  ],
+                  "e": "op",
+                  "op": "eq"
+                },
+                "e": "if",
+                "else": {
+                  "cond": {
+                    "args": [
+                      {
+                        "e": "get",
+                        "field": "kind",
+                        "of": {
+                          "e": "var",
+                          "name": "input"
+                        }
+                      },
+                      {
+                        "e": "lit",
+                        "v": "ret"
+                      }
+                    ],
+                    "e": "op",
+                    "op": "eq"
+                  },
+                  "e": "if",
+                  "else": {
+                    "e": "record",
+                    "fields": {
+                      "actions": {
+                        "e": "list",
+                        "items": []
+                      },
+                      "state": {
+                        "e": "var",
+                        "name": "state"
+                      }
+                    }
+                  },
+                  "then": {
+                    "cond": {
+                      "args": [
+                        {
+                          "e": "get",
+                          "field": "call",
+                          "of": {
+                            "e": "var",
+                            "name": "input"
+                          }
+                        },
+                        {
+                          "e": "lit",
+                          "v": 0
+                        }
+                      ],
+                      "e": "op",
+                      "op": "eq"
+                    },
+                    "e": "if",
+                    "else": {
+                      "e": "record",
+                      "fields": {
+                        "actions": {
+                          "e": "list",
+                          "items": []
+                        },
+                        "state": {
+                          "e": "var",
+                          "name": "state"
+                        }
+                      }
+                    },
+                    "then": {
+                      "e": "record",
+                      "fields": {
+                        "actions": {
+                          "e": "list",
+                          "items": [
+                            {
+                              "e": "record",
+                              "fields": {
+                                "args": {
+                                  "e": "record",
+                                  "fields": {
+                                    "body": {
+                                      "e": "get",
+                                      "field": "value",
+                                      "of": {
+                                        "e": "var",
+                                        "name": "input"
+                                      }
+                                    },
+                                    "url": {
+                                      "e": "lit",
+                                      "v": "https://example.com"
+                                    }
+                                  }
+                                },
+                                "kind": {
+                                  "e": "lit",
+                                  "v": "call"
+                                },
+                                "op": {
+                                  "e": "lit",
+                                  "v": "net.send"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        "state": {
+                          "e": "var",
+                          "name": "state"
+                        }
+                      }
+                    }
+                  }
+                },
+                "then": {
+                  "e": "record",
+                  "fields": {
+                    "actions": {
+                      "e": "list",
+                      "items": [
+                        {
+                          "e": "record",
+                          "fields": {
+                            "args": {
+                              "e": "record",
+                              "fields": {
+                                "url": {
+                                  "e": "lit",
+                                  "v": "https://example.com/page"
+                                }
+                              }
+                            },
+                            "kind": {
+                              "e": "lit",
+                              "v": "call"
+                            },
+                            "op": {
+                              "e": "lit",
+                              "v": "net.fetch"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    "state": {
+                      "e": "var",
+                      "name": "state"
+                    }
+                  }
+                }
+              }
+            },
+            "interface": {
+              "channels": {
+                "act": {
+                  "type": {
+                    "Record": {
+                      "kind": "String"
+                    }
+                  }
+                },
+                "user": {
+                  "type": "String"
+                }
+              },
+              "operations": {
+                "fs.write": {
+                  "effect": true,
+                  "input": {
+                    "Record": {
+                      "path": "String"
+                    }
+                  },
+                  "output": "Int"
+                },
+                "net.fetch": {
+                  "input": {
+                    "Record": {
+                      "url": "String"
+                    }
+                  },
+                  "output": "String",
+                  "ret": {
+                    "e": "list",
+                    "items": [
+                      {
+                        "e": "lit",
+                        "v": "web"
+                      }
+                    ]
+                  }
+                },
+                "net.send": {
+                  "effect": true,
+                  "input": {
+                    "Record": {
+                      "body": "String",
+                      "url": "String"
+                    }
+                  },
+                  "output": "Int"
+                }
+              }
+            },
+            "next": 0,
+            "pending": [],
+            "queue": [],
+            "started": false,
+            "state": {
+              "record": {
+                "fields": {}
+              }
+            }
+          }
+        }
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "events": [
+            {
+              "input": {
+                "kind": "start",
+                "value": {}
+              },
+              "kind": "in",
+              "origin": [],
+              "state": {}
+            },
+            {
+              "action": {
+                "args": {
+                  "url": "https://example.com/page"
+                },
+                "kind": "call",
+                "op": "net.fetch"
+              },
+              "call": 0,
+              "kind": "out",
+              "labels": {
+                "args": {
+                  "url": []
+                },
+                "kind": [],
+                "op": []
+              },
+              "origin": [],
+              "performed": true,
+              "state": {}
+            }
+          ],
+          "system": {
+            "root": {
+              "grant": null,
+              "harness": {
+                "arg": {
+                  "Record": {}
+                },
+                "init": {},
+                "state": {
+                  "Record": {}
+                },
+                "step": {
+                  "cond": {
+                    "args": [
+                      {
+                        "e": "get",
+                        "field": "kind",
+                        "of": {
+                          "e": "var",
+                          "name": "input"
+                        }
+                      },
+                      {
+                        "e": "lit",
+                        "v": "start"
+                      }
+                    ],
+                    "e": "op",
+                    "op": "eq"
+                  },
+                  "e": "if",
+                  "else": {
+                    "cond": {
+                      "args": [
+                        {
+                          "e": "get",
+                          "field": "kind",
+                          "of": {
+                            "e": "var",
+                            "name": "input"
+                          }
+                        },
+                        {
+                          "e": "lit",
+                          "v": "ret"
+                        }
+                      ],
+                      "e": "op",
+                      "op": "eq"
+                    },
+                    "e": "if",
+                    "else": {
+                      "e": "record",
+                      "fields": {
+                        "actions": {
+                          "e": "list",
+                          "items": []
+                        },
+                        "state": {
+                          "e": "var",
+                          "name": "state"
+                        }
+                      }
+                    },
+                    "then": {
+                      "cond": {
+                        "args": [
+                          {
+                            "e": "get",
+                            "field": "call",
+                            "of": {
+                              "e": "var",
+                              "name": "input"
+                            }
+                          },
+                          {
+                            "e": "lit",
+                            "v": 0
+                          }
+                        ],
+                        "e": "op",
+                        "op": "eq"
+                      },
+                      "e": "if",
+                      "else": {
+                        "e": "record",
+                        "fields": {
+                          "actions": {
+                            "e": "list",
+                            "items": []
+                          },
+                          "state": {
+                            "e": "var",
+                            "name": "state"
+                          }
+                        }
+                      },
+                      "then": {
+                        "e": "record",
+                        "fields": {
+                          "actions": {
+                            "e": "list",
+                            "items": [
+                              {
+                                "e": "record",
+                                "fields": {
+                                  "args": {
+                                    "e": "record",
+                                    "fields": {
+                                      "body": {
+                                        "e": "get",
+                                        "field": "value",
+                                        "of": {
+                                          "e": "var",
+                                          "name": "input"
+                                        }
+                                      },
+                                      "url": {
+                                        "e": "lit",
+                                        "v": "https://example.com"
+                                      }
+                                    }
+                                  },
+                                  "kind": {
+                                    "e": "lit",
+                                    "v": "call"
+                                  },
+                                  "op": {
+                                    "e": "lit",
+                                    "v": "net.send"
+                                  }
+                                }
+                              }
+                            ]
+                          },
+                          "state": {
+                            "e": "var",
+                            "name": "state"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "then": {
+                    "e": "record",
+                    "fields": {
+                      "actions": {
+                        "e": "list",
+                        "items": [
+                          {
+                            "e": "record",
+                            "fields": {
+                              "args": {
+                                "e": "record",
+                                "fields": {
+                                  "url": {
+                                    "e": "lit",
+                                    "v": "https://example.com/page"
+                                  }
+                                }
+                              },
+                              "kind": {
+                                "e": "lit",
+                                "v": "call"
+                              },
+                              "op": {
+                                "e": "lit",
+                                "v": "net.fetch"
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      "state": {
+                        "e": "var",
+                        "name": "state"
+                      }
+                    }
+                  }
+                }
+              },
+              "interface": {
+                "channels": {
+                  "act": {
+                    "type": {
+                      "Record": {
+                        "kind": "String"
+                      }
+                    }
+                  },
+                  "user": {
+                    "type": "String"
+                  }
+                },
+                "operations": {
+                  "fs.write": {
+                    "effect": true,
+                    "input": {
+                      "Record": {
+                        "path": "String"
+                      }
+                    },
+                    "output": "Int"
+                  },
+                  "net.fetch": {
+                    "input": {
+                      "Record": {
+                        "url": "String"
+                      }
+                    },
+                    "output": "String",
+                    "ret": {
+                      "e": "list",
+                      "items": [
+                        {
+                          "e": "lit",
+                          "v": "web"
+                        }
+                      ]
+                    }
+                  },
+                  "net.send": {
+                    "effect": true,
+                    "input": {
+                      "Record": {
+                        "body": "String",
+                        "url": "String"
+                      }
+                    },
+                    "output": "Int"
+                  }
+                }
+              },
+              "next": 1,
+              "pending": [
+                {
+                  "args": {
+                    "record": {
+                      "fields": {
+                        "url": {
+                          "scalar": {
+                            "value": "https://example.com/page"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "call": 0,
+                  "op": "net.fetch"
+                }
+              ],
+              "queue": [],
+              "started": true,
+              "state": {
+                "record": {
+                  "fields": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "delivery": {
+          "input": {
+            "call": 7,
+            "kind": "ret",
+            "value": "no such call"
+          }
+        },
+        "op": "deliver",
+        "system": {
+          "root": {
+            "grant": null,
+            "harness": {
+              "arg": {
+                "Record": {}
+              },
+              "init": {},
+              "state": {
+                "Record": {}
+              },
+              "step": {
+                "cond": {
+                  "args": [
+                    {
+                      "e": "get",
+                      "field": "kind",
+                      "of": {
+                        "e": "var",
+                        "name": "input"
+                      }
+                    },
+                    {
+                      "e": "lit",
+                      "v": "start"
+                    }
+                  ],
+                  "e": "op",
+                  "op": "eq"
+                },
+                "e": "if",
+                "else": {
+                  "cond": {
+                    "args": [
+                      {
+                        "e": "get",
+                        "field": "kind",
+                        "of": {
+                          "e": "var",
+                          "name": "input"
+                        }
+                      },
+                      {
+                        "e": "lit",
+                        "v": "ret"
+                      }
+                    ],
+                    "e": "op",
+                    "op": "eq"
+                  },
+                  "e": "if",
+                  "else": {
+                    "e": "record",
+                    "fields": {
+                      "actions": {
+                        "e": "list",
+                        "items": []
+                      },
+                      "state": {
+                        "e": "var",
+                        "name": "state"
+                      }
+                    }
+                  },
+                  "then": {
+                    "cond": {
+                      "args": [
+                        {
+                          "e": "get",
+                          "field": "call",
+                          "of": {
+                            "e": "var",
+                            "name": "input"
+                          }
+                        },
+                        {
+                          "e": "lit",
+                          "v": 0
+                        }
+                      ],
+                      "e": "op",
+                      "op": "eq"
+                    },
+                    "e": "if",
+                    "else": {
+                      "e": "record",
+                      "fields": {
+                        "actions": {
+                          "e": "list",
+                          "items": []
+                        },
+                        "state": {
+                          "e": "var",
+                          "name": "state"
+                        }
+                      }
+                    },
+                    "then": {
+                      "e": "record",
+                      "fields": {
+                        "actions": {
+                          "e": "list",
+                          "items": [
+                            {
+                              "e": "record",
+                              "fields": {
+                                "args": {
+                                  "e": "record",
+                                  "fields": {
+                                    "body": {
+                                      "e": "get",
+                                      "field": "value",
+                                      "of": {
+                                        "e": "var",
+                                        "name": "input"
+                                      }
+                                    },
+                                    "url": {
+                                      "e": "lit",
+                                      "v": "https://example.com"
+                                    }
+                                  }
+                                },
+                                "kind": {
+                                  "e": "lit",
+                                  "v": "call"
+                                },
+                                "op": {
+                                  "e": "lit",
+                                  "v": "net.send"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        "state": {
+                          "e": "var",
+                          "name": "state"
+                        }
+                      }
+                    }
+                  }
+                },
+                "then": {
+                  "e": "record",
+                  "fields": {
+                    "actions": {
+                      "e": "list",
+                      "items": [
+                        {
+                          "e": "record",
+                          "fields": {
+                            "args": {
+                              "e": "record",
+                              "fields": {
+                                "url": {
+                                  "e": "lit",
+                                  "v": "https://example.com/page"
+                                }
+                              }
+                            },
+                            "kind": {
+                              "e": "lit",
+                              "v": "call"
+                            },
+                            "op": {
+                              "e": "lit",
+                              "v": "net.fetch"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    "state": {
+                      "e": "var",
+                      "name": "state"
+                    }
+                  }
+                }
+              }
+            },
+            "interface": {
+              "channels": {
+                "act": {
+                  "type": {
+                    "Record": {
+                      "kind": "String"
+                    }
+                  }
+                },
+                "user": {
+                  "type": "String"
+                }
+              },
+              "operations": {
+                "fs.write": {
+                  "effect": true,
+                  "input": {
+                    "Record": {
+                      "path": "String"
+                    }
+                  },
+                  "output": "Int"
+                },
+                "net.fetch": {
+                  "input": {
+                    "Record": {
+                      "url": "String"
+                    }
+                  },
+                  "output": "String",
+                  "ret": {
+                    "e": "list",
+                    "items": [
+                      {
+                        "e": "lit",
+                        "v": "web"
+                      }
+                    ]
+                  }
+                },
+                "net.send": {
+                  "effect": true,
+                  "input": {
+                    "Record": {
+                      "body": "String",
+                      "url": "String"
+                    }
+                  },
+                  "output": "Int"
+                }
+              }
+            },
+            "next": 1,
+            "pending": [
+              {
+                "args": {
+                  "record": {
+                    "fields": {
+                      "url": {
+                        "scalar": {
+                          "value": "https://example.com/page"
+                        }
+                      }
+                    }
+                  }
+                },
+                "call": 0,
+                "op": "net.fetch"
+              }
+            ],
+            "queue": [],
+            "started": true,
+            "state": {
+              "record": {
+                "fields": {}
+              }
+            }
+          }
+        }
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "events": [
+            {
+              "input": {
+                "call": 7,
+                "kind": "ret",
+                "value": "no such call"
+              },
+              "kind": "withheld",
+              "origin": [],
+              "reason": {
+                "call": 7,
+                "kind": "notPending"
+              }
+            }
+          ],
+          "system": {
+            "root": {
+              "grant": null,
+              "harness": {
+                "arg": {
+                  "Record": {}
+                },
+                "init": {},
+                "state": {
+                  "Record": {}
+                },
+                "step": {
+                  "cond": {
+                    "args": [
+                      {
+                        "e": "get",
+                        "field": "kind",
+                        "of": {
+                          "e": "var",
+                          "name": "input"
+                        }
+                      },
+                      {
+                        "e": "lit",
+                        "v": "start"
+                      }
+                    ],
+                    "e": "op",
+                    "op": "eq"
+                  },
+                  "e": "if",
+                  "else": {
+                    "cond": {
+                      "args": [
+                        {
+                          "e": "get",
+                          "field": "kind",
+                          "of": {
+                            "e": "var",
+                            "name": "input"
+                          }
+                        },
+                        {
+                          "e": "lit",
+                          "v": "ret"
+                        }
+                      ],
+                      "e": "op",
+                      "op": "eq"
+                    },
+                    "e": "if",
+                    "else": {
+                      "e": "record",
+                      "fields": {
+                        "actions": {
+                          "e": "list",
+                          "items": []
+                        },
+                        "state": {
+                          "e": "var",
+                          "name": "state"
+                        }
+                      }
+                    },
+                    "then": {
+                      "cond": {
+                        "args": [
+                          {
+                            "e": "get",
+                            "field": "call",
+                            "of": {
+                              "e": "var",
+                              "name": "input"
+                            }
+                          },
+                          {
+                            "e": "lit",
+                            "v": 0
+                          }
+                        ],
+                        "e": "op",
+                        "op": "eq"
+                      },
+                      "e": "if",
+                      "else": {
+                        "e": "record",
+                        "fields": {
+                          "actions": {
+                            "e": "list",
+                            "items": []
+                          },
+                          "state": {
+                            "e": "var",
+                            "name": "state"
+                          }
+                        }
+                      },
+                      "then": {
+                        "e": "record",
+                        "fields": {
+                          "actions": {
+                            "e": "list",
+                            "items": [
+                              {
+                                "e": "record",
+                                "fields": {
+                                  "args": {
+                                    "e": "record",
+                                    "fields": {
+                                      "body": {
+                                        "e": "get",
+                                        "field": "value",
+                                        "of": {
+                                          "e": "var",
+                                          "name": "input"
+                                        }
+                                      },
+                                      "url": {
+                                        "e": "lit",
+                                        "v": "https://example.com"
+                                      }
+                                    }
+                                  },
+                                  "kind": {
+                                    "e": "lit",
+                                    "v": "call"
+                                  },
+                                  "op": {
+                                    "e": "lit",
+                                    "v": "net.send"
+                                  }
+                                }
+                              }
+                            ]
+                          },
+                          "state": {
+                            "e": "var",
+                            "name": "state"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "then": {
+                    "e": "record",
+                    "fields": {
+                      "actions": {
+                        "e": "list",
+                        "items": [
+                          {
+                            "e": "record",
+                            "fields": {
+                              "args": {
+                                "e": "record",
+                                "fields": {
+                                  "url": {
+                                    "e": "lit",
+                                    "v": "https://example.com/page"
+                                  }
+                                }
+                              },
+                              "kind": {
+                                "e": "lit",
+                                "v": "call"
+                              },
+                              "op": {
+                                "e": "lit",
+                                "v": "net.fetch"
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      "state": {
+                        "e": "var",
+                        "name": "state"
+                      }
+                    }
+                  }
+                }
+              },
+              "interface": {
+                "channels": {
+                  "act": {
+                    "type": {
+                      "Record": {
+                        "kind": "String"
+                      }
+                    }
+                  },
+                  "user": {
+                    "type": "String"
+                  }
+                },
+                "operations": {
+                  "fs.write": {
+                    "effect": true,
+                    "input": {
+                      "Record": {
+                        "path": "String"
+                      }
+                    },
+                    "output": "Int"
+                  },
+                  "net.fetch": {
+                    "input": {
+                      "Record": {
+                        "url": "String"
+                      }
+                    },
+                    "output": "String",
+                    "ret": {
+                      "e": "list",
+                      "items": [
+                        {
+                          "e": "lit",
+                          "v": "web"
+                        }
+                      ]
+                    }
+                  },
+                  "net.send": {
+                    "effect": true,
+                    "input": {
+                      "Record": {
+                        "body": "String",
+                        "url": "String"
+                      }
+                    },
+                    "output": "Int"
+                  }
+                }
+              },
+              "next": 1,
+              "pending": [
+                {
+                  "args": {
+                    "record": {
+                      "fields": {
+                        "url": {
+                          "scalar": {
+                            "value": "https://example.com/page"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "call": 0,
+                  "op": "net.fetch"
+                }
+              ],
+              "queue": [],
+              "started": true,
+              "state": {
+                "record": {
+                  "fields": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "delivery": {
+          "input": {
+            "call": 0,
+            "kind": "ret",
+            "value": 3
+          }
+        },
+        "op": "deliver",
+        "system": {
+          "root": {
+            "grant": null,
+            "harness": {
+              "arg": {
+                "Record": {}
+              },
+              "init": {},
+              "state": {
+                "Record": {}
+              },
+              "step": {
+                "cond": {
+                  "args": [
+                    {
+                      "e": "get",
+                      "field": "kind",
+                      "of": {
+                        "e": "var",
+                        "name": "input"
+                      }
+                    },
+                    {
+                      "e": "lit",
+                      "v": "start"
+                    }
+                  ],
+                  "e": "op",
+                  "op": "eq"
+                },
+                "e": "if",
+                "else": {
+                  "cond": {
+                    "args": [
+                      {
+                        "e": "get",
+                        "field": "kind",
+                        "of": {
+                          "e": "var",
+                          "name": "input"
+                        }
+                      },
+                      {
+                        "e": "lit",
+                        "v": "ret"
+                      }
+                    ],
+                    "e": "op",
+                    "op": "eq"
+                  },
+                  "e": "if",
+                  "else": {
+                    "e": "record",
+                    "fields": {
+                      "actions": {
+                        "e": "list",
+                        "items": []
+                      },
+                      "state": {
+                        "e": "var",
+                        "name": "state"
+                      }
+                    }
+                  },
+                  "then": {
+                    "cond": {
+                      "args": [
+                        {
+                          "e": "get",
+                          "field": "call",
+                          "of": {
+                            "e": "var",
+                            "name": "input"
+                          }
+                        },
+                        {
+                          "e": "lit",
+                          "v": 0
+                        }
+                      ],
+                      "e": "op",
+                      "op": "eq"
+                    },
+                    "e": "if",
+                    "else": {
+                      "e": "record",
+                      "fields": {
+                        "actions": {
+                          "e": "list",
+                          "items": []
+                        },
+                        "state": {
+                          "e": "var",
+                          "name": "state"
+                        }
+                      }
+                    },
+                    "then": {
+                      "e": "record",
+                      "fields": {
+                        "actions": {
+                          "e": "list",
+                          "items": [
+                            {
+                              "e": "record",
+                              "fields": {
+                                "args": {
+                                  "e": "record",
+                                  "fields": {
+                                    "body": {
+                                      "e": "get",
+                                      "field": "value",
+                                      "of": {
+                                        "e": "var",
+                                        "name": "input"
+                                      }
+                                    },
+                                    "url": {
+                                      "e": "lit",
+                                      "v": "https://example.com"
+                                    }
+                                  }
+                                },
+                                "kind": {
+                                  "e": "lit",
+                                  "v": "call"
+                                },
+                                "op": {
+                                  "e": "lit",
+                                  "v": "net.send"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        "state": {
+                          "e": "var",
+                          "name": "state"
+                        }
+                      }
+                    }
+                  }
+                },
+                "then": {
+                  "e": "record",
+                  "fields": {
+                    "actions": {
+                      "e": "list",
+                      "items": [
+                        {
+                          "e": "record",
+                          "fields": {
+                            "args": {
+                              "e": "record",
+                              "fields": {
+                                "url": {
+                                  "e": "lit",
+                                  "v": "https://example.com/page"
+                                }
+                              }
+                            },
+                            "kind": {
+                              "e": "lit",
+                              "v": "call"
+                            },
+                            "op": {
+                              "e": "lit",
+                              "v": "net.fetch"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    "state": {
+                      "e": "var",
+                      "name": "state"
+                    }
+                  }
+                }
+              }
+            },
+            "interface": {
+              "channels": {
+                "act": {
+                  "type": {
+                    "Record": {
+                      "kind": "String"
+                    }
+                  }
+                },
+                "user": {
+                  "type": "String"
+                }
+              },
+              "operations": {
+                "fs.write": {
+                  "effect": true,
+                  "input": {
+                    "Record": {
+                      "path": "String"
+                    }
+                  },
+                  "output": "Int"
+                },
+                "net.fetch": {
+                  "input": {
+                    "Record": {
+                      "url": "String"
+                    }
+                  },
+                  "output": "String",
+                  "ret": {
+                    "e": "list",
+                    "items": [
+                      {
+                        "e": "lit",
+                        "v": "web"
+                      }
+                    ]
+                  }
+                },
+                "net.send": {
+                  "effect": true,
+                  "input": {
+                    "Record": {
+                      "body": "String",
+                      "url": "String"
+                    }
+                  },
+                  "output": "Int"
+                }
+              }
+            },
+            "next": 1,
+            "pending": [
+              {
+                "args": {
+                  "record": {
+                    "fields": {
+                      "url": {
+                        "scalar": {
+                          "value": "https://example.com/page"
+                        }
+                      }
+                    }
+                  }
+                },
+                "call": 0,
+                "op": "net.fetch"
+              }
+            ],
+            "queue": [],
+            "started": true,
+            "state": {
+              "record": {
+                "fields": {}
+              }
+            }
+          }
+        }
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "events": [
+            {
+              "input": {
+                "call": 0,
+                "kind": "ret",
+                "value": 3
+              },
+              "kind": "withheld",
+              "origin": [],
+              "reason": {
+                "expected": "String",
+                "got": 3,
+                "kind": "mismatch"
+              }
+            }
+          ],
+          "system": {
+            "root": {
+              "grant": null,
+              "harness": {
+                "arg": {
+                  "Record": {}
+                },
+                "init": {},
+                "state": {
+                  "Record": {}
+                },
+                "step": {
+                  "cond": {
+                    "args": [
+                      {
+                        "e": "get",
+                        "field": "kind",
+                        "of": {
+                          "e": "var",
+                          "name": "input"
+                        }
+                      },
+                      {
+                        "e": "lit",
+                        "v": "start"
+                      }
+                    ],
+                    "e": "op",
+                    "op": "eq"
+                  },
+                  "e": "if",
+                  "else": {
+                    "cond": {
+                      "args": [
+                        {
+                          "e": "get",
+                          "field": "kind",
+                          "of": {
+                            "e": "var",
+                            "name": "input"
+                          }
+                        },
+                        {
+                          "e": "lit",
+                          "v": "ret"
+                        }
+                      ],
+                      "e": "op",
+                      "op": "eq"
+                    },
+                    "e": "if",
+                    "else": {
+                      "e": "record",
+                      "fields": {
+                        "actions": {
+                          "e": "list",
+                          "items": []
+                        },
+                        "state": {
+                          "e": "var",
+                          "name": "state"
+                        }
+                      }
+                    },
+                    "then": {
+                      "cond": {
+                        "args": [
+                          {
+                            "e": "get",
+                            "field": "call",
+                            "of": {
+                              "e": "var",
+                              "name": "input"
+                            }
+                          },
+                          {
+                            "e": "lit",
+                            "v": 0
+                          }
+                        ],
+                        "e": "op",
+                        "op": "eq"
+                      },
+                      "e": "if",
+                      "else": {
+                        "e": "record",
+                        "fields": {
+                          "actions": {
+                            "e": "list",
+                            "items": []
+                          },
+                          "state": {
+                            "e": "var",
+                            "name": "state"
+                          }
+                        }
+                      },
+                      "then": {
+                        "e": "record",
+                        "fields": {
+                          "actions": {
+                            "e": "list",
+                            "items": [
+                              {
+                                "e": "record",
+                                "fields": {
+                                  "args": {
+                                    "e": "record",
+                                    "fields": {
+                                      "body": {
+                                        "e": "get",
+                                        "field": "value",
+                                        "of": {
+                                          "e": "var",
+                                          "name": "input"
+                                        }
+                                      },
+                                      "url": {
+                                        "e": "lit",
+                                        "v": "https://example.com"
+                                      }
+                                    }
+                                  },
+                                  "kind": {
+                                    "e": "lit",
+                                    "v": "call"
+                                  },
+                                  "op": {
+                                    "e": "lit",
+                                    "v": "net.send"
+                                  }
+                                }
+                              }
+                            ]
+                          },
+                          "state": {
+                            "e": "var",
+                            "name": "state"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "then": {
+                    "e": "record",
+                    "fields": {
+                      "actions": {
+                        "e": "list",
+                        "items": [
+                          {
+                            "e": "record",
+                            "fields": {
+                              "args": {
+                                "e": "record",
+                                "fields": {
+                                  "url": {
+                                    "e": "lit",
+                                    "v": "https://example.com/page"
+                                  }
+                                }
+                              },
+                              "kind": {
+                                "e": "lit",
+                                "v": "call"
+                              },
+                              "op": {
+                                "e": "lit",
+                                "v": "net.fetch"
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      "state": {
+                        "e": "var",
+                        "name": "state"
+                      }
+                    }
+                  }
+                }
+              },
+              "interface": {
+                "channels": {
+                  "act": {
+                    "type": {
+                      "Record": {
+                        "kind": "String"
+                      }
+                    }
+                  },
+                  "user": {
+                    "type": "String"
+                  }
+                },
+                "operations": {
+                  "fs.write": {
+                    "effect": true,
+                    "input": {
+                      "Record": {
+                        "path": "String"
+                      }
+                    },
+                    "output": "Int"
+                  },
+                  "net.fetch": {
+                    "input": {
+                      "Record": {
+                        "url": "String"
+                      }
+                    },
+                    "output": "String",
+                    "ret": {
+                      "e": "list",
+                      "items": [
+                        {
+                          "e": "lit",
+                          "v": "web"
+                        }
+                      ]
+                    }
+                  },
+                  "net.send": {
+                    "effect": true,
+                    "input": {
+                      "Record": {
+                        "body": "String",
+                        "url": "String"
+                      }
+                    },
+                    "output": "Int"
+                  }
+                }
+              },
+              "next": 1,
+              "pending": [
+                {
+                  "args": {
+                    "record": {
+                      "fields": {
+                        "url": {
+                          "scalar": {
+                            "value": "https://example.com/page"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "call": 0,
+                  "op": "net.fetch"
+                }
+              ],
+              "queue": [],
+              "started": true,
+              "state": {
+                "record": {
+                  "fields": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "delivery": {
+          "input": {
+            "call": 0,
+            "kind": "ret",
+            "value": "page"
+          }
+        },
+        "op": "deliver",
+        "system": {
+          "root": {
+            "grant": null,
+            "harness": {
+              "arg": {
+                "Record": {}
+              },
+              "init": {},
+              "state": {
+                "Record": {}
+              },
+              "step": {
+                "cond": {
+                  "args": [
+                    {
+                      "e": "get",
+                      "field": "kind",
+                      "of": {
+                        "e": "var",
+                        "name": "input"
+                      }
+                    },
+                    {
+                      "e": "lit",
+                      "v": "start"
+                    }
+                  ],
+                  "e": "op",
+                  "op": "eq"
+                },
+                "e": "if",
+                "else": {
+                  "cond": {
+                    "args": [
+                      {
+                        "e": "get",
+                        "field": "kind",
+                        "of": {
+                          "e": "var",
+                          "name": "input"
+                        }
+                      },
+                      {
+                        "e": "lit",
+                        "v": "ret"
+                      }
+                    ],
+                    "e": "op",
+                    "op": "eq"
+                  },
+                  "e": "if",
+                  "else": {
+                    "e": "record",
+                    "fields": {
+                      "actions": {
+                        "e": "list",
+                        "items": []
+                      },
+                      "state": {
+                        "e": "var",
+                        "name": "state"
+                      }
+                    }
+                  },
+                  "then": {
+                    "cond": {
+                      "args": [
+                        {
+                          "e": "get",
+                          "field": "call",
+                          "of": {
+                            "e": "var",
+                            "name": "input"
+                          }
+                        },
+                        {
+                          "e": "lit",
+                          "v": 0
+                        }
+                      ],
+                      "e": "op",
+                      "op": "eq"
+                    },
+                    "e": "if",
+                    "else": {
+                      "e": "record",
+                      "fields": {
+                        "actions": {
+                          "e": "list",
+                          "items": []
+                        },
+                        "state": {
+                          "e": "var",
+                          "name": "state"
+                        }
+                      }
+                    },
+                    "then": {
+                      "e": "record",
+                      "fields": {
+                        "actions": {
+                          "e": "list",
+                          "items": [
+                            {
+                              "e": "record",
+                              "fields": {
+                                "args": {
+                                  "e": "record",
+                                  "fields": {
+                                    "body": {
+                                      "e": "get",
+                                      "field": "value",
+                                      "of": {
+                                        "e": "var",
+                                        "name": "input"
+                                      }
+                                    },
+                                    "url": {
+                                      "e": "lit",
+                                      "v": "https://example.com"
+                                    }
+                                  }
+                                },
+                                "kind": {
+                                  "e": "lit",
+                                  "v": "call"
+                                },
+                                "op": {
+                                  "e": "lit",
+                                  "v": "net.send"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        "state": {
+                          "e": "var",
+                          "name": "state"
+                        }
+                      }
+                    }
+                  }
+                },
+                "then": {
+                  "e": "record",
+                  "fields": {
+                    "actions": {
+                      "e": "list",
+                      "items": [
+                        {
+                          "e": "record",
+                          "fields": {
+                            "args": {
+                              "e": "record",
+                              "fields": {
+                                "url": {
+                                  "e": "lit",
+                                  "v": "https://example.com/page"
+                                }
+                              }
+                            },
+                            "kind": {
+                              "e": "lit",
+                              "v": "call"
+                            },
+                            "op": {
+                              "e": "lit",
+                              "v": "net.fetch"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    "state": {
+                      "e": "var",
+                      "name": "state"
+                    }
+                  }
+                }
+              }
+            },
+            "interface": {
+              "channels": {
+                "act": {
+                  "type": {
+                    "Record": {
+                      "kind": "String"
+                    }
+                  }
+                },
+                "user": {
+                  "type": "String"
+                }
+              },
+              "operations": {
+                "fs.write": {
+                  "effect": true,
+                  "input": {
+                    "Record": {
+                      "path": "String"
+                    }
+                  },
+                  "output": "Int"
+                },
+                "net.fetch": {
+                  "input": {
+                    "Record": {
+                      "url": "String"
+                    }
+                  },
+                  "output": "String",
+                  "ret": {
+                    "e": "list",
+                    "items": [
+                      {
+                        "e": "lit",
+                        "v": "web"
+                      }
+                    ]
+                  }
+                },
+                "net.send": {
+                  "effect": true,
+                  "input": {
+                    "Record": {
+                      "body": "String",
+                      "url": "String"
+                    }
+                  },
+                  "output": "Int"
+                }
+              }
+            },
+            "next": 1,
+            "pending": [
+              {
+                "args": {
+                  "record": {
+                    "fields": {
+                      "url": {
+                        "scalar": {
+                          "value": "https://example.com/page"
+                        }
+                      }
+                    }
+                  }
+                },
+                "call": 0,
+                "op": "net.fetch"
+              }
+            ],
+            "queue": [],
+            "started": true,
+            "state": {
+              "record": {
+                "fields": {}
+              }
+            }
+          }
+        }
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "events": [
+            {
+              "input": {
+                "call": 0,
+                "kind": "ret",
+                "op": "net.fetch",
+                "value": "page"
+              },
+              "kind": "in",
+              "label": ["web"],
+              "origin": [],
+              "state": {}
+            },
+            {
+              "action": {
+                "args": {
+                  "body": "page",
+                  "url": "https://example.com"
+                },
+                "kind": "call",
+                "op": "net.send"
+              },
+              "call": 1,
+              "effect": true,
+              "kind": "out",
+              "labels": {
+                "args": {
+                  "body": ["web"],
+                  "url": ["web"]
+                },
+                "kind": ["web"],
+                "op": ["web"]
+              },
+              "origin": [],
+              "performed": true,
+              "state": {}
+            }
+          ],
+          "system": {
+            "root": {
+              "grant": null,
+              "harness": {
+                "arg": {
+                  "Record": {}
+                },
+                "init": {},
+                "state": {
+                  "Record": {}
+                },
+                "step": {
+                  "cond": {
+                    "args": [
+                      {
+                        "e": "get",
+                        "field": "kind",
+                        "of": {
+                          "e": "var",
+                          "name": "input"
+                        }
+                      },
+                      {
+                        "e": "lit",
+                        "v": "start"
+                      }
+                    ],
+                    "e": "op",
+                    "op": "eq"
+                  },
+                  "e": "if",
+                  "else": {
+                    "cond": {
+                      "args": [
+                        {
+                          "e": "get",
+                          "field": "kind",
+                          "of": {
+                            "e": "var",
+                            "name": "input"
+                          }
+                        },
+                        {
+                          "e": "lit",
+                          "v": "ret"
+                        }
+                      ],
+                      "e": "op",
+                      "op": "eq"
+                    },
+                    "e": "if",
+                    "else": {
+                      "e": "record",
+                      "fields": {
+                        "actions": {
+                          "e": "list",
+                          "items": []
+                        },
+                        "state": {
+                          "e": "var",
+                          "name": "state"
+                        }
+                      }
+                    },
+                    "then": {
+                      "cond": {
+                        "args": [
+                          {
+                            "e": "get",
+                            "field": "call",
+                            "of": {
+                              "e": "var",
+                              "name": "input"
+                            }
+                          },
+                          {
+                            "e": "lit",
+                            "v": 0
+                          }
+                        ],
+                        "e": "op",
+                        "op": "eq"
+                      },
+                      "e": "if",
+                      "else": {
+                        "e": "record",
+                        "fields": {
+                          "actions": {
+                            "e": "list",
+                            "items": []
+                          },
+                          "state": {
+                            "e": "var",
+                            "name": "state"
+                          }
+                        }
+                      },
+                      "then": {
+                        "e": "record",
+                        "fields": {
+                          "actions": {
+                            "e": "list",
+                            "items": [
+                              {
+                                "e": "record",
+                                "fields": {
+                                  "args": {
+                                    "e": "record",
+                                    "fields": {
+                                      "body": {
+                                        "e": "get",
+                                        "field": "value",
+                                        "of": {
+                                          "e": "var",
+                                          "name": "input"
+                                        }
+                                      },
+                                      "url": {
+                                        "e": "lit",
+                                        "v": "https://example.com"
+                                      }
+                                    }
+                                  },
+                                  "kind": {
+                                    "e": "lit",
+                                    "v": "call"
+                                  },
+                                  "op": {
+                                    "e": "lit",
+                                    "v": "net.send"
+                                  }
+                                }
+                              }
+                            ]
+                          },
+                          "state": {
+                            "e": "var",
+                            "name": "state"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "then": {
+                    "e": "record",
+                    "fields": {
+                      "actions": {
+                        "e": "list",
+                        "items": [
+                          {
+                            "e": "record",
+                            "fields": {
+                              "args": {
+                                "e": "record",
+                                "fields": {
+                                  "url": {
+                                    "e": "lit",
+                                    "v": "https://example.com/page"
+                                  }
+                                }
+                              },
+                              "kind": {
+                                "e": "lit",
+                                "v": "call"
+                              },
+                              "op": {
+                                "e": "lit",
+                                "v": "net.fetch"
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      "state": {
+                        "e": "var",
+                        "name": "state"
+                      }
+                    }
+                  }
+                }
+              },
+              "interface": {
+                "channels": {
+                  "act": {
+                    "type": {
+                      "Record": {
+                        "kind": "String"
+                      }
+                    }
+                  },
+                  "user": {
+                    "type": "String"
+                  }
+                },
+                "operations": {
+                  "fs.write": {
+                    "effect": true,
+                    "input": {
+                      "Record": {
+                        "path": "String"
+                      }
+                    },
+                    "output": "Int"
+                  },
+                  "net.fetch": {
+                    "input": {
+                      "Record": {
+                        "url": "String"
+                      }
+                    },
+                    "output": "String",
+                    "ret": {
+                      "e": "list",
+                      "items": [
+                        {
+                          "e": "lit",
+                          "v": "web"
+                        }
+                      ]
+                    }
+                  },
+                  "net.send": {
+                    "effect": true,
+                    "input": {
+                      "Record": {
+                        "body": "String",
+                        "url": "String"
+                      }
+                    },
+                    "output": "Int"
+                  }
+                }
+              },
+              "next": 2,
+              "pending": [
+                {
+                  "args": {
+                    "record": {
+                      "fields": {
+                        "body": {
+                          "scalar": {
+                            "label": ["web"],
+                            "value": "page"
+                          }
+                        },
+                        "url": {
+                          "scalar": {
+                            "label": ["web"],
+                            "value": "https://example.com"
+                          }
+                        }
+                      },
+                      "label": ["web"]
+                    }
+                  },
+                  "call": 1,
+                  "op": "net.send"
+                }
+              ],
+              "queue": [],
+              "seen": ["web"],
+              "started": true,
+              "state": {
+                "record": {
+                  "fields": {},
+                  "label": ["web"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "grant": null,
+        "harness": {
+          "arg": {
+            "Record": {}
+          },
+          "init": {},
+          "state": {
+            "Record": {}
+          },
+          "step": {
+            "cond": {
+              "args": [
+                {
+                  "e": "get",
+                  "field": "kind",
+                  "of": {
+                    "e": "var",
+                    "name": "input"
+                  }
+                },
+                {
+                  "e": "lit",
+                  "v": "start"
+                }
+              ],
+              "e": "op",
+              "op": "eq"
+            },
+            "e": "if",
+            "else": {
+              "cond": {
+                "args": [
+                  {
+                    "e": "get",
+                    "field": "kind",
+                    "of": {
+                      "e": "var",
+                      "name": "input"
+                    }
+                  },
+                  {
+                    "e": "lit",
+                    "v": "ret"
+                  }
+                ],
+                "e": "op",
+                "op": "eq"
+              },
+              "e": "if",
+              "else": {
+                "e": "record",
+                "fields": {
+                  "actions": {
+                    "e": "list",
+                    "items": []
+                  },
+                  "state": {
+                    "e": "var",
+                    "name": "state"
+                  }
+                }
+              },
+              "then": {
+                "cond": {
+                  "args": [
+                    {
+                      "e": "get",
+                      "field": "call",
+                      "of": {
+                        "e": "var",
+                        "name": "input"
+                      }
+                    },
+                    {
+                      "e": "lit",
+                      "v": 0
+                    }
+                  ],
+                  "e": "op",
+                  "op": "eq"
+                },
+                "e": "if",
+                "else": {
+                  "e": "record",
+                  "fields": {
+                    "actions": {
+                      "e": "list",
+                      "items": []
+                    },
+                    "state": {
+                      "e": "var",
+                      "name": "state"
+                    }
+                  }
+                },
+                "then": {
+                  "e": "record",
+                  "fields": {
+                    "actions": {
+                      "e": "list",
+                      "items": [
+                        {
+                          "e": "record",
+                          "fields": {
+                            "args": {
+                              "e": "record",
+                              "fields": {
+                                "body": {
+                                  "e": "get",
+                                  "field": "value",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "input"
+                                  }
+                                },
+                                "url": {
+                                  "e": "lit",
+                                  "v": "https://example.com"
+                                }
+                              }
+                            },
+                            "kind": {
+                              "e": "lit",
+                              "v": "call"
+                            },
+                            "op": {
+                              "e": "lit",
+                              "v": "net.send"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    "state": {
+                      "e": "var",
+                      "name": "state"
+                    }
+                  }
+                }
+              }
+            },
+            "then": {
+              "e": "record",
+              "fields": {
+                "actions": {
+                  "e": "list",
+                  "items": [
+                    {
+                      "e": "record",
+                      "fields": {
+                        "args": {
+                          "e": "record",
+                          "fields": {
+                            "url": {
+                              "e": "lit",
+                              "v": "https://example.com/page"
+                            }
+                          }
+                        },
+                        "kind": {
+                          "e": "lit",
+                          "v": "call"
+                        },
+                        "op": {
+                          "e": "lit",
+                          "v": "net.fetch"
+                        }
+                      }
+                    }
+                  ]
+                },
+                "state": {
+                  "e": "var",
+                  "name": "state"
+                }
+              }
+            }
+          }
+        },
+        "interface": {},
+        "op": "init"
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "kind": "ready",
+          "system": {
+            "root": {
+              "grant": null,
+              "harness": {
+                "arg": {
+                  "Record": {}
+                },
+                "init": {},
+                "state": {
+                  "Record": {}
+                },
+                "step": {
+                  "cond": {
+                    "args": [
+                      {
+                        "e": "get",
+                        "field": "kind",
+                        "of": {
+                          "e": "var",
+                          "name": "input"
+                        }
+                      },
+                      {
+                        "e": "lit",
+                        "v": "start"
+                      }
+                    ],
+                    "e": "op",
+                    "op": "eq"
+                  },
+                  "e": "if",
+                  "else": {
+                    "cond": {
+                      "args": [
+                        {
+                          "e": "get",
+                          "field": "kind",
+                          "of": {
+                            "e": "var",
+                            "name": "input"
+                          }
+                        },
+                        {
+                          "e": "lit",
+                          "v": "ret"
+                        }
+                      ],
+                      "e": "op",
+                      "op": "eq"
+                    },
+                    "e": "if",
+                    "else": {
+                      "e": "record",
+                      "fields": {
+                        "actions": {
+                          "e": "list",
+                          "items": []
+                        },
+                        "state": {
+                          "e": "var",
+                          "name": "state"
+                        }
+                      }
+                    },
+                    "then": {
+                      "cond": {
+                        "args": [
+                          {
+                            "e": "get",
+                            "field": "call",
+                            "of": {
+                              "e": "var",
+                              "name": "input"
+                            }
+                          },
+                          {
+                            "e": "lit",
+                            "v": 0
+                          }
+                        ],
+                        "e": "op",
+                        "op": "eq"
+                      },
+                      "e": "if",
+                      "else": {
+                        "e": "record",
+                        "fields": {
+                          "actions": {
+                            "e": "list",
+                            "items": []
+                          },
+                          "state": {
+                            "e": "var",
+                            "name": "state"
+                          }
+                        }
+                      },
+                      "then": {
+                        "e": "record",
+                        "fields": {
+                          "actions": {
+                            "e": "list",
+                            "items": [
+                              {
+                                "e": "record",
+                                "fields": {
+                                  "args": {
+                                    "e": "record",
+                                    "fields": {
+                                      "body": {
+                                        "e": "get",
+                                        "field": "value",
+                                        "of": {
+                                          "e": "var",
+                                          "name": "input"
+                                        }
+                                      },
+                                      "url": {
+                                        "e": "lit",
+                                        "v": "https://example.com"
+                                      }
+                                    }
+                                  },
+                                  "kind": {
+                                    "e": "lit",
+                                    "v": "call"
+                                  },
+                                  "op": {
+                                    "e": "lit",
+                                    "v": "net.send"
+                                  }
+                                }
+                              }
+                            ]
+                          },
+                          "state": {
+                            "e": "var",
+                            "name": "state"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "then": {
+                    "e": "record",
+                    "fields": {
+                      "actions": {
+                        "e": "list",
+                        "items": [
+                          {
+                            "e": "record",
+                            "fields": {
+                              "args": {
+                                "e": "record",
+                                "fields": {
+                                  "url": {
+                                    "e": "lit",
+                                    "v": "https://example.com/page"
+                                  }
+                                }
+                              },
+                              "kind": {
+                                "e": "lit",
+                                "v": "call"
+                              },
+                              "op": {
+                                "e": "lit",
+                                "v": "net.fetch"
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      "state": {
+                        "e": "var",
+                        "name": "state"
+                      }
+                    }
+                  }
+                }
+              },
+              "interface": {},
+              "next": 0,
+              "pending": [],
+              "queue": [],
+              "started": false,
+              "state": {
+                "record": {
+                  "fields": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "delivery": {
+          "input": {
+            "kind": "start",
+            "value": {}
+          }
+        },
+        "op": "deliver",
+        "system": {
+          "root": {
+            "grant": null,
+            "harness": {
+              "arg": {
+                "Record": {}
+              },
+              "init": {},
+              "state": {
+                "Record": {}
+              },
+              "step": {
+                "cond": {
+                  "args": [
+                    {
+                      "e": "get",
+                      "field": "kind",
+                      "of": {
+                        "e": "var",
+                        "name": "input"
+                      }
+                    },
+                    {
+                      "e": "lit",
+                      "v": "start"
+                    }
+                  ],
+                  "e": "op",
+                  "op": "eq"
+                },
+                "e": "if",
+                "else": {
+                  "cond": {
+                    "args": [
+                      {
+                        "e": "get",
+                        "field": "kind",
+                        "of": {
+                          "e": "var",
+                          "name": "input"
+                        }
+                      },
+                      {
+                        "e": "lit",
+                        "v": "ret"
+                      }
+                    ],
+                    "e": "op",
+                    "op": "eq"
+                  },
+                  "e": "if",
+                  "else": {
+                    "e": "record",
+                    "fields": {
+                      "actions": {
+                        "e": "list",
+                        "items": []
+                      },
+                      "state": {
+                        "e": "var",
+                        "name": "state"
+                      }
+                    }
+                  },
+                  "then": {
+                    "cond": {
+                      "args": [
+                        {
+                          "e": "get",
+                          "field": "call",
+                          "of": {
+                            "e": "var",
+                            "name": "input"
+                          }
+                        },
+                        {
+                          "e": "lit",
+                          "v": 0
+                        }
+                      ],
+                      "e": "op",
+                      "op": "eq"
+                    },
+                    "e": "if",
+                    "else": {
+                      "e": "record",
+                      "fields": {
+                        "actions": {
+                          "e": "list",
+                          "items": []
+                        },
+                        "state": {
+                          "e": "var",
+                          "name": "state"
+                        }
+                      }
+                    },
+                    "then": {
+                      "e": "record",
+                      "fields": {
+                        "actions": {
+                          "e": "list",
+                          "items": [
+                            {
+                              "e": "record",
+                              "fields": {
+                                "args": {
+                                  "e": "record",
+                                  "fields": {
+                                    "body": {
+                                      "e": "get",
+                                      "field": "value",
+                                      "of": {
+                                        "e": "var",
+                                        "name": "input"
+                                      }
+                                    },
+                                    "url": {
+                                      "e": "lit",
+                                      "v": "https://example.com"
+                                    }
+                                  }
+                                },
+                                "kind": {
+                                  "e": "lit",
+                                  "v": "call"
+                                },
+                                "op": {
+                                  "e": "lit",
+                                  "v": "net.send"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        "state": {
+                          "e": "var",
+                          "name": "state"
+                        }
+                      }
+                    }
+                  }
+                },
+                "then": {
+                  "e": "record",
+                  "fields": {
+                    "actions": {
+                      "e": "list",
+                      "items": [
+                        {
+                          "e": "record",
+                          "fields": {
+                            "args": {
+                              "e": "record",
+                              "fields": {
+                                "url": {
+                                  "e": "lit",
+                                  "v": "https://example.com/page"
+                                }
+                              }
+                            },
+                            "kind": {
+                              "e": "lit",
+                              "v": "call"
+                            },
+                            "op": {
+                              "e": "lit",
+                              "v": "net.fetch"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    "state": {
+                      "e": "var",
+                      "name": "state"
+                    }
+                  }
+                }
+              }
+            },
+            "interface": {},
+            "next": 0,
+            "pending": [],
+            "queue": [],
+            "started": false,
+            "state": {
+              "record": {
+                "fields": {}
+              }
+            }
+          }
+        }
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "events": [
+            {
+              "input": {
+                "kind": "start",
+                "value": {}
+              },
+              "kind": "in",
+              "origin": [],
+              "state": {}
+            },
+            {
+              "action": {
+                "args": {
+                  "url": "https://example.com/page"
+                },
+                "kind": "call",
+                "op": "net.fetch"
+              },
+              "call": 0,
+              "kind": "out",
+              "labels": {
+                "args": {
+                  "url": []
+                },
+                "kind": [],
+                "op": []
+              },
+              "origin": [],
+              "performed": false,
+              "state": {}
+            },
+            {
+              "input": {
+                "call": 0,
+                "kind": "refused",
+                "op": "net.fetch"
+              },
+              "kind": "in",
+              "origin": [],
+              "state": {}
+            }
+          ],
+          "system": {
+            "root": {
+              "grant": null,
+              "harness": {
+                "arg": {
+                  "Record": {}
+                },
+                "init": {},
+                "state": {
+                  "Record": {}
+                },
+                "step": {
+                  "cond": {
+                    "args": [
+                      {
+                        "e": "get",
+                        "field": "kind",
+                        "of": {
+                          "e": "var",
+                          "name": "input"
+                        }
+                      },
+                      {
+                        "e": "lit",
+                        "v": "start"
+                      }
+                    ],
+                    "e": "op",
+                    "op": "eq"
+                  },
+                  "e": "if",
+                  "else": {
+                    "cond": {
+                      "args": [
+                        {
+                          "e": "get",
+                          "field": "kind",
+                          "of": {
+                            "e": "var",
+                            "name": "input"
+                          }
+                        },
+                        {
+                          "e": "lit",
+                          "v": "ret"
+                        }
+                      ],
+                      "e": "op",
+                      "op": "eq"
+                    },
+                    "e": "if",
+                    "else": {
+                      "e": "record",
+                      "fields": {
+                        "actions": {
+                          "e": "list",
+                          "items": []
+                        },
+                        "state": {
+                          "e": "var",
+                          "name": "state"
+                        }
+                      }
+                    },
+                    "then": {
+                      "cond": {
+                        "args": [
+                          {
+                            "e": "get",
+                            "field": "call",
+                            "of": {
+                              "e": "var",
+                              "name": "input"
+                            }
+                          },
+                          {
+                            "e": "lit",
+                            "v": 0
+                          }
+                        ],
+                        "e": "op",
+                        "op": "eq"
+                      },
+                      "e": "if",
+                      "else": {
+                        "e": "record",
+                        "fields": {
+                          "actions": {
+                            "e": "list",
+                            "items": []
+                          },
+                          "state": {
+                            "e": "var",
+                            "name": "state"
+                          }
+                        }
+                      },
+                      "then": {
+                        "e": "record",
+                        "fields": {
+                          "actions": {
+                            "e": "list",
+                            "items": [
+                              {
+                                "e": "record",
+                                "fields": {
+                                  "args": {
+                                    "e": "record",
+                                    "fields": {
+                                      "body": {
+                                        "e": "get",
+                                        "field": "value",
+                                        "of": {
+                                          "e": "var",
+                                          "name": "input"
+                                        }
+                                      },
+                                      "url": {
+                                        "e": "lit",
+                                        "v": "https://example.com"
+                                      }
+                                    }
+                                  },
+                                  "kind": {
+                                    "e": "lit",
+                                    "v": "call"
+                                  },
+                                  "op": {
+                                    "e": "lit",
+                                    "v": "net.send"
+                                  }
+                                }
+                              }
+                            ]
+                          },
+                          "state": {
+                            "e": "var",
+                            "name": "state"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "then": {
+                    "e": "record",
+                    "fields": {
+                      "actions": {
+                        "e": "list",
+                        "items": [
+                          {
+                            "e": "record",
+                            "fields": {
+                              "args": {
+                                "e": "record",
+                                "fields": {
+                                  "url": {
+                                    "e": "lit",
+                                    "v": "https://example.com/page"
+                                  }
+                                }
+                              },
+                              "kind": {
+                                "e": "lit",
+                                "v": "call"
+                              },
+                              "op": {
+                                "e": "lit",
+                                "v": "net.fetch"
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      "state": {
+                        "e": "var",
+                        "name": "state"
+                      }
+                    }
+                  }
+                }
+              },
+              "interface": {},
+              "next": 1,
+              "pending": [],
+              "queue": [],
+              "started": true,
+              "state": {
+                "record": {
+                  "fields": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,16 +1,19 @@
 //! The kernel's interface: one request in, one response out, each in deterministic CBOR.
 
-use crate::assess::assess;
 use crate::cbor::{self, DecodeError};
-use crate::check::check_ask;
-use crate::claim::{
-    Assessment, Claim, Verdict as ClaimVerdict, Witness, assess_claim, check_claim, claim_key,
+use crate::check::infer;
+use crate::evidence::{Alphabet, Evidence, Method, Subject, certificate, prove, verify};
+use crate::harness::{
+    Harness, Installation, Interface, Narrowing, check_harness, check_interface, input_type,
+    install, narrow,
 };
-use crate::ir::{Answer, Ask, AskSpec, World};
-use crate::key::{ask_key, spec_key};
-use crate::smtlib;
-use crate::smtlib::claim::{Floats, Read};
-use crate::validate::Verdict;
+use crate::induction::{check_step, obligation};
+use crate::ir::{Expr, Type};
+use crate::key::{Kind, key};
+use crate::labeled::{self, LValue};
+use crate::property::{Property, check_property, monitor};
+use crate::run::{Delivery, System};
+use crate::smtlib::{self, Definition, Floats};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
@@ -20,59 +23,105 @@ use std::collections::BTreeMap;
 #[derive(Deserialize)]
 #[serde(tag = "op", rename_all = "camelCase")]
 pub enum Request {
-    /// The Ask's content key in this world.
-    Key {
-        ask: Ask,
+    /// The type of an expression, given its variables' types, and what is wrong with it.
+    Infer {
+        expr: Expr,
         #[serde(default)]
-        world: World,
+        vars: BTreeMap<String, Type>,
     },
-    /// The key of a spec alone, under which a reusable Procedure for it is kept.
-    SpecKey { spec: AskSpec },
-    /// Problems with a closed Ask.
-    CheckAsk { ask: Ask },
-    /// Whether `answer` is an Answer the kernel can read, and if not, why.
-    ReadAnswer { answer: Value },
-    /// Check an Answer against its Ask, evaluate it as far as `resolved` allows, and check the contract.
-    Assess {
-        ask: Ask,
+    /// The value of an expression, given its variables' values, all trusted.
+    Evaluate {
+        expr: Expr,
         #[serde(default)]
-        world: World,
-        answer: Answer,
-        #[serde(default)]
-        resolved: BTreeMap<String, Value>,
-        #[serde(default)]
-        evidence: Vec<Verdict>,
+        vars: BTreeMap<String, Value>,
     },
-    /// The Ask, its world and an Answer to it as an SMT-LIB 2 script, or why they have no faithful reading.
-    Smtlib {
-        ask: Ask,
+    /// Problems with a harness, against an interface if one is given.
+    CheckHarness {
+        harness: Harness,
         #[serde(default)]
-        world: World,
-        answer: Answer,
+        interface: Option<Interface>,
     },
-    /// A claim's content key.
-    ClaimKey { claim: Claim },
-    /// Problems with a claim.
-    CheckClaim { claim: Claim },
-    /// Re-check a counterexample to a claim about an Answer: a verdict, or the values it still lacks.
-    AssessClaim {
-        claim: Claim,
-        answer: Answer,
+    /// The type of what a harness's step receives against an interface.
+    InputType {
+        harness: Harness,
         #[serde(default)]
-        witness: Witness,
+        interface: Interface,
     },
-    /// The kernel's verdict if the witness is complete; otherwise the SMT-LIB query that asks a solver for what it lacks.
-    ClaimQuery {
-        claim: Claim,
-        answer: Answer,
+    /// Problems with an interface's contracts.
+    CheckInterface { interface: Interface },
+    /// The interface of several capabilities, each under its prefix.
+    Install { capabilities: Vec<Installation> },
+    /// An interface narrowed for a child.
+    Narrow {
+        interface: Interface,
+        narrowings: Vec<Narrowing>,
+    },
+    /// A system that hasn't started: the harness at its initial state, against the interface.
+    Init {
+        harness: Harness,
         #[serde(default)]
-        witness: Witness,
-        /// `exact` by default; `real` to search fast, with every candidate re-checked as always.
+        interface: Interface,
+        /// The grant state the root principal starts the run with.
+        #[serde(default)]
+        grant: Value,
+    },
+    /// Deliver one input to a system: the next configuration, and what happened.
+    Deliver { system: System, delivery: Delivery },
+    /// Problems with a property.
+    CheckProperty { property: Property },
+    /// Whether a trace satisfies a property, and if not, where it first fails.
+    Monitor {
+        property: Property,
+        trace: Vec<Value>,
+    },
+    /// The kernel's verdict on a property of a harness, by a method, as evidence.
+    Prove {
+        #[serde(flatten)]
+        subject: Subject,
+        method: Method,
+    },
+    /// Whether evidence is about this subject, and the kernel reaches its verdict.
+    Verify {
+        #[serde(flatten)]
+        subject: Subject,
+        evidence: Evidence,
+    },
+    /// The configurations an `invariant` certificate lists: every one reachable under the alphabet.
+    Certificate {
+        #[serde(flatten)]
+        subject: Subject,
+        alphabet: Alphabet,
+        #[serde(default = "certificate_limit")]
+        limit: usize,
+    },
+    /// Initiation for an invariant of a harness's state, decided, and consecution, as an SMT-LIB query.
+    Obligation {
+        harness: Harness,
+        #[serde(default)]
+        interface: Interface,
+        invariant: Expr,
         #[serde(default)]
         floats: Floats,
     },
-    /// A solver's `get-value` reply to a claim query, as the values its reads ask for.
-    ReadValues { reply: String, reads: Vec<Read> },
+    /// One step from a state where the invariant holds: whether it still holds after this input.
+    CheckInduction {
+        harness: Harness,
+        #[serde(default)]
+        interface: Interface,
+        invariant: Expr,
+        state: Value,
+        input: Value,
+    },
+    /// The content key of a harness object.
+    ObjectKey { kind: Kind, object: Value },
+    /// Definitions as an SMT-LIB 2 script, or why they have no faithful reading.
+    Smtlib {
+        definitions: Vec<Definition>,
+        #[serde(default)]
+        floats: Floats,
+    },
+    /// A solver's `get-value` reply, as values of these types.
+    ReadValues { reply: String, types: Vec<Type> },
 }
 
 #[derive(Serialize)]
@@ -84,67 +133,110 @@ pub enum RequestError {
     Malformed { detail: String },
 }
 
-/// The kernel's assessment of a counterexample, with a validation script any solver confirms when it is one.
-fn assessed(claim: &Claim, answer: &Answer, witness: &Witness) -> Value {
-    match assess_claim(claim, answer, witness) {
-        Assessment::Assessed { verdict } => {
-            let refuted = matches!(verdict, ClaimVerdict::Refutes | ClaimVerdict::Inconsistent);
-            let validation = refuted
-                .then(|| smtlib::claim::validation(claim, answer, witness).ok())
-                .flatten();
-            json!({ "kind": "assessed", "claim": claim_key(claim), "verdict": verdict, "validation": validation })
-        }
-        incomplete => json!(incomplete),
+fn certificate_limit() -> usize {
+    10_000
+}
+
+fn refused_or<T: Serialize, E: Serialize>(kind: &str, field: &str, result: Result<T, E>) -> Value {
+    match result {
+        Ok(v) => json!({ "kind": kind, field: v }),
+        Err(error) => json!({ "kind": "refused", "error": error }),
     }
 }
 
 fn respond(request: Request) -> Value {
     match request {
-        Request::Key { ask, world } => json!({ "key": ask_key(&ask, &world.facts) }),
-        Request::SpecKey { spec } => json!({ "key": spec_key(&spec) }),
-        Request::CheckAsk { ask } => json!({ "problems": check_ask(&ask) }),
-        Request::ReadAnswer { answer } => match serde_json::from_value::<Answer>(answer) {
-            Ok(_) => json!({ "readable": true }),
-            Err(e) => json!({ "readable": false, "detail": e.to_string() }),
-        },
-        Request::Assess {
-            ask,
-            world,
-            answer,
-            resolved,
-            evidence,
-        } => {
-            json!(assess(&ask, &world, &answer, &resolved, &evidence))
+        Request::Infer { expr, vars } => {
+            let (ty, problems) = infer(&expr, vars.into_iter().collect());
+            json!({ "type": ty, "problems": problems })
         }
-        Request::Smtlib { ask, world, answer } => match smtlib::export(&ask, &world, &answer) {
-            Ok(text) => json!({ "kind": "exported", "text": text }),
+        Request::Evaluate { expr, vars } => {
+            let scope = vars
+                .iter()
+                .map(|(n, v)| (n.clone(), LValue::trusted(v)))
+                .collect();
+            match labeled::eval(&expr, scope) {
+                Ok(v) => json!({ "kind": "value", "value": v.value() }),
+                Err(error) => json!({ "kind": "failed", "error": error }),
+            }
+        }
+        Request::CheckHarness { harness, interface } => {
+            json!({ "problems": check_harness(&harness, interface.as_ref()) })
+        }
+        Request::InputType { harness, interface } => {
+            json!({ "type": input_type(&harness, &interface) })
+        }
+        Request::CheckInterface { interface } => {
+            json!({ "problems": check_interface(&interface) })
+        }
+        Request::Install { capabilities } => {
+            refused_or("installed", "interface", install(&capabilities))
+        }
+        Request::Narrow {
+            interface,
+            narrowings,
+        } => refused_or("narrowed", "interface", narrow(&interface, &narrowings)),
+        Request::Init {
+            harness,
+            interface,
+            grant,
+        } => refused_or("ready", "system", System::new(harness, interface, grant)),
+        Request::Deliver {
+            mut system,
+            delivery,
+        } => {
+            let events = system.deliver(&delivery);
+            json!({ "system": system, "events": events })
+        }
+        Request::CheckProperty { property } => json!({ "problems": check_property(&property) }),
+        Request::Monitor { property, trace } => json!(monitor(&property, &trace)),
+        Request::Prove { subject, method } => match prove(&subject, &method) {
+            Ok(evidence) => {
+                json!({ "kind": "evidence", "key": key(Kind::Evidence, &evidence), "evidence": evidence })
+            }
             Err(error) => json!({ "kind": "refused", "error": error }),
         },
-        Request::ClaimKey { claim } => json!({ "key": claim_key(&claim) }),
-        Request::CheckClaim { claim } => json!({ "problems": check_claim(&claim) }),
-        Request::AssessClaim {
-            claim,
-            answer,
-            witness,
-        } => assessed(&claim, &answer, &witness),
-        Request::ClaimQuery {
-            claim,
-            answer,
-            witness,
-            floats,
-        } => match assess_claim(&claim, &answer, &witness) {
-            Assessment::Incomplete { vars, holes } => {
-                match smtlib::claim::query(&claim, &answer, &witness, &vars, &holes, floats) {
-                    Ok(query) => {
-                        json!({ "kind": "query", "script": query.script, "reads": query.reads })
-                    }
-                    Err(error) => json!({ "kind": "refused", "error": error }),
-                }
-            }
-            Assessment::Assessed { .. } => assessed(&claim, &answer, &witness),
+        Request::Verify { subject, evidence } => match verify(&subject, &evidence) {
+            Ok(()) => json!({ "valid": true }),
+            Err(error) => json!({ "valid": false, "error": error }),
         },
-        Request::ReadValues { reply, reads } => {
-            match smtlib::values::read(&reply, &reads.iter().map(Read::ty).collect::<Vec<_>>()) {
+        Request::Certificate {
+            subject,
+            alphabet,
+            limit,
+        } => refused_or(
+            "certificate",
+            "configurations",
+            certificate(&subject, &alphabet, limit),
+        ),
+        Request::Obligation {
+            harness,
+            interface,
+            invariant,
+            floats,
+        } => match obligation(&harness, &interface, &invariant, floats) {
+            Ok(o) => {
+                json!({ "kind": "obligation", "initiation": o.initiation, "text": o.text, "excluded": o.excluded, "reads": o.reads })
+            }
+            Err(error) => json!({ "kind": "refused", "error": error }),
+        },
+        Request::CheckInduction {
+            harness,
+            interface,
+            invariant,
+            state,
+            input,
+        } => match check_step(&harness, &interface, &invariant, &state, &input) {
+            Ok(verdict) => json!(verdict),
+            Err(error) => json!({ "kind": "refused", "error": error }),
+        },
+        Request::ObjectKey { kind, object } => json!({ "key": key(kind, &object) }),
+        Request::Smtlib {
+            definitions,
+            floats,
+        } => refused_or("exported", "text", smtlib::export(&definitions, floats)),
+        Request::ReadValues { reply, types } => {
+            match smtlib::values::read(&reply, &types.iter().collect::<Vec<_>>()) {
                 Ok(values) => json!({ "kind": "values", "values": values }),
                 Err(error) => json!({ "kind": "unreadable", "error": error }),
             }

@@ -1,4 +1,4 @@
-// Protocol objects (`crates/kernel/src/ir.rs`). Values are plain JSON.
+// Types and expressions (`crates/kernel/src/ir.rs`). Values are plain JSON.
 
 export type Value = null | boolean | number | string | Value[] | { [field: string]: Value };
 
@@ -10,90 +10,54 @@ export type Type =
   | "Bool"
   | "Any"
   | { readonly List: Type }
-  | { readonly Record: Readonly<Record<string, Type>> };
+  | { readonly Record: Readonly<Record<string, Type>> }
+  /** A record whose `tag` field names its case, and which has that case's type. */
+  | { readonly Variant: { readonly tag: string; readonly cases: Readonly<Record<string, Type>> } };
 
 export interface Param {
   readonly name: string;
   readonly type: Type;
 }
 
-/** A check on an Answer's value. Kernel validators are replayable; `checker` is delegated; `prose` is never checked. */
-export type Validator =
-  | { readonly kind: "min"; readonly value: number; readonly at?: readonly string[] }
-  | { readonly kind: "max"; readonly value: number; readonly at?: readonly string[] }
-  | { readonly kind: "nonEmpty"; readonly at?: readonly string[] }
-  | { readonly kind: "oneOf"; readonly values: readonly Value[]; readonly at?: readonly string[] }
-  | { readonly kind: "minLength"; readonly value: number; readonly at?: readonly string[] }
-  | { readonly kind: "maxLength"; readonly value: number; readonly at?: readonly string[] }
-  | { readonly kind: "checker"; readonly actor: string; readonly note?: string }
-  | { readonly kind: "prose"; readonly text: string };
-
-/** An Ask's signature and contract: a typed hole. */
-export interface AskSpec {
-  readonly name: string;
-  readonly params?: readonly Param[];
-  readonly output: Type;
-  readonly description?: string;
-  readonly validators?: readonly Validator[];
-  /** `derivation`: a raw value or an assumption can't answer it. */
-  readonly form?: "any" | "derivation";
-  /** An effect Ask changes the world: it needs authority, and is never answered from the store. */
-  readonly effect?: boolean;
-}
-
-/** A closed Ask: a spec with a value for each parameter. */
-export interface Ask {
-  readonly spec: AskSpec;
-  readonly args: Readonly<Record<string, Value>>;
-}
-
-/** An input the requester declares, with where it came from. */
-export interface Fact {
-  readonly value: Value;
-  readonly type?: Type;
-  readonly source?: string;
-}
-
-/** The context an Ask is answered in: information (part of the content key) and capabilities (not). */
-export interface World {
-  readonly facts?: Readonly<Record<string, Fact>>;
-  /** The Actors a responder's holes may be routed to. Empty: any. */
-  readonly actors?: readonly string[];
-}
-
-/** A Procedure's body. `ask` is a computational hole; `assume`, `opaque` and `fact` are epistemic ones. */
+/** A pure expression. `fold` is the only iteration, so evaluation always ends. */
 export type Expr =
   | { readonly e: "lit"; readonly v: Value }
   | { readonly e: "var"; readonly name: string }
-  | { readonly e: "fact"; readonly name: string }
   | { readonly e: "op"; readonly op: string; readonly args: readonly Expr[] }
-  | { readonly e: "ask"; readonly spec: AskSpec; readonly args: Readonly<Record<string, Expr>> }
-  | {
-      readonly e: "assume";
-      readonly v: Value;
-      readonly type: Type;
-      readonly note?: string;
-      readonly source?: string;
-    }
-  | { readonly e: "opaque"; readonly type: Type; readonly note?: string }
   | { readonly e: "let"; readonly name: string; readonly be: Expr; readonly in: Expr }
   | { readonly e: "if"; readonly cond: Expr; readonly then: Expr; readonly else: Expr }
   | { readonly e: "record"; readonly fields: Readonly<Record<string, Expr>> }
   | { readonly e: "list"; readonly items: readonly Expr[] }
-  | { readonly e: "get"; readonly of: Expr; readonly field: string };
+  | { readonly e: "get"; readonly of: Expr; readonly field: string }
+  /** The untrusted sources a value may depend on, as a sorted list. Empty: trusted. */
+  | { readonly e: "label"; readonly of: Expr }
+  /** The case of a variant, read off its `on` field (`kind` by default), with `bind` holding it at that case's type. */
+  | {
+      readonly e: "match";
+      readonly of: Expr;
+      readonly on?: string;
+      readonly cases: Readonly<Record<string, { readonly bind: string; readonly body: Expr }>>;
+      readonly otherwise?: Expr;
+    }
+  | {
+      readonly e: "fold";
+      readonly over: Expr;
+      readonly init: Expr;
+      readonly acc: string;
+      readonly item: string;
+      readonly body: Expr;
+    };
 
-/** What an Actor returns: a raw value, or a Procedure over the Ask's parameters. */
-export type Answer = { readonly value: Value } | { readonly procedure: Expr };
-
-// What the kernel says about an Answer (`crates/kernel/src/assess.rs`).
-
-/** A `/`-separated path into a Procedure's body; `""` is the root. */
+/** A `/`-separated path into an expression; `""` is the root. */
 export type Path = string;
 
-export type State = "illFormed" | "constructed" | "evaluable" | "satisfied" | "failed";
+export type Arity =
+  | { readonly arity: "exactly"; readonly n: number }
+  | { readonly arity: "between"; readonly min: number; readonly max: number }
+  | { readonly arity: "atLeast"; readonly n: number };
 
 export type OpTypeError =
-  | { readonly kind: "arity"; readonly expected: unknown; readonly got: number }
+  | { readonly kind: "arity"; readonly expected: Arity; readonly got: number }
   | {
       readonly kind: "operand";
       readonly index: number;
@@ -112,35 +76,9 @@ export type OpEvalError =
       readonly got: Value;
     };
 
+/** What makes an expression ill-typed (`crates/kernel/src/check.rs`). */
 export type Problem =
-  | { readonly kind: "missingArgument"; readonly ask: string; readonly param: string }
-  | {
-      readonly kind: "unexpectedArgument";
-      readonly at: Path;
-      readonly ask: string;
-      readonly arg: string;
-    }
-  | {
-      readonly kind: "argumentMismatch";
-      readonly ask: string;
-      readonly param: string;
-      readonly expected: Type;
-      readonly got: Value;
-    }
-  | {
-      readonly kind: "duplicateParameter";
-      readonly at: Path;
-      readonly ask: string;
-      readonly param: string;
-    }
-  | {
-      readonly kind: "missingHoleArgument";
-      readonly at: Path;
-      readonly ask: string;
-      readonly param: string;
-    }
   | { readonly kind: "unknownVariable"; readonly at: Path; readonly name: string }
-  | { readonly kind: "unknownFact"; readonly at: Path; readonly name: string }
   | { readonly kind: "unknownOperator"; readonly at: Path; readonly op: string }
   | {
       readonly kind: "operator";
@@ -151,48 +89,12 @@ export type Problem =
   | { readonly kind: "mismatch"; readonly at: Path; readonly expected: Type; readonly got: Type }
   | { readonly kind: "notARecord"; readonly at: Path; readonly got: Type }
   | { readonly kind: "noSuchField"; readonly at: Path; readonly field: string; readonly of: Type }
-  | {
-      readonly kind: "assumptionMismatch";
-      readonly at: Path;
-      readonly expected: Type;
-      readonly got: Value;
-    }
-  | {
-      readonly kind: "notDerived";
-      readonly at: Path;
-      readonly reason: "rawValue" | "assumption" | "opaque";
-    };
+  | { readonly kind: "notAList"; readonly at: Path; readonly got: Type }
+  | { readonly kind: "notAVariant"; readonly at: Path; readonly on: string; readonly got: Type }
+  | { readonly kind: "noSuchCase"; readonly at: Path; readonly case: string }
+  | { readonly kind: "notExhaustive"; readonly at: Path; readonly missing: readonly string[] };
 
-/** A computational hole: an Ask inside a Procedure. */
-export interface Hole {
-  readonly at: Path;
-  readonly spec: AskSpec;
-}
-
-/** An epistemic hole: something the result rests on that Cronch has not checked. */
-export type Assumption =
-  | { readonly kind: "rawValue"; readonly value: Value }
-  | {
-      readonly kind: "assumed";
-      readonly at: Path;
-      readonly type: Type;
-      readonly value: Value;
-      readonly note?: string;
-      readonly source?: string;
-    }
-  | { readonly kind: "opaque"; readonly at: Path; readonly type: Type; readonly note?: string }
-  | {
-      readonly kind: "fact";
-      readonly name: string;
-      readonly value: Value;
-      readonly source?: string;
-    };
-
-/** A hole evaluation is blocked on. */
-export type Open =
-  | { readonly kind: "ask"; readonly at: Path; readonly key: string; readonly ask: Ask }
-  | { readonly kind: "opaque"; readonly at: Path; readonly type: Type };
-
+/** Why an expression failed to evaluate (`crates/kernel/src/labeled.rs`). */
 export type EvalError =
   | {
       readonly kind: "operator";
@@ -200,90 +102,332 @@ export type EvalError =
       readonly op: string;
       readonly error: OpEvalError;
     }
-  | {
-      readonly kind: "resolution";
-      readonly at: Path;
-      readonly key: string;
-      readonly expected: Type;
-      readonly got: Value;
-    }
   | { readonly kind: "unknownVariable"; readonly at: Path; readonly name: string }
-  | { readonly kind: "unknownFact"; readonly at: Path; readonly name: string }
   | { readonly kind: "unknownOperator"; readonly at: Path; readonly op: string }
   | { readonly kind: "notABool"; readonly at: Path; readonly got: Value }
-  | { readonly kind: "noSuchField"; readonly at: Path; readonly field: string; readonly of: Value };
+  | { readonly kind: "noSuchField"; readonly at: Path; readonly field: string; readonly of: Value }
+  | { readonly kind: "notAList"; readonly at: Path; readonly got: Value }
+  | { readonly kind: "noCase"; readonly at: Path; readonly got: Value };
 
-/** A Checker Actor's verdict on one validator. It counts only if `checker` is the one the validator names. */
-export interface Verdict {
-  readonly validator: number;
-  readonly checker: string;
-  readonly verdict: boolean;
+/** Untrusted sources. Empty: trusted. */
+export type Label = readonly string[];
+
+/** A value with a label on every node. */
+export type LValue =
+  | { readonly scalar: { readonly label?: Label; readonly value: Value } }
+  | { readonly list: { readonly label?: Label; readonly items: readonly LValue[] } }
+  | {
+      readonly record: {
+        readonly label?: Label;
+        readonly fields: Readonly<Record<string, LValue>>;
+      };
+    };
+
+// Harnesses and interfaces (`crates/kernel/src/harness.rs`).
+
+/** `⟨A, S, s₀, δ⟩`. `step` is over `state` and `input`, and gives `{ state, actions }`. */
+export interface Harness {
+  readonly arg: Type;
+  readonly state: Type;
+  readonly init: Value;
+  readonly step: Expr;
 }
 
-export type Subject =
-  | { readonly on: "type"; readonly expected: Type }
-  | { readonly on: "validator"; readonly index: number; readonly validator: Validator };
+/** An operation and its contract. Every expression is over `args`, and as named: `grant`, `result`. */
+export interface Operation {
+  readonly input: Type;
+  readonly output: Type;
+  readonly mode?: "single" | "stream";
+  /** Over `args` and `grant`: the call is performed only if it holds. */
+  readonly pre?: Expr;
+  /** Over `args` and `result`: results that break it are withheld. */
+  readonly post?: Expr;
+  /** Over `args`: the sources of what the call delivers. Absent: the arguments' labels. */
+  readonly ret?: Expr;
+  readonly raise?: Label;
+  readonly effect?: boolean;
+  /** Over `args`: what the call may touch, recorded on the trace. */
+  readonly footprint?: Expr;
+  /** Over `args` and `grant`: the next grant state, when the call is performed. */
+  readonly onCall?: Expr;
+  /** Over `args`, `result` and `grant`: the next grant state, when a trusted result arrives. */
+  readonly onResult?: Expr;
+}
 
-export type Failure =
-  | { readonly kind: "notInhabited" }
-  | { readonly kind: "noSuchField"; readonly at: readonly string[] }
-  | { readonly kind: "notANumber"; readonly got: Value }
-  | { readonly kind: "notSized"; readonly got: Value }
-  | { readonly kind: "belowMin"; readonly min: number; readonly got: number }
-  | { readonly kind: "aboveMax"; readonly max: number; readonly got: number }
-  | { readonly kind: "empty" }
-  | { readonly kind: "notOneOf"; readonly got: Value }
-  | { readonly kind: "tooShort"; readonly min: number; readonly got: number }
-  | { readonly kind: "tooLong"; readonly max: number; readonly got: number }
-  | { readonly kind: "rejected"; readonly checker: string };
+export interface Channel {
+  readonly type: Type;
+  readonly label?: Label;
+  /** Over `value`: messages that break it are withheld. */
+  readonly inv?: Expr;
+  /** Over `value` and `grant`: the next grant state, on a trusted channel. */
+  readonly onMsg?: Expr;
+}
+
+export interface Interface {
+  readonly operations?: Readonly<Record<string, Operation>>;
+  readonly channels?: Readonly<Record<string, Channel>>;
+}
+
+export interface Installation {
+  readonly prefix?: string;
+  readonly capability: Interface;
+}
+
+/** Narrowing only ever removes, strengthens or distrusts: there is no way to widen. */
+export type Narrowing =
+  | { readonly kind: "drop"; readonly op: string }
+  | { readonly kind: "only"; readonly ops: readonly string[] }
+  | { readonly kind: "dropChannel"; readonly channel: string }
+  | { readonly kind: "restrict"; readonly op: string; readonly pre: Expr }
+  | { readonly kind: "raise"; readonly op: string; readonly label: Label };
+
+export type HarnessPlace =
+  | { readonly in: "step" }
+  | { readonly in: "operation"; readonly name: string; readonly part: string }
+  | { readonly in: "channel"; readonly name: string; readonly part: string };
+
+export type HarnessProblem =
+  | { readonly kind: "expr"; readonly place: HarnessPlace; readonly problem: Problem }
+  | { readonly kind: "init"; readonly expected: Type; readonly got: Value }
+  | { readonly kind: "step"; readonly expected: Type; readonly got: Type }
+  | {
+      readonly kind: "part";
+      readonly place: HarnessPlace;
+      readonly expected: Type;
+      readonly got: Type;
+    };
+
+// Runs (`crates/kernel/src/run.rs`).
+
+export type WorldInput =
+  | { readonly kind: "start"; readonly value: Value; readonly label?: Label }
+  | { readonly kind: "ret"; readonly call: number; readonly value: Value }
+  | { readonly kind: "end"; readonly call: number }
+  | { readonly kind: "failed"; readonly call: number; readonly error: Value }
+  | { readonly kind: "msg"; readonly channel: string; readonly value: Value };
+
+/** An input from the world, to the run at `to` (a path of spawn identifiers; `[]` is the root). */
+export interface Delivery {
+  readonly to?: readonly number[];
+  readonly input: WorldInput;
+}
+
+export type Withheld =
+  | { readonly kind: "noSuchRun" }
+  | { readonly kind: "ended" }
+  | { readonly kind: "notStarted" }
+  | { readonly kind: "alreadyStarted" }
+  | { readonly kind: "notPending"; readonly call: number }
+  | { readonly kind: "notAStream"; readonly call: number }
+  | { readonly kind: "noSuchChannel"; readonly channel: string }
+  | { readonly kind: "mismatch"; readonly expected: Type; readonly got: Value }
+  | { readonly kind: "postcondition"; readonly call: number }
+  | { readonly kind: "invariant"; readonly channel: string }
+  | { readonly kind: "returnLabel"; readonly call: number };
+
+export type StepError =
+  | { readonly kind: "eval"; readonly error: EvalError }
+  | { readonly kind: "notAStep"; readonly got: Value }
+  | { readonly kind: "badAction"; readonly action: Value }
+  | { readonly kind: "runaway" };
 
 export type Outcome =
-  | { readonly result: "pass" }
-  | { readonly result: "attested"; readonly checker: string }
-  | { readonly result: "fail"; readonly failure: Failure }
-  | { readonly result: "delegated"; readonly checker: string }
-  | { readonly result: "unchecked" };
+  | { readonly kind: "halted"; readonly value: Value; readonly label?: Label }
+  | { readonly kind: "failed"; readonly error: StepError };
 
-export interface Check {
-  readonly subject: Subject;
-  readonly outcome: Outcome;
+export interface Pending {
+  readonly call: number;
+  readonly op: string;
+  readonly args: LValue;
 }
 
-export interface Report {
-  readonly key: string;
-  readonly state: State;
-  readonly problems: readonly Problem[];
-  readonly holes: readonly Hole[];
+export interface Run {
+  readonly harness: Harness;
+  readonly interface: Interface;
+  readonly state: LValue;
+  readonly pending: readonly Pending[];
+  readonly next: number;
+  readonly queue: readonly { readonly input: Value; readonly label?: Label }[];
+  readonly started: boolean;
+  readonly outcome?: Outcome;
+  /** What this run's preconditions read: the root principal's grant at the root, a copy of its parent's in a child. */
+  readonly grant: Value;
+  readonly seen?: Label;
+  readonly children?: readonly { readonly call: number; readonly run: Run }[];
+}
+
+/** A configuration. Hosts keep it between deliveries and hand it back unchanged. */
+export interface System {
+  readonly root: Run;
+}
+
+export type Event =
+  | {
+      readonly kind: "in";
+      readonly origin: readonly number[];
+      readonly input: Value;
+      readonly label?: Label;
+      readonly state: Value;
+    }
+  | {
+      readonly kind: "out";
+      readonly origin: readonly number[];
+      readonly call?: number;
+      readonly action: Value;
+      readonly performed: boolean;
+      readonly effect?: boolean;
+      readonly footprint?: Value;
+      /** The action's labels, shaped like the action. */
+      readonly labels: Value;
+      readonly state: Value;
+    }
+  | {
+      readonly kind: "withheld";
+      readonly origin: readonly number[];
+      readonly input: WorldInput;
+      readonly reason: Withheld;
+    }
+  | {
+      readonly kind: "failed";
+      readonly origin: readonly number[];
+      readonly input: Value;
+      readonly error: StepError;
+    };
+
+// Properties (`crates/kernel/src/property.rs`).
+
+export type Formula =
+  /** An expression over `event` and bound variables. One that fails to evaluate is false. */
+  | { readonly f: "atom"; readonly holds: Expr }
+  | { readonly f: "not"; readonly of: Formula }
+  | { readonly f: "and"; readonly of: readonly Formula[] }
+  | { readonly f: "or"; readonly of: readonly Formula[] }
+  | { readonly f: "implies"; readonly if: Formula; readonly then: Formula }
+  /** `var` ranges over the values `of` gave at the events so far. */
+  | { readonly f: "exists"; readonly var: string; readonly of: Expr; readonly body: Formula }
+  | { readonly f: "forall"; readonly var: string; readonly of: Expr; readonly body: Formula }
+  | { readonly f: "prev"; readonly of: Formula }
+  | { readonly f: "since"; readonly left: Formula; readonly right: Formula }
+  | { readonly f: "once"; readonly of: Formula }
+  | { readonly f: "historically"; readonly of: Formula };
+
+/** `□always`: at every event of every run. */
+export interface Property {
+  readonly name: string;
+  readonly always: Formula;
+}
+
+export interface PropertyProblem {
+  readonly at: string;
+  readonly problem: Problem;
+}
+
+export type Monitored =
+  | { readonly verdict: "holds" }
+  | { readonly verdict: "violated"; readonly at: number };
+
+// Evidence (`crates/kernel/src/evidence.rs`).
+
+export interface Subject {
+  readonly harness: Harness;
+  readonly interface?: Interface;
+  readonly grant?: Value;
+  readonly property: Property;
+}
+
+export type Template =
+  | { readonly kind: "start"; readonly value: Value; readonly label?: Label }
+  | { readonly kind: "ret"; readonly value: Value; readonly op?: string }
+  | { readonly kind: "end"; readonly op?: string }
+  | { readonly kind: "failed"; readonly error: Value; readonly op?: string }
+  | { readonly kind: "msg"; readonly channel: string; readonly value: Value };
+
+export interface Choice {
+  readonly to?: readonly number[];
+  readonly input: Template;
+}
+
+/** A configuration as a certificate lists it. */
+export interface Configuration {
+  readonly system: System;
+  readonly monitor?: { readonly last?: readonly boolean[] };
+}
+
+export type Method =
+  | { readonly kind: "counterexample"; readonly deliveries: readonly Delivery[] }
+  | { readonly kind: "bounded"; readonly depth: number; readonly alphabet: readonly Choice[] }
+  | { readonly kind: "exhaustive"; readonly alphabet: readonly Choice[]; readonly limit?: number }
+  /** An inductive invariant over `config`, with the configurations it holds of. */
+  | {
+      readonly kind: "invariant";
+      readonly invariant: Expr;
+      readonly configurations: readonly Configuration[];
+      readonly alphabet: readonly Choice[];
+    };
+
+export type Verdict =
+  | {
+      readonly verdict: "refuted";
+      readonly counterexample: readonly Delivery[];
+      readonly at: number;
+    }
+  | { readonly verdict: "holdsUpTo"; readonly depth: number }
+  | { readonly verdict: "holds" };
+
+export type Assumption =
+  | { readonly kind: "contracts"; readonly interface: string }
+  | { readonly kind: "checker"; readonly kernel: string }
+  | { readonly kind: "environment"; readonly alphabet: string }
+  | { readonly kind: "runtime" };
+
+export type Evidence = {
+  readonly harness: string;
+  readonly interface: string;
+  readonly grant: string;
+  readonly property: string;
+  readonly method: Method;
   readonly assumptions: readonly Assumption[];
-  readonly open: readonly Open[];
-  readonly value?: Value;
-  readonly checks: readonly Check[];
-  readonly error?: EvalError;
+} & Verdict;
+
+export type ProveError =
+  | { readonly kind: "init"; readonly error: InitError }
+  | { readonly kind: "property"; readonly problems: readonly PropertyProblem[] }
+  | { readonly kind: "inadmissible"; readonly index: number; readonly reason: Withheld }
+  | { readonly kind: "notViolated" }
+  | { readonly kind: "quantified" }
+  | { readonly kind: "inconclusive"; readonly explored: number }
+  | { readonly kind: "refuted"; readonly counterexample: readonly Delivery[] }
+  | { readonly kind: "initiation" }
+  | { readonly kind: "notInvariant"; readonly index: number }
+  | { readonly kind: "notClosed"; readonly index: number; readonly delivery: Delivery }
+  | { readonly kind: "unsafe"; readonly index: number; readonly delivery: Delivery };
+
+export type InitError =
+  | { readonly kind: "harness"; readonly problems: readonly HarnessProblem[] }
+  | { readonly kind: "interface"; readonly problems: readonly HarnessProblem[] };
+
+export type Kind = "harness" | "interface" | "property" | "grant" | "alphabet" | "evidence";
+
+// SMT-LIB (`crates/kernel/src/smtlib`).
+
+export interface Definition {
+  readonly name: string;
+  readonly params?: readonly Param[];
+  readonly body: Expr;
+  readonly description?: string;
 }
 
-// The SMT-LIB 2 export of an Ask and its Answer (`crates/kernel/src/smtlib`).
+export type Floats = "exact" | "real";
 
-export interface SmtlibInput {
-  readonly ask: Ask;
-  readonly world?: World;
-  readonly answer: Answer;
-}
-
-/** Where a part with no SMT-LIB reading is. */
-export type SmtlibPlace =
-  | { readonly in: "spec" }
-  | { readonly in: "argument"; readonly param: string }
-  | { readonly in: "fact"; readonly name: string }
-  | { readonly in: "body"; readonly at: Path }
-  | { readonly in: "validator"; readonly index: number };
-
-/** Why a part has no faithful SMT-LIB reading. */
 export type NoReading =
   | { readonly kind: "any" }
   | { readonly kind: "operator"; readonly op: string }
   | { readonly kind: "listConversion"; readonly from: Type; readonly to: Type }
   | { readonly kind: "equality"; readonly left: Type; readonly right: Type }
   | { readonly kind: "text"; readonly of: Type }
+  | { readonly kind: "fold" }
+  | { readonly kind: "label" }
+  | { readonly kind: "emptyVariant" }
   | { readonly kind: "roundingDigits" }
   | { readonly kind: "recordSize" }
   | { readonly kind: "undeclaredField"; readonly field: string }
@@ -291,107 +435,16 @@ export type NoReading =
   | { readonly kind: "character"; readonly code: number }
   | { readonly kind: "value"; readonly expected: Type; readonly got: Value };
 
-export type SmtlibError =
+export type SmtlibRefusal = { readonly definition: string } & (
   | { readonly kind: "illFormed"; readonly problems: readonly Problem[] }
-  | { readonly kind: "noReading"; readonly place: SmtlibPlace; readonly reason: NoReading };
-
-export type SmtlibExport =
-  | { readonly kind: "exported"; readonly text: string }
-  | { readonly kind: "refused"; readonly error: SmtlibError };
-
-// Claims (`crates/kernel/src/claim.rs`).
-
-/** A claim is wanted of the Answers; an assumption is something their author is committed to. */
-export type Stance = "claim" | "assumption";
-
-export interface Claim {
-  readonly name: string;
-  /** `claim` when absent. */
-  readonly stance?: Stance;
-  /** The spec whose Answers the claim is about. Inside `holds`, an Ask of it is the Answer under check. */
-  readonly about: AskSpec;
-  readonly vars?: readonly Param[];
-  /** A Bool over `vars`, true for every value of them if the claim holds. */
-  readonly holds: Expr;
-  readonly description?: string;
-}
-
-/** A value for one of the Answer's nested Asks, closed at the arguments its evaluation reached it with. */
-export interface HoleValue {
-  readonly ask: Ask;
-  readonly value: Value;
-}
-
-/** A proposed counterexample: values for the claim's variables, and for the nested Asks evaluation reaches. */
-export interface Witness {
-  readonly vars?: Readonly<Record<string, Value>>;
-  readonly holes?: readonly HoleValue[];
-}
-
-export type ClaimProblem =
-  | { readonly kind: "body"; readonly problem: Problem }
-  | { readonly kind: "foreignAsk"; readonly at: Path; readonly ask: string };
-
-/** Why a counterexample can't be read against the Answer at all. */
-export type InvalidWitness =
-  | { readonly kind: "illFormedClaim"; readonly problems: readonly ClaimProblem[] }
-  | { readonly kind: "illFormedAnswer"; readonly problems: readonly Problem[] }
-  | { readonly kind: "unexpectedVar"; readonly name: string }
   | {
-      readonly kind: "varMismatch";
-      readonly name: string;
-      readonly expected: Type;
-      readonly got: Value;
+      readonly kind: "noReading";
+      readonly place:
+        | { readonly in: "param"; readonly name: string }
+        | { readonly in: "body"; readonly at: Path };
+      readonly reason: NoReading;
     }
-  | { readonly kind: "holeMismatch"; readonly ask: string; readonly problems: readonly Problem[] }
-  | { readonly kind: "opaque"; readonly at: Path }
-  | { readonly kind: "tooDeep" };
-
-export type ClaimVerdict =
-  /** The claim is false at the witness. */
-  | { readonly kind: "refutes" }
-  /** The assumption is false at the witness: the Answer contradicts it. */
-  | { readonly kind: "inconsistent" }
-  /** `holds` is true at the witness: a proposed counterexample that isn't one. */
-  | { readonly kind: "notRefuted" }
-  /** The Answer or the claim has no value at the witness: it neither holds nor fails there. */
-  | { readonly kind: "undefined"; readonly error: EvalError }
-  | { readonly kind: "invalid"; readonly reason: InvalidWitness };
-
-export type ClaimAssessment =
-  | {
-      readonly kind: "assessed";
-      /** The claim's content key. */
-      readonly claim: string;
-      readonly verdict: ClaimVerdict;
-      /** For a refutation: an SMT-LIB script, every value fixed, that any solver confirms with `sat`. */
-      readonly validation?: string | null;
-    }
-  /** The witness lacks values the evaluation needs. */
-  | {
-      readonly kind: "incomplete";
-      readonly vars: readonly Param[];
-      readonly holes: readonly Open[];
-    };
-
-/** How a claim query reads Floats: exactly, as IEEE doubles, or as reals, to search fast. */
-export type Floats = "exact" | "real";
-
-/** A value a query asks the solver for, in the order of its `get-value`. */
-export type ValueRead =
-  | { readonly of: "var"; readonly name: string; readonly type: Type }
-  | { readonly of: "hole"; readonly key: string; readonly ask: Ask; readonly type: Type };
-
-export interface ClaimInput {
-  readonly claim: Claim;
-  readonly answer: Answer;
-  readonly witness?: Witness;
-}
-
-export type ClaimQuery =
-  | Extract<ClaimAssessment, { readonly kind: "assessed" }>
-  | { readonly kind: "query"; readonly script: string; readonly reads: readonly ValueRead[] }
-  | { readonly kind: "refused"; readonly error: SmtlibError };
+);
 
 export type Unreadable =
   | { readonly kind: "syntax"; readonly detail: string }
@@ -400,80 +453,105 @@ export type Unreadable =
   | { readonly kind: "notFinite" }
   | { readonly kind: "tooLarge" };
 
-export type ReadValues =
-  | { readonly kind: "values"; readonly values: readonly Value[] }
-  | { readonly kind: "unreadable"; readonly error: Unreadable };
+type Refusable<K extends string, T> =
+  | ({ readonly kind: K } & T)
+  | { readonly kind: "refused"; readonly error: unknown };
 
-// Deterministic CBOR (`cbor.js`).
-
-export type DecodeError =
-  | { readonly kind: "truncated"; readonly offset: number }
-  | { readonly kind: "unsupported"; readonly offset: number; readonly initial: number }
-  | { readonly kind: "invalidUtf8"; readonly offset: number }
-  | { readonly kind: "nonTextKey"; readonly offset: number }
-  | { readonly kind: "duplicateKey"; readonly offset: number }
-  | { readonly kind: "notFinite"; readonly offset: number }
-  /** An integer JavaScript can't represent exactly. */
-  | { readonly kind: "outOfRange"; readonly offset: number }
-  | { readonly kind: "tooDeep"; readonly offset: number }
-  | { readonly kind: "trailingBytes"; readonly offset: number }
-  | { readonly kind: "nonCanonical" };
-
-export type Decoded =
-  | { readonly ok: true; readonly value: Value }
-  | { readonly ok: false; readonly error: DecodeError };
-
-/** Thrown when encoding something outside the data model: a non-finite number, a function, a symbol. */
-export class EncodeError extends Error {
-  readonly name: "EncodeError";
-  readonly found: string;
-  constructor(found: string);
-}
-
-/** Encode any JSON-shaped value. */
-export function encode(value: unknown): Uint8Array<ArrayBuffer>;
-export function decode(bytes: Uint8Array): Decoded;
-
-// The kernel.
-
-export interface AssessInput {
-  readonly ask: Ask;
-  readonly world?: World;
-  readonly answer: Answer;
-  readonly resolved?: Readonly<Record<string, Value>>;
-  readonly evidence?: readonly Verdict[];
-}
-
-/** Whether a value is an Answer the kernel can read: the Answer itself, or why not. */
-export type AnswerReading =
-  | { readonly kind: "readable"; readonly answer: Answer }
-  | { readonly kind: "unreadable"; readonly detail: string };
-
-/** The kernel refused a request: it was not one it understands. A bug in the caller, never a verdict. */
-export class KernelError extends Error {
-  readonly name: "KernelError";
-  readonly detail: unknown;
-  constructor(detail: unknown);
-}
-
-/** The trusted checker. Synchronous and deterministic: the same input gives the same report on every host. */
 export interface Kernel {
-  key(ask: Ask, world?: World): string;
-  specKey(spec: AskSpec): string;
-  checkAsk(ask: Ask): readonly Problem[];
-  /** Never throws: an Answer from outside is read here before it becomes an event. */
-  readAnswer(value: unknown): AnswerReading;
-  assess(input: AssessInput): Report;
-  /** The Ask, its world and an Answer as an SMT-LIB 2 script, or why part of them has no faithful reading. */
-  smtlib(input: SmtlibInput): SmtlibExport;
-  claimKey(claim: Claim): string;
-  checkClaim(claim: Claim): readonly ClaimProblem[];
-  /** Re-check a counterexample to a claim about an Answer: a verdict, or the values it still lacks. */
-  assessClaim(input: ClaimInput): ClaimAssessment;
-  /** The verdict if the witness is complete; otherwise the SMT-LIB query that asks a solver for what it lacks. */
-  claimQuery(input: ClaimInput & { readonly floats?: Floats }): ClaimQuery;
-  /** A solver's `get-value` reply to a claim query, as the values its reads ask for. */
-  readValues(reply: string, reads: readonly ValueRead[]): ReadValues;
+  infer(
+    expr: Expr,
+    vars?: Readonly<Record<string, Type>>,
+  ): { readonly type: Type | null; readonly problems: readonly Problem[] };
+  evaluate(
+    expr: Expr,
+    vars?: Readonly<Record<string, Value>>,
+  ):
+    | { readonly kind: "value"; readonly value: Value }
+    | { readonly kind: "failed"; readonly error: EvalError };
+  /** Against an interface, the harness's input is typed by `inputType`; without one, it is `Any`. */
+  checkHarness(harness: Harness, iface?: Interface): readonly HarnessProblem[];
+  inputType(harness: Harness, iface: Interface): Type;
+  checkInterface(iface: Interface): readonly HarnessProblem[];
+  install(
+    capabilities: readonly Installation[],
+  ): Refusable<"installed", { readonly interface: Interface }>;
+  narrow(
+    iface: Interface,
+    narrowings: readonly Narrowing[],
+  ): Refusable<"narrowed", { readonly interface: Interface }>;
+  init(input: {
+    readonly harness: Harness;
+    readonly interface?: Interface;
+    readonly grant?: Value;
+  }): Refusable<"ready", { readonly system: System }>;
+  /** Deliver one input: the next configuration, and what happened. */
+  deliver(
+    system: System,
+    delivery: Delivery,
+  ): { readonly system: System; readonly events: readonly Event[] };
+  checkProperty(property: Property): readonly PropertyProblem[];
+  monitor(property: Property, trace: readonly Event[]): Monitored;
+  prove(
+    subject: Subject,
+    method: Method,
+  ):
+    | { readonly kind: "evidence"; readonly key: string; readonly evidence: Evidence }
+    | { readonly kind: "refused"; readonly error: ProveError };
+  verify(
+    subject: Subject,
+    evidence: Evidence,
+  ): { readonly valid: true } | { readonly valid: false; readonly error: unknown };
+  /** The configurations an `invariant` certificate lists, found by search. */
+  certificate(
+    subject: Subject,
+    alphabet: readonly Choice[],
+    limit?: number,
+  ):
+    | { readonly kind: "certificate"; readonly configurations: readonly Configuration[] }
+    | { readonly kind: "refused"; readonly error: ProveError };
+  /** Initiation, decided, and consecution as an SMT-LIB query whose models are counterexamples to induction. */
+  obligation(input: {
+    readonly harness: Harness;
+    readonly interface?: Interface;
+    readonly invariant: Expr;
+    readonly floats?: Floats;
+  }):
+    | {
+        readonly kind: "obligation";
+        readonly initiation: boolean;
+        readonly text: string;
+        readonly excluded: readonly string[];
+        /** The types to read a model's state and input at. */
+        readonly reads: readonly [Type, Type];
+      }
+    | { readonly kind: "refused"; readonly error: unknown };
+  /** The kernel's check of a solver's counterexample to induction. */
+  checkInduction(input: {
+    readonly harness: Harness;
+    readonly interface?: Interface;
+    readonly invariant: Expr;
+    readonly state: Value;
+    readonly input: Value;
+  }):
+    | { readonly kind: "preserved"; readonly next: Value }
+    | { readonly kind: "notInductive"; readonly next: Value }
+    | {
+        readonly kind: "refused";
+        readonly error: { readonly kind: "invariant" | "state" | "input" | "notHeld" | "step" };
+      };
+  key(kind: Kind, object: unknown): string;
+  smtlib(
+    definitions: readonly Definition[],
+    floats?: Floats,
+  ):
+    | { readonly kind: "exported"; readonly text: string }
+    | { readonly kind: "refused"; readonly error: SmtlibRefusal };
+  readValues(
+    reply: string,
+    types: readonly Type[],
+  ):
+    | { readonly kind: "values"; readonly values: readonly Value[] }
+    | { readonly kind: "unreadable"; readonly error: Unreadable };
 }
 
 /** Instantiate the kernel from its bytes, or from a compiled module where bytes can't be compiled (a Worker). */

@@ -152,6 +152,11 @@ pub enum Command {
         name: Term,
         selectors: Vec<(Term, Term)>,
     },
+    /// A variant: one constructor per case, each with its selectors.
+    DeclareVariant {
+        name: Term,
+        constructors: Vec<(Term, Vec<(Term, Term)>)>,
+    },
     DeclareFun {
         name: Term,
         params: Vec<Term>,
@@ -192,6 +197,21 @@ impl Display for Command {
                         .collect(),
                 );
                 write!(f, "(declare-datatype {name} ({constructor}))")
+            }
+            Command::DeclareVariant { name, constructors } => {
+                let constructors = Term::List(
+                    constructors
+                        .iter()
+                        .map(|(c, selectors)| {
+                            Term::List(
+                                std::iter::once(c.clone())
+                                    .chain(pairs(selectors).items())
+                                    .collect(),
+                            )
+                        })
+                        .collect(),
+                );
+                write!(f, "(declare-datatype {name} {constructors})")
             }
             Command::DeclareFun { name, params, sort } => {
                 write!(

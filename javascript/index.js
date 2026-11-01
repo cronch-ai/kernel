@@ -44,37 +44,35 @@ export async function instantiate(source) {
   };
 
   return {
-    key: (ask, world) => call({ op: "key", ask, world: world ?? {} }).key,
-    specKey: (spec) => call({ op: "specKey", spec }).key,
-    checkAsk: (ask) => call({ op: "checkAsk", ask }).problems,
-    readAnswer: (value) => {
-      const reading = call({ op: "readAnswer", answer: value });
-      return reading.readable
-        ? { kind: "readable", answer: value }
-        : { kind: "unreadable", detail: reading.detail };
-    },
-    assess: ({ ask, world, answer, resolved, evidence }) =>
+    infer: (expr, vars) => call({ op: "infer", expr, vars: vars ?? {} }),
+    evaluate: (expr, vars) => call({ op: "evaluate", expr, vars: vars ?? {} }),
+    checkHarness: (harness, iface) =>
+      call({ op: "checkHarness", harness, interface: iface ?? null }).problems,
+    inputType: (harness, iface) => call({ op: "inputType", harness, interface: iface }).type,
+    checkInterface: (iface) => call({ op: "checkInterface", interface: iface }).problems,
+    install: (capabilities) => call({ op: "install", capabilities }),
+    narrow: (iface, narrowings) => call({ op: "narrow", interface: iface, narrowings }),
+    init: ({ harness, interface: iface, grant }) =>
+      call({ op: "init", harness, interface: iface ?? {}, grant: grant ?? null }),
+    deliver: (system, delivery) => call({ op: "deliver", system, delivery }),
+    checkProperty: (property) => call({ op: "checkProperty", property }).problems,
+    monitor: (property, trace) => call({ op: "monitor", property, trace }),
+    prove: (subject, method) => call({ op: "prove", ...subject, method }),
+    verify: (subject, evidence) => call({ op: "verify", ...subject, evidence }),
+    certificate: (subject, alphabet, limit) =>
+      call({ op: "certificate", ...subject, alphabet, limit: limit ?? 10000 }),
+    obligation: ({ harness, interface: iface, invariant, floats }) =>
       call({
-        op: "assess",
-        ask,
-        world: world ?? {},
-        answer,
-        resolved: resolved ?? {},
-        evidence: evidence ?? [],
-      }),
-    smtlib: ({ ask, world, answer }) => call({ op: "smtlib", ask, world: world ?? {}, answer }),
-    claimKey: (claim) => call({ op: "claimKey", claim }).key,
-    checkClaim: (claim) => call({ op: "checkClaim", claim }).problems,
-    assessClaim: ({ claim, answer, witness }) =>
-      call({ op: "assessClaim", claim, answer, witness: witness ?? {} }),
-    claimQuery: ({ claim, answer, witness, floats }) =>
-      call({
-        op: "claimQuery",
-        claim,
-        answer,
-        witness: witness ?? {},
+        op: "obligation",
+        harness,
+        interface: iface ?? {},
+        invariant,
         floats: floats ?? "exact",
       }),
-    readValues: (reply, reads) => call({ op: "readValues", reply, reads }),
+    checkInduction: ({ harness, interface: iface, invariant, state, input }) =>
+      call({ op: "checkInduction", harness, interface: iface ?? {}, invariant, state, input }),
+    key: (kind, object) => call({ op: "objectKey", kind, object }).key,
+    smtlib: (definitions, floats) => call({ op: "smtlib", definitions, floats: floats ?? "exact" }),
+    readValues: (reply, types) => call({ op: "readValues", reply, types }),
   };
 }

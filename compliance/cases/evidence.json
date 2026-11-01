@@ -1,0 +1,1991 @@
+{
+  "description": "Evidence by counterexample, bounded and exhaustive search, and its re-checking.",
+  "exchanges": [
+    {
+      "request": {
+        "harness": {
+          "arg": {
+            "Record": {}
+          },
+          "init": {},
+          "state": {
+            "Record": {}
+          },
+          "step": {
+            "cond": {
+              "args": [
+                {
+                  "e": "get",
+                  "field": "kind",
+                  "of": {
+                    "e": "var",
+                    "name": "input"
+                  }
+                },
+                {
+                  "e": "lit",
+                  "v": "start"
+                }
+              ],
+              "e": "op",
+              "op": "eq"
+            },
+            "e": "if",
+            "else": {
+              "cond": {
+                "args": [
+                  {
+                    "e": "get",
+                    "field": "kind",
+                    "of": {
+                      "e": "var",
+                      "name": "input"
+                    }
+                  },
+                  {
+                    "e": "lit",
+                    "v": "ret"
+                  }
+                ],
+                "e": "op",
+                "op": "eq"
+              },
+              "e": "if",
+              "else": {
+                "e": "record",
+                "fields": {
+                  "actions": {
+                    "e": "list",
+                    "items": []
+                  },
+                  "state": {
+                    "e": "var",
+                    "name": "state"
+                  }
+                }
+              },
+              "then": {
+                "cond": {
+                  "args": [
+                    {
+                      "e": "get",
+                      "field": "call",
+                      "of": {
+                        "e": "var",
+                        "name": "input"
+                      }
+                    },
+                    {
+                      "e": "lit",
+                      "v": 0
+                    }
+                  ],
+                  "e": "op",
+                  "op": "eq"
+                },
+                "e": "if",
+                "else": {
+                  "e": "record",
+                  "fields": {
+                    "actions": {
+                      "e": "list",
+                      "items": []
+                    },
+                    "state": {
+                      "e": "var",
+                      "name": "state"
+                    }
+                  }
+                },
+                "then": {
+                  "e": "record",
+                  "fields": {
+                    "actions": {
+                      "e": "list",
+                      "items": [
+                        {
+                          "e": "record",
+                          "fields": {
+                            "args": {
+                              "e": "record",
+                              "fields": {
+                                "body": {
+                                  "e": "get",
+                                  "field": "value",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "input"
+                                  }
+                                },
+                                "url": {
+                                  "e": "lit",
+                                  "v": "https://example.com"
+                                }
+                              }
+                            },
+                            "kind": {
+                              "e": "lit",
+                              "v": "call"
+                            },
+                            "op": {
+                              "e": "lit",
+                              "v": "net.send"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    "state": {
+                      "e": "var",
+                      "name": "state"
+                    }
+                  }
+                }
+              }
+            },
+            "then": {
+              "e": "record",
+              "fields": {
+                "actions": {
+                  "e": "list",
+                  "items": [
+                    {
+                      "e": "record",
+                      "fields": {
+                        "args": {
+                          "e": "record",
+                          "fields": {
+                            "url": {
+                              "e": "lit",
+                              "v": "https://example.com/page"
+                            }
+                          }
+                        },
+                        "kind": {
+                          "e": "lit",
+                          "v": "call"
+                        },
+                        "op": {
+                          "e": "lit",
+                          "v": "net.fetch"
+                        }
+                      }
+                    }
+                  ]
+                },
+                "state": {
+                  "e": "var",
+                  "name": "state"
+                }
+              }
+            }
+          }
+        },
+        "interface": {
+          "channels": {
+            "act": {
+              "type": {
+                "Record": {
+                  "kind": "String"
+                }
+              }
+            },
+            "user": {
+              "type": "String"
+            }
+          },
+          "operations": {
+            "fs.write": {
+              "effect": true,
+              "input": {
+                "Record": {
+                  "path": "String"
+                }
+              },
+              "output": "Int"
+            },
+            "net.fetch": {
+              "input": {
+                "Record": {
+                  "url": "String"
+                }
+              },
+              "output": "String",
+              "ret": {
+                "e": "list",
+                "items": [
+                  {
+                    "e": "lit",
+                    "v": "web"
+                  }
+                ]
+              }
+            },
+            "net.send": {
+              "effect": true,
+              "input": {
+                "Record": {
+                  "body": "String",
+                  "url": "String"
+                }
+              },
+              "output": "Int"
+            }
+          }
+        },
+        "method": {
+          "deliveries": [
+            {
+              "input": {
+                "kind": "start",
+                "value": {}
+              }
+            },
+            {
+              "input": {
+                "call": 0,
+                "kind": "ret",
+                "value": "page"
+              }
+            }
+          ],
+          "kind": "counterexample"
+        },
+        "op": "prove",
+        "property": {
+          "always": {
+            "f": "implies",
+            "if": {
+              "f": "atom",
+              "holds": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "e": "get",
+                                "field": "kind",
+                                "of": {
+                                  "e": "var",
+                                  "name": "event"
+                                }
+                              },
+                              {
+                                "e": "lit",
+                                "v": "out"
+                              }
+                            ],
+                            "e": "op",
+                            "op": "eq"
+                          },
+                          {
+                            "args": [
+                              {
+                                "e": "get",
+                                "field": "kind",
+                                "of": {
+                                  "e": "get",
+                                  "field": "action",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "event"
+                                  }
+                                }
+                              },
+                              {
+                                "e": "lit",
+                                "v": "call"
+                              }
+                            ],
+                            "e": "op",
+                            "op": "eq"
+                          }
+                        ],
+                        "e": "op",
+                        "op": "and"
+                      },
+                      {
+                        "e": "get",
+                        "field": "performed",
+                        "of": {
+                          "e": "var",
+                          "name": "event"
+                        }
+                      }
+                    ],
+                    "e": "op",
+                    "op": "and"
+                  },
+                  {
+                    "args": [
+                      {
+                        "e": "get",
+                        "field": "op",
+                        "of": {
+                          "e": "get",
+                          "field": "action",
+                          "of": {
+                            "e": "var",
+                            "name": "event"
+                          }
+                        }
+                      },
+                      {
+                        "e": "lit",
+                        "v": "net.send"
+                      }
+                    ],
+                    "e": "op",
+                    "op": "eq"
+                  }
+                ],
+                "e": "op",
+                "op": "and"
+              }
+            },
+            "then": {
+              "f": "atom",
+              "holds": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "e": "get",
+                        "field": "body",
+                        "of": {
+                          "e": "get",
+                          "field": "args",
+                          "of": {
+                            "e": "get",
+                            "field": "labels",
+                            "of": {
+                              "e": "var",
+                              "name": "event"
+                            }
+                          }
+                        }
+                      }
+                    ],
+                    "e": "op",
+                    "op": "len"
+                  },
+                  {
+                    "e": "lit",
+                    "v": 0
+                  }
+                ],
+                "e": "op",
+                "op": "eq"
+              }
+            }
+          },
+          "name": "noUntrustedSend"
+        }
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "evidence": {
+            "assumptions": [
+              {
+                "interface": "sha256:274ffd31ce52b0d63dd92c006422108acff2f175382d0f5d46aa5dfaba1beb21",
+                "kind": "contracts"
+              },
+              {
+                "kernel": "cronch-kernel/0.1.0",
+                "kind": "checker"
+              }
+            ],
+            "at": 3,
+            "counterexample": [
+              {
+                "input": {
+                  "kind": "start",
+                  "label": [],
+                  "value": {}
+                },
+                "to": []
+              },
+              {
+                "input": {
+                  "call": 0,
+                  "kind": "ret",
+                  "value": "page"
+                },
+                "to": []
+              }
+            ],
+            "grant": "sha256:f192c92f3aeac8e9398fb4e40a7802990f13a78467067fd77e22ea4f4c634dff",
+            "harness": "sha256:730f1acedfae2dc9a53c643de2360962677c80f8c4ab21870532313f3a410920",
+            "interface": "sha256:274ffd31ce52b0d63dd92c006422108acff2f175382d0f5d46aa5dfaba1beb21",
+            "method": {
+              "deliveries": [
+                {
+                  "input": {
+                    "kind": "start",
+                    "label": [],
+                    "value": {}
+                  },
+                  "to": []
+                },
+                {
+                  "input": {
+                    "call": 0,
+                    "kind": "ret",
+                    "value": "page"
+                  },
+                  "to": []
+                }
+              ],
+              "kind": "counterexample"
+            },
+            "property": "sha256:e14c086676f803a797f346bc88fc1ac30ade302bade53d412974affc4520ec6c",
+            "verdict": "refuted"
+          },
+          "key": "sha256:dbb03c35ff6f1e75a8e5c5ff2d225315958070f2663ddc6a3fa3088872b5a14c",
+          "kind": "evidence"
+        }
+      }
+    },
+    {
+      "request": {
+        "evidence": {
+          "assumptions": [
+            {
+              "interface": "sha256:274ffd31ce52b0d63dd92c006422108acff2f175382d0f5d46aa5dfaba1beb21",
+              "kind": "contracts"
+            },
+            {
+              "kernel": "cronch-kernel/0.1.0",
+              "kind": "checker"
+            }
+          ],
+          "at": 3,
+          "counterexample": [
+            {
+              "input": {
+                "kind": "start",
+                "label": [],
+                "value": {}
+              },
+              "to": []
+            },
+            {
+              "input": {
+                "call": 0,
+                "kind": "ret",
+                "value": "page"
+              },
+              "to": []
+            }
+          ],
+          "grant": "sha256:f192c92f3aeac8e9398fb4e40a7802990f13a78467067fd77e22ea4f4c634dff",
+          "harness": "sha256:730f1acedfae2dc9a53c643de2360962677c80f8c4ab21870532313f3a410920",
+          "interface": "sha256:274ffd31ce52b0d63dd92c006422108acff2f175382d0f5d46aa5dfaba1beb21",
+          "method": {
+            "deliveries": [
+              {
+                "input": {
+                  "kind": "start",
+                  "label": [],
+                  "value": {}
+                },
+                "to": []
+              },
+              {
+                "input": {
+                  "call": 0,
+                  "kind": "ret",
+                  "value": "page"
+                },
+                "to": []
+              }
+            ],
+            "kind": "counterexample"
+          },
+          "property": "sha256:e14c086676f803a797f346bc88fc1ac30ade302bade53d412974affc4520ec6c",
+          "verdict": "refuted"
+        },
+        "harness": {
+          "arg": {
+            "Record": {}
+          },
+          "init": {},
+          "state": {
+            "Record": {}
+          },
+          "step": {
+            "cond": {
+              "args": [
+                {
+                  "e": "get",
+                  "field": "kind",
+                  "of": {
+                    "e": "var",
+                    "name": "input"
+                  }
+                },
+                {
+                  "e": "lit",
+                  "v": "start"
+                }
+              ],
+              "e": "op",
+              "op": "eq"
+            },
+            "e": "if",
+            "else": {
+              "cond": {
+                "args": [
+                  {
+                    "e": "get",
+                    "field": "kind",
+                    "of": {
+                      "e": "var",
+                      "name": "input"
+                    }
+                  },
+                  {
+                    "e": "lit",
+                    "v": "ret"
+                  }
+                ],
+                "e": "op",
+                "op": "eq"
+              },
+              "e": "if",
+              "else": {
+                "e": "record",
+                "fields": {
+                  "actions": {
+                    "e": "list",
+                    "items": []
+                  },
+                  "state": {
+                    "e": "var",
+                    "name": "state"
+                  }
+                }
+              },
+              "then": {
+                "cond": {
+                  "args": [
+                    {
+                      "e": "get",
+                      "field": "call",
+                      "of": {
+                        "e": "var",
+                        "name": "input"
+                      }
+                    },
+                    {
+                      "e": "lit",
+                      "v": 0
+                    }
+                  ],
+                  "e": "op",
+                  "op": "eq"
+                },
+                "e": "if",
+                "else": {
+                  "e": "record",
+                  "fields": {
+                    "actions": {
+                      "e": "list",
+                      "items": []
+                    },
+                    "state": {
+                      "e": "var",
+                      "name": "state"
+                    }
+                  }
+                },
+                "then": {
+                  "e": "record",
+                  "fields": {
+                    "actions": {
+                      "e": "list",
+                      "items": [
+                        {
+                          "e": "record",
+                          "fields": {
+                            "args": {
+                              "e": "record",
+                              "fields": {
+                                "body": {
+                                  "e": "get",
+                                  "field": "value",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "input"
+                                  }
+                                },
+                                "url": {
+                                  "e": "lit",
+                                  "v": "https://example.com"
+                                }
+                              }
+                            },
+                            "kind": {
+                              "e": "lit",
+                              "v": "call"
+                            },
+                            "op": {
+                              "e": "lit",
+                              "v": "net.send"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    "state": {
+                      "e": "var",
+                      "name": "state"
+                    }
+                  }
+                }
+              }
+            },
+            "then": {
+              "e": "record",
+              "fields": {
+                "actions": {
+                  "e": "list",
+                  "items": [
+                    {
+                      "e": "record",
+                      "fields": {
+                        "args": {
+                          "e": "record",
+                          "fields": {
+                            "url": {
+                              "e": "lit",
+                              "v": "https://example.com/page"
+                            }
+                          }
+                        },
+                        "kind": {
+                          "e": "lit",
+                          "v": "call"
+                        },
+                        "op": {
+                          "e": "lit",
+                          "v": "net.fetch"
+                        }
+                      }
+                    }
+                  ]
+                },
+                "state": {
+                  "e": "var",
+                  "name": "state"
+                }
+              }
+            }
+          }
+        },
+        "interface": {
+          "channels": {
+            "act": {
+              "type": {
+                "Record": {
+                  "kind": "String"
+                }
+              }
+            },
+            "user": {
+              "type": "String"
+            }
+          },
+          "operations": {
+            "fs.write": {
+              "effect": true,
+              "input": {
+                "Record": {
+                  "path": "String"
+                }
+              },
+              "output": "Int"
+            },
+            "net.fetch": {
+              "input": {
+                "Record": {
+                  "url": "String"
+                }
+              },
+              "output": "String",
+              "ret": {
+                "e": "list",
+                "items": [
+                  {
+                    "e": "lit",
+                    "v": "web"
+                  }
+                ]
+              }
+            },
+            "net.send": {
+              "effect": true,
+              "input": {
+                "Record": {
+                  "body": "String",
+                  "url": "String"
+                }
+              },
+              "output": "Int"
+            }
+          }
+        },
+        "op": "verify",
+        "property": {
+          "always": {
+            "f": "implies",
+            "if": {
+              "f": "atom",
+              "holds": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "e": "get",
+                                "field": "kind",
+                                "of": {
+                                  "e": "var",
+                                  "name": "event"
+                                }
+                              },
+                              {
+                                "e": "lit",
+                                "v": "out"
+                              }
+                            ],
+                            "e": "op",
+                            "op": "eq"
+                          },
+                          {
+                            "args": [
+                              {
+                                "e": "get",
+                                "field": "kind",
+                                "of": {
+                                  "e": "get",
+                                  "field": "action",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "event"
+                                  }
+                                }
+                              },
+                              {
+                                "e": "lit",
+                                "v": "call"
+                              }
+                            ],
+                            "e": "op",
+                            "op": "eq"
+                          }
+                        ],
+                        "e": "op",
+                        "op": "and"
+                      },
+                      {
+                        "e": "get",
+                        "field": "performed",
+                        "of": {
+                          "e": "var",
+                          "name": "event"
+                        }
+                      }
+                    ],
+                    "e": "op",
+                    "op": "and"
+                  },
+                  {
+                    "args": [
+                      {
+                        "e": "get",
+                        "field": "op",
+                        "of": {
+                          "e": "get",
+                          "field": "action",
+                          "of": {
+                            "e": "var",
+                            "name": "event"
+                          }
+                        }
+                      },
+                      {
+                        "e": "lit",
+                        "v": "net.send"
+                      }
+                    ],
+                    "e": "op",
+                    "op": "eq"
+                  }
+                ],
+                "e": "op",
+                "op": "and"
+              }
+            },
+            "then": {
+              "f": "atom",
+              "holds": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "e": "get",
+                        "field": "body",
+                        "of": {
+                          "e": "get",
+                          "field": "args",
+                          "of": {
+                            "e": "get",
+                            "field": "labels",
+                            "of": {
+                              "e": "var",
+                              "name": "event"
+                            }
+                          }
+                        }
+                      }
+                    ],
+                    "e": "op",
+                    "op": "len"
+                  },
+                  {
+                    "e": "lit",
+                    "v": 0
+                  }
+                ],
+                "e": "op",
+                "op": "eq"
+              }
+            }
+          },
+          "name": "noUntrustedSend"
+        }
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "valid": true
+        }
+      }
+    },
+    {
+      "request": {
+        "harness": {
+          "arg": {
+            "Record": {}
+          },
+          "init": {},
+          "state": {
+            "Record": {}
+          },
+          "step": {
+            "cond": {
+              "args": [
+                {
+                  "e": "get",
+                  "field": "kind",
+                  "of": {
+                    "e": "var",
+                    "name": "input"
+                  }
+                },
+                {
+                  "e": "lit",
+                  "v": "start"
+                }
+              ],
+              "e": "op",
+              "op": "eq"
+            },
+            "e": "if",
+            "else": {
+              "e": "record",
+              "fields": {
+                "actions": {
+                  "e": "list",
+                  "items": []
+                },
+                "state": {
+                  "e": "var",
+                  "name": "state"
+                }
+              }
+            },
+            "then": {
+              "e": "record",
+              "fields": {
+                "actions": {
+                  "e": "list",
+                  "items": [
+                    {
+                      "e": "record",
+                      "fields": {
+                        "args": {
+                          "e": "record",
+                          "fields": {
+                            "body": {
+                              "e": "lit",
+                              "v": "hello"
+                            },
+                            "url": {
+                              "e": "lit",
+                              "v": "https://example.com"
+                            }
+                          }
+                        },
+                        "kind": {
+                          "e": "lit",
+                          "v": "call"
+                        },
+                        "op": {
+                          "e": "lit",
+                          "v": "net.send"
+                        }
+                      }
+                    },
+                    {
+                      "e": "record",
+                      "fields": {
+                        "args": {
+                          "e": "record",
+                          "fields": {
+                            "url": {
+                              "e": "lit",
+                              "v": "https://example.com/page"
+                            }
+                          }
+                        },
+                        "kind": {
+                          "e": "lit",
+                          "v": "call"
+                        },
+                        "op": {
+                          "e": "lit",
+                          "v": "net.fetch"
+                        }
+                      }
+                    }
+                  ]
+                },
+                "state": {
+                  "e": "var",
+                  "name": "state"
+                }
+              }
+            }
+          }
+        },
+        "interface": {
+          "channels": {
+            "act": {
+              "type": {
+                "Record": {
+                  "kind": "String"
+                }
+              }
+            },
+            "user": {
+              "type": "String"
+            }
+          },
+          "operations": {
+            "fs.write": {
+              "effect": true,
+              "input": {
+                "Record": {
+                  "path": "String"
+                }
+              },
+              "output": "Int"
+            },
+            "net.fetch": {
+              "input": {
+                "Record": {
+                  "url": "String"
+                }
+              },
+              "output": "String",
+              "ret": {
+                "e": "list",
+                "items": [
+                  {
+                    "e": "lit",
+                    "v": "web"
+                  }
+                ]
+              }
+            },
+            "net.send": {
+              "effect": true,
+              "input": {
+                "Record": {
+                  "body": "String",
+                  "url": "String"
+                }
+              },
+              "output": "Int"
+            }
+          }
+        },
+        "method": {
+          "alphabet": [
+            {
+              "input": {
+                "kind": "start",
+                "value": {}
+              }
+            },
+            {
+              "input": {
+                "kind": "ret",
+                "op": "net.fetch",
+                "value": "page"
+              }
+            },
+            {
+              "input": {
+                "kind": "ret",
+                "op": "net.send",
+                "value": 200
+              }
+            }
+          ],
+          "depth": 3,
+          "kind": "bounded"
+        },
+        "op": "prove",
+        "property": {
+          "always": {
+            "f": "implies",
+            "if": {
+              "f": "atom",
+              "holds": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "e": "get",
+                                "field": "kind",
+                                "of": {
+                                  "e": "var",
+                                  "name": "event"
+                                }
+                              },
+                              {
+                                "e": "lit",
+                                "v": "out"
+                              }
+                            ],
+                            "e": "op",
+                            "op": "eq"
+                          },
+                          {
+                            "args": [
+                              {
+                                "e": "get",
+                                "field": "kind",
+                                "of": {
+                                  "e": "get",
+                                  "field": "action",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "event"
+                                  }
+                                }
+                              },
+                              {
+                                "e": "lit",
+                                "v": "call"
+                              }
+                            ],
+                            "e": "op",
+                            "op": "eq"
+                          }
+                        ],
+                        "e": "op",
+                        "op": "and"
+                      },
+                      {
+                        "e": "get",
+                        "field": "performed",
+                        "of": {
+                          "e": "var",
+                          "name": "event"
+                        }
+                      }
+                    ],
+                    "e": "op",
+                    "op": "and"
+                  },
+                  {
+                    "args": [
+                      {
+                        "e": "get",
+                        "field": "op",
+                        "of": {
+                          "e": "get",
+                          "field": "action",
+                          "of": {
+                            "e": "var",
+                            "name": "event"
+                          }
+                        }
+                      },
+                      {
+                        "e": "lit",
+                        "v": "net.send"
+                      }
+                    ],
+                    "e": "op",
+                    "op": "eq"
+                  }
+                ],
+                "e": "op",
+                "op": "and"
+              }
+            },
+            "then": {
+              "f": "atom",
+              "holds": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "e": "get",
+                        "field": "body",
+                        "of": {
+                          "e": "get",
+                          "field": "args",
+                          "of": {
+                            "e": "get",
+                            "field": "labels",
+                            "of": {
+                              "e": "var",
+                              "name": "event"
+                            }
+                          }
+                        }
+                      }
+                    ],
+                    "e": "op",
+                    "op": "len"
+                  },
+                  {
+                    "e": "lit",
+                    "v": 0
+                  }
+                ],
+                "e": "op",
+                "op": "eq"
+              }
+            }
+          },
+          "name": "noUntrustedSend"
+        }
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "evidence": {
+            "assumptions": [
+              {
+                "interface": "sha256:274ffd31ce52b0d63dd92c006422108acff2f175382d0f5d46aa5dfaba1beb21",
+                "kind": "contracts"
+              },
+              {
+                "kernel": "cronch-kernel/0.1.0",
+                "kind": "checker"
+              },
+              {
+                "alphabet": "sha256:36fbadbf0b90dc155ed05583a069bd0d2f4e19ba6e9d94f016cc53c4352f8ebd",
+                "kind": "environment"
+              },
+              {
+                "kind": "runtime"
+              }
+            ],
+            "depth": 3,
+            "grant": "sha256:f192c92f3aeac8e9398fb4e40a7802990f13a78467067fd77e22ea4f4c634dff",
+            "harness": "sha256:f8d537949c5934fac4c30ba5d1c228641a173fb0dd17c6081763a69b297cc3ae",
+            "interface": "sha256:274ffd31ce52b0d63dd92c006422108acff2f175382d0f5d46aa5dfaba1beb21",
+            "method": {
+              "alphabet": [
+                {
+                  "input": {
+                    "kind": "start",
+                    "label": [],
+                    "value": {}
+                  }
+                },
+                {
+                  "input": {
+                    "kind": "ret",
+                    "op": "net.fetch",
+                    "value": "page"
+                  }
+                },
+                {
+                  "input": {
+                    "kind": "ret",
+                    "op": "net.send",
+                    "value": 200
+                  }
+                }
+              ],
+              "depth": 3,
+              "kind": "bounded"
+            },
+            "property": "sha256:e14c086676f803a797f346bc88fc1ac30ade302bade53d412974affc4520ec6c",
+            "verdict": "holdsUpTo"
+          },
+          "key": "sha256:3885aabdaa87f751de8eb71e606c43ef92a1a6a283fcfe3c3d0060a4cdcf4274",
+          "kind": "evidence"
+        }
+      }
+    },
+    {
+      "request": {
+        "harness": {
+          "arg": {
+            "Record": {}
+          },
+          "init": {},
+          "state": {
+            "Record": {}
+          },
+          "step": {
+            "cond": {
+              "args": [
+                {
+                  "e": "get",
+                  "field": "kind",
+                  "of": {
+                    "e": "var",
+                    "name": "input"
+                  }
+                },
+                {
+                  "e": "lit",
+                  "v": "start"
+                }
+              ],
+              "e": "op",
+              "op": "eq"
+            },
+            "e": "if",
+            "else": {
+              "e": "record",
+              "fields": {
+                "actions": {
+                  "e": "list",
+                  "items": []
+                },
+                "state": {
+                  "e": "var",
+                  "name": "state"
+                }
+              }
+            },
+            "then": {
+              "e": "record",
+              "fields": {
+                "actions": {
+                  "e": "list",
+                  "items": [
+                    {
+                      "e": "record",
+                      "fields": {
+                        "args": {
+                          "e": "record",
+                          "fields": {
+                            "body": {
+                              "e": "lit",
+                              "v": "hello"
+                            },
+                            "url": {
+                              "e": "lit",
+                              "v": "https://example.com"
+                            }
+                          }
+                        },
+                        "kind": {
+                          "e": "lit",
+                          "v": "call"
+                        },
+                        "op": {
+                          "e": "lit",
+                          "v": "net.send"
+                        }
+                      }
+                    },
+                    {
+                      "e": "record",
+                      "fields": {
+                        "args": {
+                          "e": "record",
+                          "fields": {
+                            "url": {
+                              "e": "lit",
+                              "v": "https://example.com/page"
+                            }
+                          }
+                        },
+                        "kind": {
+                          "e": "lit",
+                          "v": "call"
+                        },
+                        "op": {
+                          "e": "lit",
+                          "v": "net.fetch"
+                        }
+                      }
+                    }
+                  ]
+                },
+                "state": {
+                  "e": "var",
+                  "name": "state"
+                }
+              }
+            }
+          }
+        },
+        "interface": {
+          "channels": {
+            "act": {
+              "type": {
+                "Record": {
+                  "kind": "String"
+                }
+              }
+            },
+            "user": {
+              "type": "String"
+            }
+          },
+          "operations": {
+            "fs.write": {
+              "effect": true,
+              "input": {
+                "Record": {
+                  "path": "String"
+                }
+              },
+              "output": "Int"
+            },
+            "net.fetch": {
+              "input": {
+                "Record": {
+                  "url": "String"
+                }
+              },
+              "output": "String",
+              "ret": {
+                "e": "list",
+                "items": [
+                  {
+                    "e": "lit",
+                    "v": "web"
+                  }
+                ]
+              }
+            },
+            "net.send": {
+              "effect": true,
+              "input": {
+                "Record": {
+                  "body": "String",
+                  "url": "String"
+                }
+              },
+              "output": "Int"
+            }
+          }
+        },
+        "method": {
+          "alphabet": [
+            {
+              "input": {
+                "kind": "start",
+                "value": {}
+              }
+            },
+            {
+              "input": {
+                "kind": "ret",
+                "op": "net.fetch",
+                "value": "page"
+              }
+            },
+            {
+              "input": {
+                "kind": "ret",
+                "op": "net.send",
+                "value": 200
+              }
+            }
+          ],
+          "kind": "exhaustive"
+        },
+        "op": "prove",
+        "property": {
+          "always": {
+            "f": "implies",
+            "if": {
+              "f": "atom",
+              "holds": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "e": "get",
+                                "field": "kind",
+                                "of": {
+                                  "e": "var",
+                                  "name": "event"
+                                }
+                              },
+                              {
+                                "e": "lit",
+                                "v": "out"
+                              }
+                            ],
+                            "e": "op",
+                            "op": "eq"
+                          },
+                          {
+                            "args": [
+                              {
+                                "e": "get",
+                                "field": "kind",
+                                "of": {
+                                  "e": "get",
+                                  "field": "action",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "event"
+                                  }
+                                }
+                              },
+                              {
+                                "e": "lit",
+                                "v": "call"
+                              }
+                            ],
+                            "e": "op",
+                            "op": "eq"
+                          }
+                        ],
+                        "e": "op",
+                        "op": "and"
+                      },
+                      {
+                        "e": "get",
+                        "field": "performed",
+                        "of": {
+                          "e": "var",
+                          "name": "event"
+                        }
+                      }
+                    ],
+                    "e": "op",
+                    "op": "and"
+                  },
+                  {
+                    "args": [
+                      {
+                        "e": "get",
+                        "field": "op",
+                        "of": {
+                          "e": "get",
+                          "field": "action",
+                          "of": {
+                            "e": "var",
+                            "name": "event"
+                          }
+                        }
+                      },
+                      {
+                        "e": "lit",
+                        "v": "net.send"
+                      }
+                    ],
+                    "e": "op",
+                    "op": "eq"
+                  }
+                ],
+                "e": "op",
+                "op": "and"
+              }
+            },
+            "then": {
+              "f": "atom",
+              "holds": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "e": "get",
+                        "field": "body",
+                        "of": {
+                          "e": "get",
+                          "field": "args",
+                          "of": {
+                            "e": "get",
+                            "field": "labels",
+                            "of": {
+                              "e": "var",
+                              "name": "event"
+                            }
+                          }
+                        }
+                      }
+                    ],
+                    "e": "op",
+                    "op": "len"
+                  },
+                  {
+                    "e": "lit",
+                    "v": 0
+                  }
+                ],
+                "e": "op",
+                "op": "eq"
+              }
+            }
+          },
+          "name": "noUntrustedSend"
+        }
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "evidence": {
+            "assumptions": [
+              {
+                "interface": "sha256:274ffd31ce52b0d63dd92c006422108acff2f175382d0f5d46aa5dfaba1beb21",
+                "kind": "contracts"
+              },
+              {
+                "kernel": "cronch-kernel/0.1.0",
+                "kind": "checker"
+              },
+              {
+                "alphabet": "sha256:36fbadbf0b90dc155ed05583a069bd0d2f4e19ba6e9d94f016cc53c4352f8ebd",
+                "kind": "environment"
+              },
+              {
+                "kind": "runtime"
+              }
+            ],
+            "grant": "sha256:f192c92f3aeac8e9398fb4e40a7802990f13a78467067fd77e22ea4f4c634dff",
+            "harness": "sha256:f8d537949c5934fac4c30ba5d1c228641a173fb0dd17c6081763a69b297cc3ae",
+            "interface": "sha256:274ffd31ce52b0d63dd92c006422108acff2f175382d0f5d46aa5dfaba1beb21",
+            "method": {
+              "alphabet": [
+                {
+                  "input": {
+                    "kind": "start",
+                    "label": [],
+                    "value": {}
+                  }
+                },
+                {
+                  "input": {
+                    "kind": "ret",
+                    "op": "net.fetch",
+                    "value": "page"
+                  }
+                },
+                {
+                  "input": {
+                    "kind": "ret",
+                    "op": "net.send",
+                    "value": 200
+                  }
+                }
+              ],
+              "kind": "exhaustive",
+              "limit": 10000
+            },
+            "property": "sha256:e14c086676f803a797f346bc88fc1ac30ade302bade53d412974affc4520ec6c",
+            "verdict": "holds"
+          },
+          "key": "sha256:70405a7340a5ab104f6ed676264bc2968a534edc7c8741ebec2865ca74326893",
+          "kind": "evidence"
+        }
+      }
+    },
+    {
+      "request": {
+        "evidence": {
+          "assumptions": [
+            {
+              "interface": "sha256:274ffd31ce52b0d63dd92c006422108acff2f175382d0f5d46aa5dfaba1beb21",
+              "kind": "contracts"
+            },
+            {
+              "kernel": "cronch-kernel/0.1.0",
+              "kind": "checker"
+            },
+            {
+              "alphabet": "sha256:36fbadbf0b90dc155ed05583a069bd0d2f4e19ba6e9d94f016cc53c4352f8ebd",
+              "kind": "environment"
+            },
+            {
+              "kind": "runtime"
+            }
+          ],
+          "grant": "sha256:f192c92f3aeac8e9398fb4e40a7802990f13a78467067fd77e22ea4f4c634dff",
+          "harness": "sha256:f8d537949c5934fac4c30ba5d1c228641a173fb0dd17c6081763a69b297cc3ae",
+          "interface": "sha256:274ffd31ce52b0d63dd92c006422108acff2f175382d0f5d46aa5dfaba1beb21",
+          "method": {
+            "alphabet": [
+              {
+                "input": {
+                  "kind": "start",
+                  "label": [],
+                  "value": {}
+                }
+              },
+              {
+                "input": {
+                  "kind": "ret",
+                  "op": "net.fetch",
+                  "value": "page"
+                }
+              },
+              {
+                "input": {
+                  "kind": "ret",
+                  "op": "net.send",
+                  "value": 200
+                }
+              }
+            ],
+            "kind": "exhaustive",
+            "limit": 10000
+          },
+          "property": "sha256:e14c086676f803a797f346bc88fc1ac30ade302bade53d412974affc4520ec6c",
+          "verdict": "holds"
+        },
+        "harness": {
+          "arg": {
+            "Record": {}
+          },
+          "init": {},
+          "state": {
+            "Record": {}
+          },
+          "step": {
+            "cond": {
+              "args": [
+                {
+                  "e": "get",
+                  "field": "kind",
+                  "of": {
+                    "e": "var",
+                    "name": "input"
+                  }
+                },
+                {
+                  "e": "lit",
+                  "v": "start"
+                }
+              ],
+              "e": "op",
+              "op": "eq"
+            },
+            "e": "if",
+            "else": {
+              "e": "record",
+              "fields": {
+                "actions": {
+                  "e": "list",
+                  "items": []
+                },
+                "state": {
+                  "e": "var",
+                  "name": "state"
+                }
+              }
+            },
+            "then": {
+              "e": "record",
+              "fields": {
+                "actions": {
+                  "e": "list",
+                  "items": [
+                    {
+                      "e": "record",
+                      "fields": {
+                        "args": {
+                          "e": "record",
+                          "fields": {
+                            "body": {
+                              "e": "lit",
+                              "v": "hello"
+                            },
+                            "url": {
+                              "e": "lit",
+                              "v": "https://example.com"
+                            }
+                          }
+                        },
+                        "kind": {
+                          "e": "lit",
+                          "v": "call"
+                        },
+                        "op": {
+                          "e": "lit",
+                          "v": "net.send"
+                        }
+                      }
+                    },
+                    {
+                      "e": "record",
+                      "fields": {
+                        "args": {
+                          "e": "record",
+                          "fields": {
+                            "url": {
+                              "e": "lit",
+                              "v": "https://example.com/page"
+                            }
+                          }
+                        },
+                        "kind": {
+                          "e": "lit",
+                          "v": "call"
+                        },
+                        "op": {
+                          "e": "lit",
+                          "v": "net.fetch"
+                        }
+                      }
+                    }
+                  ]
+                },
+                "state": {
+                  "e": "var",
+                  "name": "state"
+                }
+              }
+            }
+          }
+        },
+        "interface": {
+          "channels": {
+            "act": {
+              "type": {
+                "Record": {
+                  "kind": "String"
+                }
+              }
+            },
+            "user": {
+              "type": "String"
+            }
+          },
+          "operations": {
+            "fs.write": {
+              "effect": true,
+              "input": {
+                "Record": {
+                  "path": "String"
+                }
+              },
+              "output": "Int"
+            },
+            "net.fetch": {
+              "input": {
+                "Record": {
+                  "url": "String"
+                }
+              },
+              "output": "String",
+              "ret": {
+                "e": "list",
+                "items": [
+                  {
+                    "e": "lit",
+                    "v": "web"
+                  }
+                ]
+              }
+            },
+            "net.send": {
+              "effect": true,
+              "input": {
+                "Record": {
+                  "body": "String",
+                  "url": "String"
+                }
+              },
+              "output": "Int"
+            }
+          }
+        },
+        "op": "verify",
+        "property": {
+          "always": {
+            "f": "implies",
+            "if": {
+              "f": "atom",
+              "holds": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "e": "get",
+                                "field": "kind",
+                                "of": {
+                                  "e": "var",
+                                  "name": "event"
+                                }
+                              },
+                              {
+                                "e": "lit",
+                                "v": "out"
+                              }
+                            ],
+                            "e": "op",
+                            "op": "eq"
+                          },
+                          {
+                            "args": [
+                              {
+                                "e": "get",
+                                "field": "kind",
+                                "of": {
+                                  "e": "get",
+                                  "field": "action",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "event"
+                                  }
+                                }
+                              },
+                              {
+                                "e": "lit",
+                                "v": "call"
+                              }
+                            ],
+                            "e": "op",
+                            "op": "eq"
+                          }
+                        ],
+                        "e": "op",
+                        "op": "and"
+                      },
+                      {
+                        "e": "get",
+                        "field": "performed",
+                        "of": {
+                          "e": "var",
+                          "name": "event"
+                        }
+                      }
+                    ],
+                    "e": "op",
+                    "op": "and"
+                  },
+                  {
+                    "args": [
+                      {
+                        "e": "get",
+                        "field": "op",
+                        "of": {
+                          "e": "get",
+                          "field": "action",
+                          "of": {
+                            "e": "var",
+                            "name": "event"
+                          }
+                        }
+                      },
+                      {
+                        "e": "lit",
+                        "v": "net.send"
+                      }
+                    ],
+                    "e": "op",
+                    "op": "eq"
+                  }
+                ],
+                "e": "op",
+                "op": "and"
+              }
+            },
+            "then": {
+              "f": "atom",
+              "holds": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "e": "get",
+                        "field": "body",
+                        "of": {
+                          "e": "get",
+                          "field": "args",
+                          "of": {
+                            "e": "get",
+                            "field": "labels",
+                            "of": {
+                              "e": "var",
+                              "name": "event"
+                            }
+                          }
+                        }
+                      }
+                    ],
+                    "e": "op",
+                    "op": "len"
+                  },
+                  {
+                    "e": "lit",
+                    "v": 0
+                  }
+                ],
+                "e": "op",
+                "op": "eq"
+              }
+            }
+          },
+          "name": "noUntrustedSend"
+        }
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "valid": true
+        }
+      }
+    }
+  ]
+}

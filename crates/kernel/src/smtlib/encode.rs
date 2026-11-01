@@ -1,16 +1,14 @@
-//! From Cronch objects to a `Script`: the walk over types, values and Procedures, reading each through the registries.
+//! From Cronch definitions to a `Script`: the walk over types, values and expressions, reading each through the
+//! registries.
 
-use super::claim::Read as ValueRead;
-use super::readings::{self, Condition, Reading, SORTS};
-use super::script::{Command, Entry, Script, Section, Term};
-use super::{ExportError, NoReading, Place};
+use super::readings::{self, Reading, SORTS};
+use super::script::{Command, Entry, Section, Term};
+use super::{Definition, ExportError, NoReading, Place};
 use crate::cbor;
 use crate::check::{Path, Problem};
-use crate::claim::{Claim, Witness, claim_key};
-use crate::ir::{Answer, Ask, AskSpec, Expr, Type, World};
-use crate::key::{ask_key, spec_key};
+use crate::ir::{Expr, Type};
 use crate::ops::{self, Op};
-use crate::types::{conforms, inhabits, of_value};
+use crate::types::{conforms, join, of_value, record_view};
 use serde::{Deserialize, Serialize};
 use serde_json::{Number, Value, json};
 use sha2::{Digest, Sha256};
@@ -21,7 +19,7 @@ type Read<T> = Result<T, NoReading>;
 pub(super) fn at_place(place: Place) -> impl Fn(NoReading) -> ExportError {
     move |reason| ExportError::NoReading {
         place: place.clone(),
-        reason,
+        reason: Box::new(reason),
     }
 }
 
@@ -37,11 +35,6 @@ fn ill_formed(problem: Problem) -> ExportError {
 
 fn child(at: &str, segment: &str) -> Path {
     format!("{at}/{segment}")
-}
-
-/// A Procedure path as names write it: the root is `/`.
-fn shown(at: &str) -> &str {
-    if at.is_empty() { "/" } else { at }
 }
 
 pub(super) fn local(name: &str) -> Read<Term> {
@@ -72,6 +65,13 @@ fn describe(ty: &Type) -> String {
                 .map(|(f, t)| format!("{f}: {}", describe(t)))
                 .collect();
             format!("{{{}}}", fields.join(", "))
+        }
+        Type::Variant { tag, cases } => {
+            let cases: Vec<String> = cases
+                .iter()
+                .map(|(c, t)| format!("{c}: {}", describe(t)))
+                .collect();
+            format!("<{tag}: {}>", cases.join(" | "))
         }
     }
 }
@@ -187,7 +187,7 @@ fn plain_equality(ty: &Type) -> bool {
     match ty {
         Type::Int | Type::Bool | Type::String => true,
         Type::List(t) => plain_equality(t),
-        Type::Float | Type::Any | Type::Record(_) => false,
+        Type::Float | Type::Any | Type::Record(_) | Type::Variant { .. } => false,
     }
 }
 
@@ -203,60 +203,70 @@ fn selector(record: &str, field: &str) -> Read<Term> {
     Term::symbol(&format!("{record}."), field)
 }
 
-/// A nested Ask's uninterpreted function: its spec's name and the start of its spec's key.
-fn hole_name(spec: &AskSpec) -> Read<Term> {
-    let key = spec_key(spec);
-    let hash = key.strip_prefix("sha256:").unwrap_or(&key);
-    Term::symbol("ask:", &format!("{}:{}", spec.name, &hash[..8]))
+/// The variant sort's name; its constructors are `name#case` and their selectors `name#case.field`.
+pub(super) fn variant_names(tag: &str, cases: &BTreeMap<String, Type>) -> String {
+    let ty = Type::Variant {
+        tag: tag.to_string(),
+        cases: cases.clone(),
+    };
+    format!("variant:{}", short_hash(&json!(ty)))
 }
 
-struct Hole<'a> {
-    name: Term,
-    spec: &'a AskSpec,
+fn case_constructor(variant: &str, case: &str) -> Read<Term> {
+    Term::symbol(&format!("{variant}#"), case)
 }
 
-pub struct Encoder<'w> {
-    world: &'w World,
-    /// Record sorts, each after the records its fields use.
-    records: Vec<(String, BTreeMap<String, Type>)>,
-    /// Nested Asks, in order of first appearance.
-    holes: Vec<Hole<'w>>,
-    /// Inputs with no value: name, type and note.
-    opaque: Vec<(Term, Type, String)>,
-    /// The world facts the Procedure reads.
-    facts: BTreeMap<String, Type>,
-    /// What the responder assumes, one line each.
-    assumed: Vec<String>,
+fn case_selector(variant: &str, case: &str, field: &str) -> Read<Term> {
+    Term::symbol(&format!("{variant}#{case}."), field)
+}
+
+/// What a case's constructor carries: a record case's fields, or one unnamed field holding a nested variant.
+pub(super) fn case_fields(case: &Type) -> Read<Vec<(String, Type)>> {
+    match case {
+        Type::Record(fields) => Ok(fields.iter().map(|(f, t)| (f.clone(), t.clone())).collect()),
+        Type::Variant { .. } => Ok(vec![(String::new(), case.clone())]),
+        _ => Err(NoReading::Any),
+    }
+}
+
+/// `((_ is C) term)`: whether the term was built by the case's constructor.
+fn tester(variant: &str, case: &str, term: Term) -> Read<Term> {
+    let is = Term::List(vec![
+        Term::atom("_"),
+        Term::atom("is"),
+        case_constructor(variant, case)?,
+    ]);
+    Ok(Term::List(vec![is, term]))
+}
+
+#[derive(Clone)]
+enum Datatype {
+    Record(BTreeMap<String, Type>),
+    Variant(BTreeMap<String, Type>),
+}
+
+pub struct Encoder {
+    /// Record and variant sorts, each after the sorts it uses.
+    datatypes: Vec<(String, Datatype)>,
     /// Variables in scope, innermost last.
     scope: Vec<(String, Type)>,
     fresh: usize,
-    /// While a claim is encoded, the key of the spec it is about: an Ask of it is the Answer, not a hole.
-    about: Option<String>,
     /// The branch conditions on the way to the node being encoded.
     guards: Vec<Term>,
     /// Where the kernel's evaluation of what is encoded so far is defined: no overflow, no division by zero, no
     /// infinite or NaN result, each under the branch it is on. SMT-LIB's functions are total, so these are stated.
     defined: Vec<Term>,
-    /// Where the Answer's own evaluation is defined, over its parameters: empty when it is total.
-    answer_defined: Vec<Term>,
     floats: Floats,
 }
 
-impl<'w> Encoder<'w> {
-    pub fn new(world: &'w World) -> Self {
+impl Encoder {
+    pub fn new() -> Self {
         Encoder {
-            world,
-            records: Vec::new(),
-            holes: Vec::new(),
-            opaque: Vec::new(),
-            facts: BTreeMap::new(),
-            assumed: Vec::new(),
+            datatypes: Vec::new(),
             scope: Vec::new(),
             fresh: 0,
-            about: None,
             guards: Vec::new(),
             defined: Vec::new(),
-            answer_defined: Vec::new(),
             floats: Floats::Exact,
         }
     }
@@ -324,14 +334,89 @@ impl<'w> Encoder<'w> {
     /// The record sort's name, unquoted, declaring it (after the records its fields use) on first sight.
     fn record(&mut self, fields: &BTreeMap<String, Type>) -> Read<String> {
         let name = record_names(fields);
-        if !self.records.iter().any(|(n, _)| *n == name) {
+        if !self.datatypes.iter().any(|(n, _)| *n == name) {
             for (field, ty) in fields {
                 selector(&name, field)?;
                 self.sort(ty)?;
             }
-            self.records.push((name.clone(), fields.clone()));
+            self.datatypes
+                .push((name.clone(), Datatype::Record(fields.clone())));
         }
         Ok(name)
+    }
+
+    /// The variant sort's name, unquoted, declaring it (after the sorts its cases use) on first sight.
+    fn variant(&mut self, tag: &str, cases: &BTreeMap<String, Type>) -> Read<String> {
+        if cases.is_empty() {
+            return Err(NoReading::EmptyVariant);
+        }
+        let name = variant_names(tag, cases);
+        if !self.datatypes.iter().any(|(n, _)| *n == name) {
+            for (case, ty) in cases {
+                case_constructor(&name, case)?;
+                for (field, t) in case_fields(ty)? {
+                    case_selector(&name, case, &field)?;
+                    self.sort(&t)?;
+                }
+            }
+            self.datatypes
+                .push((name.clone(), Datatype::Variant(cases.clone())));
+        }
+        Ok(name)
+    }
+
+    /// A field of a variant-typed term: its tag, or a field every case has, read from whichever case it is.
+    fn variant_field(
+        &mut self,
+        term: Term,
+        tag: &str,
+        cases: &BTreeMap<String, Type>,
+        field: &str,
+    ) -> Read<(Term, Type)> {
+        let name = self.variant(tag, cases)?;
+        let field_ty = if field == tag {
+            Type::String
+        } else {
+            match record_view(&Type::Variant {
+                tag: tag.to_string(),
+                cases: cases.clone(),
+            }) {
+                Type::Record(view) => view.get(field).cloned().ok_or(NoReading::Any)?,
+                _ => return Err(NoReading::Any),
+            }
+        };
+        let mut branches = Vec::new();
+        for (case, case_ty) in cases {
+            let value = if field == tag {
+                Term::string(case)?
+            } else {
+                match case_ty {
+                    Type::Record(fields) => {
+                        let read =
+                            Term::app(case_selector(&name, case, field)?, vec![term.clone()]);
+                        self.coerce(read, &fields[field], &field_ty)?
+                    }
+                    Type::Variant {
+                        tag: inner_tag,
+                        cases: inner,
+                    } => {
+                        let nested = Term::app(case_selector(&name, case, "")?, vec![term.clone()]);
+                        let (read, ty) = self.variant_field(nested, inner_tag, inner, field)?;
+                        self.coerce(read, &ty, &field_ty)?
+                    }
+                    _ => return Err(NoReading::Any),
+                }
+            };
+            branches.push((tester(&name, case, term.clone())?, value));
+        }
+        let (_, last) = branches.pop().ok_or(NoReading::Any)?;
+        let chained = branches
+            .into_iter()
+            .rev()
+            .fold(last, |rest, (test, value)| {
+                Term::call("ite", vec![test, value, rest])
+            });
+        Ok((chained, field_ty))
     }
 
     fn constructor(&mut self, fields: &BTreeMap<String, Type>) -> Read<Term> {
@@ -354,6 +439,7 @@ impl<'w> Encoder<'w> {
         match ty {
             Type::List(t) => Ok(Term::call("Seq", vec![self.sort(t)?])),
             Type::Record(fields) => self.constructor(fields),
+            Type::Variant { tag, cases } => Term::symbol("", &self.variant(tag, cases)?),
             _ => Err(NoReading::Any),
         }
     }
@@ -389,6 +475,21 @@ impl<'w> Encoder<'w> {
                 }
                 Ok(Term::app(constructor, args))
             }
+            (Type::Variant { tag, cases }, Value::Object(map)) => {
+                let case = map.get(tag).and_then(Value::as_str).ok_or_else(mismatch)?;
+                let case_ty = cases.get(case).ok_or_else(mismatch)?;
+                let name = self.variant(tag, cases)?;
+                let mut args = Vec::new();
+                for (field, t) in case_fields(case_ty)? {
+                    let part = if field.is_empty() {
+                        v
+                    } else {
+                        map.get(&field).ok_or_else(mismatch)?
+                    };
+                    args.push(self.value(part, &t)?);
+                }
+                Ok(Term::app(case_constructor(&name, case)?, args))
+            }
             _ => Err(mismatch()),
         }
     }
@@ -419,21 +520,7 @@ impl<'w> Encoder<'w> {
         }
     }
 
-    fn hole(&mut self, spec: &'w AskSpec, at: &str) -> Result<Term, ExportError> {
-        let name = hole_name(spec).map_err(at_body(at))?;
-        if !self.holes.iter().any(|h| h.name == name) {
-            for ty in spec.params.iter().map(|p| &p.ty).chain([&spec.output]) {
-                self.sort(ty).map_err(at_body(at))?;
-            }
-            self.holes.push(Hole {
-                name: name.clone(),
-                spec,
-            });
-        }
-        Ok(name)
-    }
-
-    pub fn expr(&mut self, expr: &'w Expr, at: &str) -> Result<(Term, Type), ExportError> {
+    pub fn expr(&mut self, expr: &Expr, at: &str) -> Result<(Term, Type), ExportError> {
         let here = at_body(at);
         match expr {
             Expr::Lit { v } => {
@@ -447,17 +534,6 @@ impl<'w> Encoder<'w> {
                     name: name.clone(),
                 })),
             },
-            Expr::Fact { name } => {
-                let fact = self.world.facts.get(name).ok_or_else(|| {
-                    ill_formed(Problem::UnknownFact {
-                        at: at.to_string(),
-                        name: name.clone(),
-                    })
-                })?;
-                let ty = fact.ty.clone().unwrap_or_else(|| of_value(&fact.value));
-                self.facts.insert(name.clone(), ty.clone());
-                Ok((Term::symbol("fact:", name).map_err(here)?, ty))
-            }
             Expr::Op { op, args } => {
                 let mut terms = Vec::new();
                 let mut types = Vec::new();
@@ -490,61 +566,6 @@ impl<'w> Encoder<'w> {
                     .map_err(here)?;
                 self.require_for(parsed, &term, &operands, &types, &ty);
                 Ok((term, ty))
-            }
-            Expr::Ask { spec, args } => {
-                let name = if self.about.as_deref() == Some(spec_key(spec).as_str()) {
-                    Term::atom("answer")
-                } else {
-                    self.hole(spec, at)?
-                };
-                let mut terms = Vec::new();
-                for p in &spec.params {
-                    let arg_at = child(at, &format!("args/{}", p.name));
-                    let arg = args.get(&p.name).ok_or_else(|| {
-                        ill_formed(Problem::MissingHoleArgument {
-                            at: at.to_string(),
-                            ask: spec.name.clone(),
-                            param: p.name.clone(),
-                        })
-                    })?;
-                    let (t, ty) = self.expr(arg, &arg_at)?;
-                    terms.push(self.coerce(t, &ty, &p.ty).map_err(at_body(&arg_at))?);
-                }
-                let applied = Term::app(name.clone(), terms.clone());
-                if name == Term::atom("answer") {
-                    if !self.answer_defined.is_empty() {
-                        self.require(Term::app(Term::atom("defined"), terms));
-                    }
-                } else if let Some(value) = self
-                    .representable(applied.clone(), &spec.output)
-                    .map_err(here)?
-                {
-                    // A nested Ask is answered with a value Cronch has, wherever it is asked.
-                    self.require(value);
-                }
-                Ok((applied, spec.output.clone()))
-            }
-            Expr::Assume {
-                v,
-                ty,
-                note,
-                source,
-            } => {
-                let mut line = format!("{}: {v} : {}", shown(at), describe(ty));
-                if !note.is_empty() {
-                    line.push_str(&format!(" ({note})"));
-                }
-                if !source.is_empty() {
-                    line.push_str(&format!(", from {source}"));
-                }
-                self.assumed.push(line);
-                Ok((self.value(v, ty).map_err(here)?, ty.clone()))
-            }
-            Expr::Opaque { ty, note } => {
-                let name = Term::symbol("opaque:", shown(at)).map_err(&here)?;
-                self.sort(ty).map_err(here)?;
-                self.opaque.push((name.clone(), ty.clone(), note.clone()));
-                Ok((name, ty.clone()))
             }
             Expr::Let { name, be, body } => {
                 let (bound, bound_ty) = self.expr(be, &child(at, "be"))?;
@@ -638,9 +659,102 @@ impl<'w> Encoder<'w> {
                         })?;
                         Ok((self.select(&fields, field, term).map_err(here)?, field_ty))
                     }
+                    Type::Variant { tag, cases } => {
+                        self.variant_field(term, &tag, &cases, field).map_err(here)
+                    }
                     _ => Err(here(NoReading::Any)),
                 }
             }
+            Expr::Match {
+                of,
+                on,
+                cases,
+                otherwise,
+            } => {
+                let (matched, ty) = self.expr(of, &child(at, "of"))?;
+                let Type::Variant {
+                    tag,
+                    cases: declared,
+                } = &ty
+                else {
+                    return Err(here(NoReading::Any));
+                };
+                if tag != on {
+                    return Err(here(NoReading::Any));
+                }
+                let name = self.variant(tag, declared).map_err(&here)?;
+                // The matched value is evaluated once, and every case reads it.
+                let x = self.fresh();
+                let from = self.defined.len();
+                let mut branches = Vec::new();
+                for (case, case_ty) in declared {
+                    let test = tester(&name, case, x.clone()).map_err(&here)?;
+                    self.guards.push(test.clone());
+                    let encoded = match cases.get(case) {
+                        Some(c) => {
+                            let body_at = child(at, &format!("cases/{case}/body"));
+                            let bound = match case_ty {
+                                Type::Record(fields) => {
+                                    let mut parts = Vec::new();
+                                    for f in fields.keys() {
+                                        let sel = case_selector(&name, case, f).map_err(&here)?;
+                                        parts.push(Term::app(sel, vec![x.clone()]));
+                                    }
+                                    Term::app(self.constructor(fields).map_err(&here)?, parts)
+                                }
+                                _ => Term::app(
+                                    case_selector(&name, case, "").map_err(&here)?,
+                                    vec![x.clone()],
+                                ),
+                            };
+                            let var = local(&c.bind).map_err(&here)?;
+                            self.scope.push((c.bind.clone(), case_ty.clone()));
+                            let inner = self.defined.len();
+                            let body = self.expr(&c.body, &body_at);
+                            self.scope.pop();
+                            body.map(|(t, bt)| {
+                                for condition in &mut self.defined[inner..] {
+                                    *condition =
+                                        Term::bind(var.clone(), bound.clone(), condition.clone());
+                                }
+                                (Term::bind(var, bound, t), bt, body_at)
+                            })
+                        }
+                        None => match otherwise {
+                            Some(o) => {
+                                let body_at = child(at, "otherwise");
+                                self.expr(o, &body_at).map(|(t, bt)| (t, bt, body_at))
+                            }
+                            None => Err(here(NoReading::Any)),
+                        },
+                    };
+                    self.guards.pop();
+                    let (t, bt, body_at) = encoded?;
+                    branches.push((test, t, bt, body_at));
+                }
+                let mut joined = branches
+                    .first()
+                    .map(|b| b.2.clone())
+                    .ok_or_else(|| here(NoReading::Any))?;
+                for b in &branches[1..] {
+                    joined = join(&joined, &b.2).ok_or_else(|| here(NoReading::Any))?;
+                }
+                let mut chained: Option<Term> = None;
+                for (test, t, bt, body_at) in branches.into_iter().rev() {
+                    let t = self.coerce(t, &bt, &joined).map_err(at_body(&body_at))?;
+                    chained = Some(match chained {
+                        None => t,
+                        Some(rest) => Term::call("ite", vec![test, t, rest]),
+                    });
+                }
+                for condition in &mut self.defined[from..] {
+                    *condition = Term::bind(x.clone(), matched.clone(), condition.clone());
+                }
+                let body = chained.ok_or_else(|| here(NoReading::Any))?;
+                Ok((Term::bind(x, matched, body), joined))
+            }
+            Expr::Fold { .. } => Err(here(NoReading::Fold)),
+            Expr::Label { .. } => Err(here(NoReading::Label)),
         }
     }
 
@@ -725,6 +839,46 @@ impl<'w> Encoder<'w> {
                     other => return Err(NoReading::Text { of: other.clone() }),
                 }
             }
+            Reading::Prefix | Reading::Contains => {
+                let (string, sequence) = if reading == Reading::Prefix {
+                    ("str.prefixof", "seq.prefixof")
+                } else {
+                    ("str.contains", "seq.contains")
+                };
+                match (&types[0], &types[1], reading) {
+                    (Type::String, Type::String, _) => Term::call(string, terms),
+                    (Type::List(a), Type::List(b), Reading::Prefix)
+                        if a == b && plain_equality(a) =>
+                    {
+                        Term::call(sequence, terms)
+                    }
+                    (Type::List(a), b, Reading::Contains) if **a == *b && plain_equality(a) => {
+                        let mut terms = terms;
+                        let item = terms.pop().expect("two operands");
+                        terms.push(Term::call("seq.unit", vec![item]));
+                        Term::call(sequence, terms)
+                    }
+                    (left, right, _) => {
+                        return Err(NoReading::Equality {
+                            left: left.clone(),
+                            right: right.clone(),
+                        });
+                    }
+                }
+            }
+            Reading::Append => {
+                let Type::List(element) = ty else {
+                    return Err(NoReading::Any);
+                };
+                let mut terms = terms.into_iter();
+                let (list, item) = (
+                    terms.next().expect("two operands"),
+                    terms.next().expect("two operands"),
+                );
+                let list = self.coerce(list, &types[0], ty)?;
+                let item = self.coerce(item, &types[1], element)?;
+                Term::call("seq.++", vec![list, Term::call("seq.unit", vec![item])])
+            }
             Reading::Length => match &types[0] {
                 Type::String => Term::call("str.len", terms),
                 _ => Term::call("seq.len", terms),
@@ -785,602 +939,105 @@ impl<'w> Encoder<'w> {
         })
     }
 
-    /// The term at a validator's path, or `None` where the kernel finds no field (the value there isn't a record).
-    fn path(
-        &mut self,
-        mut term: Term,
-        mut ty: Type,
-        fields: &[String],
-    ) -> Read<Option<(Term, Type)>> {
-        for field in fields {
-            match ty {
-                Type::Record(declared) => {
-                    let field_ty =
-                        declared
-                            .get(field)
-                            .cloned()
-                            .ok_or(NoReading::UndeclaredField {
-                                field: field.clone(),
-                            })?;
-                    term = self.select(&declared, field, term)?;
-                    ty = field_ty;
-                }
-                Type::Any => return Err(NoReading::Any),
-                _ => return Ok(None),
-            }
-        }
-        Ok(Some((term, ty)))
-    }
-
-    /// A validator's registered condition on `result`, or `None` for one the kernel doesn't check.
-    fn condition(&mut self, condition: Condition, output: &Type) -> Read<Option<Term>> {
-        let unsatisfiable = Term::atom("false");
-        let result = Term::atom("result");
-        Ok(Some(match condition {
-            Condition::Unstated => return Ok(None),
-            Condition::Bound {
-                at,
-                int,
-                float,
-                bound,
-            } => match self.path(result, output.clone(), at)? {
-                Some((_, Type::Any)) => return Err(NoReading::Any),
-                // A whole bound is an integer, so an integer meets it by integer comparison.
-                Some((term, Type::Int)) if bound.fract() == 0.0 && bound.abs() < 9.2e18 => {
-                    Term::call(
-                        int,
-                        vec![term, Term::int(bound < 0.0, format!("{:.0}", bound.abs()))],
-                    )
-                }
-                Some((term, ty)) if numeric(&ty) => {
-                    let bound = float_literal(self.floats, bound);
-                    exactly(
-                        self.floats,
-                        int,
-                        float,
-                        vec![term, bound],
-                        &[ty, Type::Float],
-                    )
-                }
-                _ => unsatisfiable,
-            },
-            Condition::Size { at, test, bound } => match self.path(result, output.clone(), at)? {
-                Some((term, Type::String)) => {
-                    Term::call(test, vec![Term::call("str.len", vec![term]), bound.into()])
-                }
-                Some((term, Type::List(_))) => {
-                    Term::call(test, vec![Term::call("seq.len", vec![term]), bound.into()])
-                }
-                // The kernel counts every field a record value has, declared or not.
-                Some((_, Type::Record(_))) => return Err(NoReading::RecordSize),
-                Some((_, Type::Any)) => return Err(NoReading::Any),
-                _ => unsatisfiable,
-            },
-            Condition::OneOf { at, values } => match self.path(result, output.clone(), at)? {
-                Some((_, Type::Any)) => return Err(NoReading::Any),
-                Some((term, ty)) if plain_equality(&ty) => {
-                    let mut any = Vec::new();
-                    for v in values.iter().filter(|v| inhabits(v, &ty)) {
-                        any.push(Term::call("=", vec![term.clone(), self.value(v, &ty)?]));
-                    }
-                    Term::fold("or", unsatisfiable, any)
-                }
-                Some((_, ty)) => {
-                    return Err(NoReading::Equality {
-                        left: ty.clone(),
-                        right: ty,
-                    });
-                }
-                None => unsatisfiable,
-            },
-        }))
-    }
-
-    /// The Answer as a function of its spec's parameters, `(define-fun answer (params) output body)`.
-    pub(super) fn answer_fun(
-        &mut self,
-        spec: &AskSpec,
-        answer: &'w Answer,
-    ) -> Result<Command, ExportError> {
-        let at_spec = at_place(Place::Spec);
-        let outer = std::mem::take(&mut self.scope);
-        let (outer_guards, outer_defined) = (
-            std::mem::take(&mut self.guards),
-            std::mem::take(&mut self.defined),
-        );
-        let mut params = Vec::new();
-        for p in &spec.params {
-            params.push((
-                local(&p.name).map_err(&at_spec)?,
-                self.sort(&p.ty).map_err(&at_spec)?,
-            ));
-            self.scope.push((p.name.clone(), p.ty.clone()));
-        }
-        let sort = self.sort(&spec.output).map_err(&at_spec)?;
-        let body = match answer {
-            Answer::Value(v) => self.value(v, &spec.output).map_err(at_body("")),
-            Answer::Procedure(expr) => self
-                .expr(expr, "")
-                .and_then(|(term, ty)| self.coerce(term, &ty, &spec.output).map_err(at_body(""))),
-        };
-        self.scope = outer;
-        self.guards = outer_guards;
-        self.answer_defined = std::mem::replace(&mut self.defined, outer_defined);
-        Ok(Command::DefineFun {
-            name: Term::atom("answer"),
-            params,
-            sort,
-            body: body?,
-        })
-    }
-
-    /// The sections declaring what the encoding so far uses: records, the world's facts, nested Asks, inputs with no
-    /// value, and the values the responder assumes.
-    pub(super) fn declarations(&mut self) -> Result<Vec<Section>, ExportError> {
-        let at_spec = at_place(Place::Spec);
-        let mut facts = Vec::new();
-        for (name, ty) in std::mem::take(&mut self.facts) {
-            let fact = &self.world.facts[&name];
-            let place = at_place(Place::Fact { name: name.clone() });
-            facts.push(Entry {
-                comments: if fact.source.is_empty() {
-                    vec![]
-                } else {
-                    vec![format!("from {}", fact.source)]
-                },
-                command: Some(Command::DefineFun {
-                    name: Term::symbol("fact:", &name).map_err(&place)?,
-                    params: vec![],
-                    sort: self.sort(&ty).map_err(&place)?,
-                    body: self.value(&fact.value, &ty).map_err(&place)?,
-                }),
-            });
-        }
-
-        let mut holes = Vec::new();
-        for hole in std::mem::take(&mut self.holes) {
-            let mut comments: Vec<String> =
-                hole.spec.description.lines().map(str::to_string).collect();
-            if hole.spec.effect {
-                comments.push(EFFECT.into());
-            }
-            let mut sorts = Vec::new();
-            for p in &hole.spec.params {
-                sorts.push(self.sort(&p.ty).map_err(&at_spec)?);
-            }
-            let sort = self.sort(&hole.spec.output).map_err(&at_spec)?;
-            holes.push(Entry {
-                comments,
-                command: Some(Command::DeclareFun {
-                    name: hole.name,
-                    params: sorts,
-                    sort,
-                }),
-            });
-        }
-
-        let mut opaque = Vec::new();
-        for (name, ty, note) in std::mem::take(&mut self.opaque) {
-            let sort = self.sort(&ty).map_err(&at_spec)?;
-            opaque.push(Entry {
-                comments: note.lines().map(str::to_string).collect(),
-                command: Some(Command::DeclareConst { name, sort }),
-            });
-        }
-
+    /// The section declaring the record sorts the encoding so far uses, each after the records its fields use.
+    pub(super) fn records(&mut self) -> Result<Section, ExportError> {
+        let at = at_place(Place::Body { at: String::new() });
         let mut records = Vec::new();
-        for (name, fields) in self.records.clone() {
-            let mut selectors = Vec::new();
-            for (field, ty) in &fields {
-                selectors.push((
-                    selector(&name, field).map_err(&at_spec)?,
-                    self.sort(ty).map_err(&at_spec)?,
-                ));
-            }
-            records.push(Entry {
-                comments: vec![describe(&Type::Record(fields))],
-                command: Some(Command::DeclareDatatype {
-                    name: Term::symbol("", &name).map_err(&at_spec)?,
-                    selectors,
-                }),
+        for (name, datatype) in self.datatypes.clone() {
+            let entry = match datatype {
+                Datatype::Record(fields) => {
+                    let mut selectors = Vec::new();
+                    for (field, ty) in &fields {
+                        selectors.push((
+                            selector(&name, field).map_err(&at)?,
+                            self.sort(ty).map_err(&at)?,
+                        ));
+                    }
+                    Entry {
+                        comments: vec![describe(&Type::Record(fields))],
+                        command: Some(Command::DeclareDatatype {
+                            name: Term::symbol("", &name).map_err(&at)?,
+                            selectors,
+                        }),
+                    }
+                }
+                Datatype::Variant(cases) => {
+                    let mut constructors = Vec::new();
+                    for (case, case_ty) in &cases {
+                        let mut selectors = Vec::new();
+                        for (field, ty) in case_fields(case_ty).map_err(&at)? {
+                            selectors.push((
+                                case_selector(&name, case, &field).map_err(&at)?,
+                                self.sort(&ty).map_err(&at)?,
+                            ));
+                        }
+                        constructors.push((case_constructor(&name, case).map_err(&at)?, selectors));
+                    }
+                    let cases: Vec<&String> = cases.keys().collect();
+                    Entry {
+                        comments: vec![format!(
+                            "A variant with the cases {}.",
+                            cases
+                                .iter()
+                                .map(|c| c.as_str())
+                                .collect::<Vec<_>>()
+                                .join(", ")
+                        )],
+                        command: Some(Command::DeclareVariant {
+                            name: Term::symbol("", &name).map_err(&at)?,
+                            constructors,
+                        }),
+                    }
+                }
+            };
+            records.push(entry);
+        }
+        Ok(Section {
+            heading: "Records and variants.",
+            entries: records,
+        })
+    }
+
+    /// A definition as `define-fun`s: the function, and where the kernel's evaluation of it is defined, if that isn't
+    /// everywhere.
+    pub(super) fn definition(&mut self, def: &Definition) -> Result<Vec<Entry>, ExportError> {
+        self.scope.clear();
+        self.guards.clear();
+        self.defined.clear();
+        let mut params = Vec::new();
+        for p in &def.params {
+            let at = at_place(Place::Param {
+                name: p.name.clone(),
             });
-        }
-
-        Ok(vec![
-            Section {
-                heading: "Records.",
-                entries: records,
-            },
-            Section {
-                heading: "The requester's declared world.",
-                entries: facts,
-            },
-            Section {
-                heading: "The Asks this Answer rests on, uninterpreted: their Answers are not part of this one.",
-                entries: holes,
-            },
-            Section {
-                heading: "Inputs with no value: the Procedure can't be evaluated past them.",
-                entries: opaque,
-            },
-            Section {
-                heading: "Values the responder assumes, which nobody checked:",
-                entries: std::mem::take(&mut self.assumed)
-                    .into_iter()
-                    .map(|line| Entry {
-                        comments: vec![line],
-                        command: None,
-                    })
-                    .collect(),
-            },
-        ])
-    }
-
-    fn described(spec: &AskSpec) -> Vec<String> {
-        let mut described: Vec<String> = spec.description.lines().map(str::to_string).collect();
-        if spec.effect {
-            described.push(EFFECT.into());
-        }
-        described
-    }
-
-    /// The Ask, its world and its Answer as a script.
-    pub fn script(mut self, ask: &'w Ask, answer: &'w Answer) -> Result<Script, ExportError> {
-        let spec = &ask.spec;
-        let answer_fun = self.answer_fun(spec, answer)?;
-        let Command::DefineFun {
-            params,
-            sort: output,
-            ..
-        } = &answer_fun
-        else {
-            unreachable!()
-        };
-        let (params, output) = (params.clone(), output.clone());
-        for p in &spec.params {
+            params.push((local(&p.name).map_err(&at)?, self.sort(&p.ty).map_err(&at)?));
             self.scope.push((p.name.clone(), p.ty.clone()));
         }
-
-        let mut holds = Vec::new();
-        let mut unstated = Vec::new();
-        for (index, validator) in spec.validators.iter().enumerate() {
-            match self
-                .condition(readings::condition(validator), &spec.output)
-                .map_err(at_place(Place::Validator { index }))?
-            {
-                Some(term) => holds.push(term),
-                None => unstated.push(match validator {
-                    crate::ir::Validator::Prose { text } => format!("unchecked: {text}"),
-                    crate::ir::Validator::Checker { actor, note } if note.is_empty() => {
-                        format!("delegated to {actor}")
-                    }
-                    crate::ir::Validator::Checker { actor, note } => {
-                        format!("delegated to {actor}: {note}")
-                    }
-                    _ => String::new(),
-                }),
-            }
-        }
-
-        let mut args = Vec::new();
-        for p in &spec.params {
-            let arg = ask.args.get(&p.name).ok_or_else(|| {
-                ill_formed(Problem::MissingArgument {
-                    ask: spec.name.clone(),
-                    param: p.name.clone(),
-                })
-            })?;
-            args.push(self.value(arg, &p.ty).map_err(at_place(Place::Argument {
-                param: p.name.clone(),
-            }))?);
-        }
-        // Validators and arguments may declare records too, so declarations come last.
-        let mut sections = self.declarations()?;
-
-        let mut contract_params = params;
-        contract_params.push((Term::atom("result"), output.clone()));
-        let form = if matches!(answer, Answer::Value(_)) {
-            "a raw value"
-        } else {
-            "a Procedure"
-        };
-
-        sections.extend([
-            Section {
-                heading: "The Answer, as a function of the Ask's parameters.",
-                entries: vec![Entry {
-                    comments: Self::described(spec),
-                    command: Some(answer_fun),
-                }],
-            },
-            Section {
-                heading: "What the Ask's replayable validators say of a result.",
-                entries: vec![Entry {
-                    comments: unstated,
-                    command: Some(Command::DefineFun {
-                        name: Term::atom("contract"),
-                        params: contract_params,
-                        sort: Term::atom("Bool"),
-                        body: Term::fold("and", Term::atom("true"), holds),
-                    }),
-                }],
-            },
-            Section {
-                heading: "The closed Ask.",
-                entries: vec![
-                    Entry {
-                        comments: vec![],
-                        command: Some(Command::DefineFun {
-                            name: Term::atom("value"),
-                            params: vec![],
-                            sort: output,
-                            body: Term::app(Term::atom("answer"), args.clone()),
-                        }),
-                    },
-                    Entry {
-                        comments: vec![],
-                        command: Some(Command::DefineFun {
-                            name: Term::atom("holds"),
-                            params: vec![],
-                            sort: Term::atom("Bool"),
-                            body: Term::app(
-                                Term::atom("contract"),
-                                args.into_iter().chain([Term::atom("value")]).collect(),
-                            ),
-                        }),
-                    },
-                ],
-            },
-        ]);
-
-        Ok(Script {
-            preamble: vec![
-                format!("{}, answered by {form}.", spec.name),
-                "Exported from Cronch. Its identity is the content key of its deterministic CBOR, not this text:"
-                    .into(),
-                ask_key(ask, &self.world.facts),
-            ],
-            options: vec![],
-            logic: "ALL",
-            sections,
-        })
-    }
-
-    /// That `term` is a value a counterexample can hold at type `ty`: a safe integer, a float neither infinite nor NaN,
-    /// and the same for every field and element. `None` where every value of the sort is one.
-    fn representable(&mut self, term: Term, ty: &Type) -> Read<Option<Term>> {
-        Ok(match ty {
-            Type::Int => Some(carried(term)),
-            Type::Float if self.floats == Floats::Exact => Some(finite(term)),
-            Type::Float => None,
-            Type::Bool | Type::String | Type::Any => None,
-            Type::Record(fields) => {
-                let mut each = Vec::new();
-                for (field, t) in fields {
-                    let selected = self.select(fields, field, term.clone())?;
-                    each.extend(self.representable(selected, t)?);
-                }
-                (!each.is_empty()).then(|| Term::fold("and", Term::atom("true"), each))
-            }
-            Type::List(t) => {
-                let i = self.fresh();
-                let nth = Term::call("seq.nth", vec![term.clone(), i.clone()]);
-                self.representable(nth, t)?.map(|each| {
-                    let within = Term::call(
-                        "and",
-                        vec![
-                            Term::call("<=", vec![Term::atom("0"), i.clone()]),
-                            Term::call("<", vec![i.clone(), Term::call("seq.len", vec![term])]),
-                        ],
-                    );
-                    Term::List(vec![
-                        Term::atom("forall"),
-                        Term::List(vec![Term::List(vec![i, Term::atom("Int")])]),
-                        Term::call("=>", vec![within, each]),
-                    ])
-                })
-            }
-        })
-    }
-
-    /// A nested Ask closed at values, as an application of its uninterpreted function, if the Answer declares it.
-    fn application(&mut self, ask: &Ask) -> Read<Option<Term>> {
-        let name = hole_name(&ask.spec)?;
-        if !self.holes.iter().any(|h| h.name == name) {
-            return Ok(None);
-        }
-        let mut args = Vec::new();
-        for p in &ask.spec.params {
-            let arg = ask.args.get(&p.name).unwrap_or(&Value::Null);
-            args.push(self.value(arg, &p.ty)?);
-        }
-        Ok(Some(Term::app(name, args)))
-    }
-
-    /// A claim about an Answer, negated: the script is `sat` exactly where some values of what the witness leaves open
-    /// make `holds` false. Given `reads`, it asks for their values.
-    pub fn claim(
-        mut self,
-        claim: &'w Claim,
-        answer: &'w Answer,
-        witness: &Witness,
-        reads: &[ValueRead],
-    ) -> Result<Script, ExportError> {
-        let answer_fun = self.answer_fun(&claim.about, answer)?;
-        let defined_fun = match (&answer_fun, self.answer_defined.is_empty()) {
-            (Command::DefineFun { params, .. }, false) => Some(Command::DefineFun {
-                name: Term::atom("defined"),
+        let (body, ty) = self.expr(&def.body, "")?;
+        let sort = self.sort(&ty).map_err(at_body(""))?;
+        let name = Term::symbol("def:", &def.name).map_err(at_body(""))?;
+        let mut entries = vec![Entry {
+            comments: def.description.lines().map(str::to_string).collect(),
+            command: Some(Command::DefineFun {
+                name,
                 params: params.clone(),
-                sort: Term::atom("Bool"),
-                body: Term::fold("and", Term::atom("true"), self.answer_defined.clone()),
+                sort,
+                body,
             }),
-            _ => None,
-        };
-        let in_claim = |error| match error {
-            ExportError::NoReading {
-                place: Place::Body { at },
-                reason,
-            } => ExportError::NoReading {
-                place: Place::Claim { at },
-                reason,
-            },
-            error => error,
-        };
-
-        let mut consts = Vec::new();
-        for p in &claim.vars {
-            let place = at_place(Place::Var {
-                name: p.name.clone(),
-            });
-            let name = local(&p.name).map_err(&place)?;
-            consts.push(Entry {
-                comments: vec![],
-                command: Some(Command::DeclareConst {
-                    name,
-                    sort: self.sort(&p.ty).map_err(&place)?,
+        }];
+        if !self.defined.is_empty() {
+            entries.push(Entry {
+                comments: vec![format!(
+                    "Where the kernel evaluates {} without an error; elsewhere the function above is unconstrained.",
+                    def.name
+                )],
+                command: Some(Command::DefineFun {
+                    name: Term::symbol("defined:", &def.name).map_err(at_body(""))?,
+                    params,
+                    sort: Term::atom("Bool"),
+                    body: Term::fold("and", Term::atom("true"), std::mem::take(&mut self.defined)),
                 }),
             });
-            self.scope.push((p.name.clone(), p.ty.clone()));
         }
-        self.about = Some(spec_key(&claim.about));
-        let encoded = self.expr(&claim.holds, "");
-        self.about = None;
-        let (holds, _) = encoded.map_err(in_claim)?;
-        let defined: Vec<Entry> = std::mem::take(&mut self.defined)
-            .into_iter()
-            .map(|condition| Entry {
-                comments: vec![],
-                command: Some(Command::Assert(condition)),
-            })
-            .collect();
-
-        // Every value the counterexample is made of is one the kernel can be given: the solver's own sorts are wider.
-        let mut ranges = Vec::new();
-        for p in &claim.vars {
-            let place = at_place(Place::Var {
-                name: p.name.clone(),
-            });
-            if let Some(term) = self
-                .representable(local(&p.name).map_err(&place)?, &p.ty)
-                .map_err(&place)?
-            {
-                ranges.push(Entry {
-                    comments: vec![],
-                    command: Some(Command::Assert(term)),
-                });
-            }
-        }
-
-        let mut fixed = Vec::new();
-        for p in &claim.vars {
-            if let Some(v) = witness.vars.get(&p.name) {
-                let place = at_place(Place::Var {
-                    name: p.name.clone(),
-                });
-                let term = Term::call(
-                    "=",
-                    vec![
-                        local(&p.name).map_err(&place)?,
-                        self.value(v, &p.ty).map_err(&place)?,
-                    ],
-                );
-                fixed.push(Entry {
-                    comments: vec![],
-                    command: Some(Command::Assert(term)),
-                });
-            }
-        }
-        for h in &witness.holes {
-            let place = at_place(Place::Hole {
-                ask: h.ask.spec.name.clone(),
-            });
-            if let Some(applied) = self.application(&h.ask).map_err(&place)? {
-                let value = self.value(&h.value, &h.ask.spec.output).map_err(&place)?;
-                let term = Term::call("=", vec![applied, value]);
-                fixed.push(Entry {
-                    comments: vec![],
-                    command: Some(Command::Assert(term)),
-                });
-            }
-        }
-        let mut terms = Vec::new();
-        for read in reads {
-            match read {
-                ValueRead::Var { name, .. } => {
-                    terms.push(local(name).map_err(at_place(Place::Var { name: name.clone() }))?)
-                }
-                ValueRead::Hole { ask, .. } => {
-                    let place = at_place(Place::Hole {
-                        ask: ask.spec.name.clone(),
-                    });
-                    let applied = self.application(ask).map_err(&place)?;
-                    terms.push(applied.ok_or_else(|| place(NoReading::Any))?);
-                }
-            }
-        }
-
-        let mut sections = self.declarations()?;
-        let mut search = vec![
-            Entry {
-                comments: vec!["The claim is false here.".into()],
-                command: Some(Command::Assert(Term::call("not", vec![holds]))),
-            },
-            Entry {
-                comments: vec![],
-                command: Some(Command::CheckSat),
-            },
-        ];
-        if !terms.is_empty() {
-            search.push(Entry {
-                comments: vec![],
-                command: Some(Command::GetValue(terms)),
-            });
-        }
-        sections.extend([
-            Section {
-                heading: "The Answer under check, as a function of its spec's parameters.",
-                entries: vec![Entry { comments: Self::described(&claim.about), command: Some(answer_fun) }],
-            },
-            Section {
-                heading:
-                    "Where the kernel evaluates it without error: no overflow, no division by zero, finite floats.",
-                entries: defined_fun.into_iter().map(|c| Entry { comments: vec![], command: Some(c) }).collect(),
-            },
-            Section { heading: "The claim's variables.", entries: consts },
-            Section {
-                heading: "Only values Cronch has: integers within ±(2^53 - 1), finite floats.", entries: ranges
-            },
-            Section {
-                heading: "Only where the claim itself, and every Answer it applies, evaluates.",
-                entries: defined,
-            },
-            Section { heading: "What the counterexample fixes.", entries: fixed },
-            Section { heading: "A counterexample: sat exactly where the claim fails.", entries: search },
-        ]);
-        let stance = match claim.stance {
-            crate::claim::Stance::Claim => "Claim",
-            crate::claim::Stance::Assumption => "Assumption",
-        };
-        let mut preamble = vec![format!(
-            "{stance} {} about {}.",
-            claim.name, claim.about.name
-        )];
-        preamble.extend(claim.description.lines().map(str::to_string));
-        preamble.extend([
-            "Exported from Cronch. Its identity is the content key of its deterministic CBOR, not this text:".into(),
-            claim_key(claim),
-        ]);
-        Ok(Script {
-            preamble,
-            options: if reads.is_empty() {
-                vec![]
-            } else {
-                vec![(":produce-models", "true")]
-            },
-            logic: "ALL",
-            sections,
-        })
+        Ok(entries)
     }
 }
-
-const EFFECT: &str = "An effect: it changes the world, and runs only with authority.";

@@ -1,0 +1,146 @@
+{
+  "description": "Typing and evaluating expressions, including a fold and a label.",
+  "exchanges": [
+    {
+      "request": {
+        "expr": {
+          "acc": "a",
+          "body": {
+            "args": [
+              {
+                "e": "var",
+                "name": "a"
+              },
+              {
+                "e": "var",
+                "name": "x"
+              }
+            ],
+            "e": "op",
+            "op": "add"
+          },
+          "e": "fold",
+          "init": {
+            "e": "lit",
+            "v": 0
+          },
+          "item": "x",
+          "over": {
+            "e": "var",
+            "name": "xs"
+          }
+        },
+        "op": "infer",
+        "vars": {
+          "xs": {
+            "List": "Int"
+          }
+        }
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "problems": [],
+          "type": "Int"
+        }
+      }
+    },
+    {
+      "request": {
+        "expr": {
+          "acc": "a",
+          "body": {
+            "args": [
+              {
+                "e": "var",
+                "name": "a"
+              },
+              {
+                "e": "var",
+                "name": "x"
+              }
+            ],
+            "e": "op",
+            "op": "add"
+          },
+          "e": "fold",
+          "init": {
+            "e": "lit",
+            "v": 0
+          },
+          "item": "x",
+          "over": {
+            "e": "var",
+            "name": "xs"
+          }
+        },
+        "op": "evaluate",
+        "vars": {
+          "xs": [1, 2, 3]
+        }
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "kind": "value",
+          "value": 6
+        }
+      }
+    },
+    {
+      "request": {
+        "expr": {
+          "e": "label",
+          "of": {
+            "e": "var",
+            "name": "x"
+          }
+        },
+        "op": "evaluate",
+        "vars": {
+          "x": 1
+        }
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "kind": "value",
+          "value": []
+        }
+      }
+    },
+    {
+      "request": {
+        "expr": {
+          "args": [
+            {
+              "e": "lit",
+              "v": 1
+            },
+            {
+              "e": "lit",
+              "v": 0
+            }
+          ],
+          "e": "op",
+          "op": "idiv"
+        },
+        "op": "evaluate"
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "error": {
+            "at": "",
+            "error": {
+              "kind": "divisionByZero"
+            },
+            "kind": "operator",
+            "op": "idiv"
+          },
+          "kind": "failed"
+        }
+      }
+    }
+  ]
+}
