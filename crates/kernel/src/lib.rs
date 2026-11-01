@@ -15,6 +15,7 @@ pub mod ir;
 pub mod key;
 pub mod labeled;
 pub mod ops;
+pub mod property;
 pub mod run;
 pub mod smtlib;
 pub mod types;

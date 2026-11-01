@@ -11,6 +11,7 @@ use crate::harness::{
 };
 use crate::ir::{Answer, Ask, AskSpec, World};
 use crate::key::{ask_key, spec_key};
+use crate::property::{Property, check_property, monitor};
 use crate::run::{Delivery, System};
 use crate::smtlib;
 use crate::smtlib::claim::{Floats, Read};
@@ -97,6 +98,13 @@ pub enum Request {
         interface: Interface,
         narrowings: Vec<Narrowing>,
     },
+    /// Problems with a property.
+    CheckProperty { property: Property },
+    /// Whether a trace satisfies a property, and if not, where it first fails.
+    Monitor {
+        property: Property,
+        trace: Vec<Value>,
+    },
     /// Deliver one input to a system: the next configuration, and what happened.
     Deliver { system: System, delivery: Delivery },
 }
@@ -170,6 +178,8 @@ fn respond(request: Request) -> Value {
             Assessment::Assessed { .. } => assessed(&claim, &answer, &witness),
         },
         Request::CheckHarness { harness } => json!({ "problems": check_harness(&harness) }),
+        Request::CheckProperty { property } => json!({ "problems": check_property(&property) }),
+        Request::Monitor { property, trace } => json!(monitor(&property, &trace)),
         Request::Install { capabilities } => match install(&capabilities) {
             Ok(interface) => json!({ "kind": "installed", "interface": interface }),
             Err(error) => json!({ "kind": "refused", "error": error }),

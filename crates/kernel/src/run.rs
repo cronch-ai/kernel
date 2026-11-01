@@ -226,6 +226,8 @@ pub enum Event {
         effect: bool,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         footprint: Option<Value>,
+        /// The action's labels, shaped like the action (`LValue::labels`).
+        labels: Value,
         state: Value,
     },
     Withheld {
@@ -628,6 +630,7 @@ impl Run {
                 performed,
                 effect,
                 footprint,
+                labels: action.labels(),
                 state: state.clone(),
             };
             let value = action.value();

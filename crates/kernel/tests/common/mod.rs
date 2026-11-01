@@ -145,3 +145,46 @@ pub fn shape(events: &[Value]) -> Vec<String> {
         })
         .collect()
 }
+
+pub mod demo;
+
+/// `event.a.b`.
+pub fn ev(fields: &[&str]) -> Value {
+    path("event", fields)
+}
+
+pub fn atom(holds: Value) -> Value {
+    json!({ "f": "atom", "holds": holds })
+}
+
+pub fn not(of: Value) -> Value {
+    json!({ "f": "not", "of": of })
+}
+
+pub fn and(of: Vec<Value>) -> Value {
+    json!({ "f": "and", "of": of })
+}
+
+pub fn implies(condition: Value, then: Value) -> Value {
+    json!({ "f": "implies", "if": condition, "then": then })
+}
+
+pub fn since(left: Value, right: Value) -> Value {
+    json!({ "f": "since", "left": left, "right": right })
+}
+
+pub fn once(of: Value) -> Value {
+    json!({ "f": "once", "of": of })
+}
+
+pub fn exists(var_name: &str, of: Value, body: Value) -> Value {
+    json!({ "f": "exists", "var": var_name, "of": of, "body": body })
+}
+
+/// The conjunction of expressions, as one expression.
+pub fn all(exprs: Vec<Value>) -> Value {
+    exprs
+        .into_iter()
+        .reduce(|a, b| op("and", vec![a, b]))
+        .unwrap_or(lit(json!(true)))
+}

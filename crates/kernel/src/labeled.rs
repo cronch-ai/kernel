@@ -114,6 +114,29 @@ impl LValue {
         self
     }
 
+    /// The labels as a value of the same shape: each scalar replaced by the sources it depends on, including those of
+    /// every container above it. What properties read to say which data reached where.
+    pub fn labels(&self) -> Value {
+        self.labels_under(&Label::new())
+    }
+
+    fn labels_under(&self, above: &Label) -> Value {
+        let mut here = above.clone();
+        here.extend(self.top().iter().cloned());
+        match self {
+            LValue::Scalar { .. } => Value::Array(here.into_iter().map(Value::String).collect()),
+            LValue::List { items, .. } => {
+                Value::Array(items.iter().map(|i| i.labels_under(&here)).collect())
+            }
+            LValue::Record { fields, .. } => Value::Object(
+                fields
+                    .iter()
+                    .map(|(k, v)| (k.clone(), v.labels_under(&here)))
+                    .collect::<Map<_, _>>(),
+            ),
+        }
+    }
+
     /// A field, carrying the record's label; `None` if this isn't a record with that field.
     pub fn field(&self, name: &str) -> Option<LValue> {
         match self {
