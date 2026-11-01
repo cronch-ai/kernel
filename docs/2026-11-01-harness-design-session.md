@@ -4,6 +4,7 @@ Where the kernel redesign on the `pivot` branch stands after this session. The d
 
 ## Sources
 
+- The architecture as built is in Linear: [Kernel architecture](https://linear.app/cronch-ai/document/kernel-architecture-harness-semantics-capabilities-properties-and-be2d9d7b9bcd). The two deprecated harness documents link to it.
 - The outline, "Cronch: formal verification for agent harnesses", is not in Linear. It was pasted into the session from another agent's summary.
 - The newest Linear document is [Harness lifecycle: write, register, prove, run, audit](https://linear.app/cronch-ai/document/harness-lifecycle-write-register-prove-run-audit-f8f7aa476e2c) (2026-10-30). It calls itself a starting point for an architecture document that hasn't been written yet.
 - [Harness semantics v0](https://linear.app/cronch-ai/document/harness-semantics-v0-definitions-capabilities-properties-and-evidence-619323535a37) is marked deprecated, but this session adopts parts of it (see Decisions).
