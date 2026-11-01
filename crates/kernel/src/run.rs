@@ -307,7 +307,7 @@ struct Admitted {
 impl System {
     /// A system that hasn't started: the harness at `s₀`, against the interface, with the root grant state.
     pub fn new(harness: Harness, interface: Interface, grant: Value) -> Result<System, InitError> {
-        let problems = check_harness(&harness);
+        let problems = check_harness(&harness, Some(&interface));
         if !problems.is_empty() {
             return Err(InitError::Harness { problems });
         }
@@ -380,13 +380,17 @@ impl System {
     }
 }
 
-fn input_value(input: &WorldInput) -> Value {
+/// The input as `δ` receives it. Results name the operation they answer (`op`), so a harness can match on it and
+/// know the result's type; a spawned child's results name `spawn`.
+fn input_value(input: &WorldInput, op: &str) -> Value {
     match input {
         WorldInput::Start { value, .. } => json!({ "kind": "start", "value": value }),
-        WorldInput::Ret { call, value } => json!({ "kind": "ret", "call": call, "value": value }),
-        WorldInput::End { call } => json!({ "kind": "end", "call": call }),
+        WorldInput::Ret { call, value } => {
+            json!({ "kind": "ret", "call": call, "op": op, "value": value })
+        }
+        WorldInput::End { call } => json!({ "kind": "end", "call": call, "op": op }),
         WorldInput::Failed { call, error } => {
-            json!({ "kind": "failed", "call": call, "error": error })
+            json!({ "kind": "failed", "call": call, "op": op, "error": error })
         }
         WorldInput::Msg { channel, value } => {
             json!({ "kind": "msg", "channel": channel, "value": value })
@@ -473,11 +477,11 @@ impl Run {
         for c in finished {
             let inbound = match c.run.outcome {
                 Some(Outcome::Halted { value, label }) => Inbound {
-                    input: json!({ "kind": "ret", "call": c.call, "value": value }),
+                    input: json!({ "kind": "ret", "call": c.call, "op": "spawn", "value": value }),
                     label,
                 },
                 Some(Outcome::Failed { error }) => Inbound {
-                    input: json!({ "kind": "failed", "call": c.call, "error": error }),
+                    input: json!({ "kind": "failed", "call": c.call, "op": "spawn", "error": error }),
                     label: c.run.seen,
                 },
                 None => unreachable!("partitioned on outcome"),
@@ -502,9 +506,18 @@ impl Run {
         if self.outcome.is_some() {
             return Err(Withheld::Ended);
         }
+        let op = match input {
+            WorldInput::Ret { call, .. }
+            | WorldInput::End { call }
+            | WorldInput::Failed { call, .. } => self
+                .pending(*call)
+                .map(|p| p.op.clone())
+                .unwrap_or_default(),
+            WorldInput::Start { .. } | WorldInput::Msg { .. } => String::new(),
+        };
         let admitted = |label, update| Admitted {
             inbound: Inbound {
-                input: input_value(input),
+                input: input_value(input, &op),
                 label,
             },
             update,
@@ -620,7 +633,7 @@ impl Run {
             Some(n) => serde_json::from_value(n.clone()).ok()?,
         };
         let interface = narrow(&self.interface, &narrowings).ok()?;
-        let well_formed = check_harness(&harness).is_empty()
+        let well_formed = check_harness(&harness, Some(&interface)).is_empty()
             && check_interface(&interface).is_empty()
             && inhabits(&arg.value(), &harness.arg);
         well_formed.then(|| {
@@ -763,7 +776,7 @@ impl Run {
                         self.children.remove(i);
                         events.push(out(Some(k), true, false, None));
                         self.queue.push_back(Inbound {
-                            input: json!({ "kind": "failed", "call": k, "error": { "cancelled": true } }),
+                            input: json!({ "kind": "failed", "call": k, "op": "spawn", "error": { "cancelled": true } }),
                             label: Label::new(),
                         });
                     } else {

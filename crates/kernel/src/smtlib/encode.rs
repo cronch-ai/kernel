@@ -8,7 +8,7 @@ use crate::cbor;
 use crate::check::{Path, Problem};
 use crate::ir::{Expr, Type};
 use crate::ops::{self, Op};
-use crate::types::{conforms, of_value};
+use crate::types::{conforms, join, of_value, record_view};
 use serde::{Deserialize, Serialize};
 use serde_json::{Number, Value, json};
 use sha2::{Digest, Sha256};
@@ -19,7 +19,7 @@ type Read<T> = Result<T, NoReading>;
 pub(super) fn at_place(place: Place) -> impl Fn(NoReading) -> ExportError {
     move |reason| ExportError::NoReading {
         place: place.clone(),
-        reason,
+        reason: Box::new(reason),
     }
 }
 
@@ -65,6 +65,13 @@ fn describe(ty: &Type) -> String {
                 .map(|(f, t)| format!("{f}: {}", describe(t)))
                 .collect();
             format!("{{{}}}", fields.join(", "))
+        }
+        Type::Variant { tag, cases } => {
+            let cases: Vec<String> = cases
+                .iter()
+                .map(|(c, t)| format!("{c}: {}", describe(t)))
+                .collect();
+            format!("<{tag}: {}>", cases.join(" | "))
         }
     }
 }
@@ -180,7 +187,7 @@ fn plain_equality(ty: &Type) -> bool {
     match ty {
         Type::Int | Type::Bool | Type::String => true,
         Type::List(t) => plain_equality(t),
-        Type::Float | Type::Any | Type::Record(_) => false,
+        Type::Float | Type::Any | Type::Record(_) | Type::Variant { .. } => false,
     }
 }
 
@@ -196,9 +203,51 @@ fn selector(record: &str, field: &str) -> Read<Term> {
     Term::symbol(&format!("{record}."), field)
 }
 
+/// The variant sort's name; its constructors are `name#case` and their selectors `name#case.field`.
+pub(super) fn variant_names(tag: &str, cases: &BTreeMap<String, Type>) -> String {
+    let ty = Type::Variant {
+        tag: tag.to_string(),
+        cases: cases.clone(),
+    };
+    format!("variant:{}", short_hash(&json!(ty)))
+}
+
+fn case_constructor(variant: &str, case: &str) -> Read<Term> {
+    Term::symbol(&format!("{variant}#"), case)
+}
+
+fn case_selector(variant: &str, case: &str, field: &str) -> Read<Term> {
+    Term::symbol(&format!("{variant}#{case}."), field)
+}
+
+/// What a case's constructor carries: a record case's fields, or one unnamed field holding a nested variant.
+pub(super) fn case_fields(case: &Type) -> Read<Vec<(String, Type)>> {
+    match case {
+        Type::Record(fields) => Ok(fields.iter().map(|(f, t)| (f.clone(), t.clone())).collect()),
+        Type::Variant { .. } => Ok(vec![(String::new(), case.clone())]),
+        _ => Err(NoReading::Any),
+    }
+}
+
+/// `((_ is C) term)`: whether the term was built by the case's constructor.
+fn tester(variant: &str, case: &str, term: Term) -> Read<Term> {
+    let is = Term::List(vec![
+        Term::atom("_"),
+        Term::atom("is"),
+        case_constructor(variant, case)?,
+    ]);
+    Ok(Term::List(vec![is, term]))
+}
+
+#[derive(Clone)]
+enum Datatype {
+    Record(BTreeMap<String, Type>),
+    Variant(BTreeMap<String, Type>),
+}
+
 pub struct Encoder {
-    /// Record sorts, each after the records its fields use.
-    records: Vec<(String, BTreeMap<String, Type>)>,
+    /// Record and variant sorts, each after the sorts it uses.
+    datatypes: Vec<(String, Datatype)>,
     /// Variables in scope, innermost last.
     scope: Vec<(String, Type)>,
     fresh: usize,
@@ -213,7 +262,7 @@ pub struct Encoder {
 impl Encoder {
     pub fn new() -> Self {
         Encoder {
-            records: Vec::new(),
+            datatypes: Vec::new(),
             scope: Vec::new(),
             fresh: 0,
             guards: Vec::new(),
@@ -285,14 +334,86 @@ impl Encoder {
     /// The record sort's name, unquoted, declaring it (after the records its fields use) on first sight.
     fn record(&mut self, fields: &BTreeMap<String, Type>) -> Read<String> {
         let name = record_names(fields);
-        if !self.records.iter().any(|(n, _)| *n == name) {
+        if !self.datatypes.iter().any(|(n, _)| *n == name) {
             for (field, ty) in fields {
                 selector(&name, field)?;
                 self.sort(ty)?;
             }
-            self.records.push((name.clone(), fields.clone()));
+            self.datatypes
+                .push((name.clone(), Datatype::Record(fields.clone())));
         }
         Ok(name)
+    }
+
+    /// The variant sort's name, unquoted, declaring it (after the sorts its cases use) on first sight.
+    fn variant(&mut self, tag: &str, cases: &BTreeMap<String, Type>) -> Read<String> {
+        let name = variant_names(tag, cases);
+        if !self.datatypes.iter().any(|(n, _)| *n == name) {
+            for (case, ty) in cases {
+                case_constructor(&name, case)?;
+                for (field, t) in case_fields(ty)? {
+                    case_selector(&name, case, &field)?;
+                    self.sort(&t)?;
+                }
+            }
+            self.datatypes
+                .push((name.clone(), Datatype::Variant(cases.clone())));
+        }
+        Ok(name)
+    }
+
+    /// A field of a variant-typed term: its tag, or a field every case has, read from whichever case it is.
+    fn variant_field(
+        &mut self,
+        term: Term,
+        tag: &str,
+        cases: &BTreeMap<String, Type>,
+        field: &str,
+    ) -> Read<(Term, Type)> {
+        let name = self.variant(tag, cases)?;
+        let field_ty = if field == tag {
+            Type::String
+        } else {
+            match record_view(&Type::Variant {
+                tag: tag.to_string(),
+                cases: cases.clone(),
+            }) {
+                Type::Record(view) => view.get(field).cloned().ok_or(NoReading::Any)?,
+                _ => return Err(NoReading::Any),
+            }
+        };
+        let mut branches = Vec::new();
+        for (case, case_ty) in cases {
+            let value = if field == tag {
+                Term::string(case)?
+            } else {
+                match case_ty {
+                    Type::Record(fields) => {
+                        let read =
+                            Term::app(case_selector(&name, case, field)?, vec![term.clone()]);
+                        self.coerce(read, &fields[field], &field_ty)?
+                    }
+                    Type::Variant {
+                        tag: inner_tag,
+                        cases: inner,
+                    } => {
+                        let nested = Term::app(case_selector(&name, case, "")?, vec![term.clone()]);
+                        let (read, ty) = self.variant_field(nested, inner_tag, inner, field)?;
+                        self.coerce(read, &ty, &field_ty)?
+                    }
+                    _ => return Err(NoReading::Any),
+                }
+            };
+            branches.push((tester(&name, case, term.clone())?, value));
+        }
+        let (_, last) = branches.pop().ok_or(NoReading::Any)?;
+        let chained = branches
+            .into_iter()
+            .rev()
+            .fold(last, |rest, (test, value)| {
+                Term::call("ite", vec![test, value, rest])
+            });
+        Ok((chained, field_ty))
     }
 
     fn constructor(&mut self, fields: &BTreeMap<String, Type>) -> Read<Term> {
@@ -315,6 +436,7 @@ impl Encoder {
         match ty {
             Type::List(t) => Ok(Term::call("Seq", vec![self.sort(t)?])),
             Type::Record(fields) => self.constructor(fields),
+            Type::Variant { tag, cases } => Term::symbol("", &self.variant(tag, cases)?),
             _ => Err(NoReading::Any),
         }
     }
@@ -349,6 +471,21 @@ impl Encoder {
                     args.push(self.value(map.get(field).ok_or_else(mismatch)?, t)?);
                 }
                 Ok(Term::app(constructor, args))
+            }
+            (Type::Variant { tag, cases }, Value::Object(map)) => {
+                let case = map.get(tag).and_then(Value::as_str).ok_or_else(mismatch)?;
+                let case_ty = cases.get(case).ok_or_else(mismatch)?;
+                let name = self.variant(tag, cases)?;
+                let mut args = Vec::new();
+                for (field, t) in case_fields(case_ty)? {
+                    let part = if field.is_empty() {
+                        v
+                    } else {
+                        map.get(&field).ok_or_else(mismatch)?
+                    };
+                    args.push(self.value(part, &t)?);
+                }
+                Ok(Term::app(case_constructor(&name, case)?, args))
             }
             _ => Err(mismatch()),
         }
@@ -519,8 +656,99 @@ impl Encoder {
                         })?;
                         Ok((self.select(&fields, field, term).map_err(here)?, field_ty))
                     }
+                    Type::Variant { tag, cases } => {
+                        self.variant_field(term, &tag, &cases, field).map_err(here)
+                    }
                     _ => Err(here(NoReading::Any)),
                 }
+            }
+            Expr::Match {
+                of,
+                on,
+                cases,
+                otherwise,
+            } => {
+                let (matched, ty) = self.expr(of, &child(at, "of"))?;
+                let Type::Variant {
+                    tag,
+                    cases: declared,
+                } = &ty
+                else {
+                    return Err(here(NoReading::Any));
+                };
+                if tag != on {
+                    return Err(here(NoReading::Any));
+                }
+                let name = self.variant(tag, declared).map_err(&here)?;
+                // The matched value is evaluated once, and every case reads it.
+                let x = self.fresh();
+                let from = self.defined.len();
+                let mut branches = Vec::new();
+                for (case, case_ty) in declared {
+                    let test = tester(&name, case, x.clone()).map_err(&here)?;
+                    self.guards.push(test.clone());
+                    let encoded = match cases.get(case) {
+                        Some(c) => {
+                            let body_at = child(at, &format!("cases/{case}/body"));
+                            let bound = match case_ty {
+                                Type::Record(fields) => {
+                                    let mut parts = Vec::new();
+                                    for f in fields.keys() {
+                                        let sel = case_selector(&name, case, f).map_err(&here)?;
+                                        parts.push(Term::app(sel, vec![x.clone()]));
+                                    }
+                                    Term::app(self.constructor(fields).map_err(&here)?, parts)
+                                }
+                                _ => Term::app(
+                                    case_selector(&name, case, "").map_err(&here)?,
+                                    vec![x.clone()],
+                                ),
+                            };
+                            let var = local(&c.bind).map_err(&here)?;
+                            self.scope.push((c.bind.clone(), case_ty.clone()));
+                            let inner = self.defined.len();
+                            let body = self.expr(&c.body, &body_at);
+                            self.scope.pop();
+                            body.map(|(t, bt)| {
+                                for condition in &mut self.defined[inner..] {
+                                    *condition =
+                                        Term::bind(var.clone(), bound.clone(), condition.clone());
+                                }
+                                (Term::bind(var, bound, t), bt, body_at)
+                            })
+                        }
+                        None => match otherwise {
+                            Some(o) => {
+                                let body_at = child(at, "otherwise");
+                                self.expr(o, &body_at).map(|(t, bt)| (t, bt, body_at))
+                            }
+                            None => Err(here(NoReading::Any)),
+                        },
+                    };
+                    self.guards.pop();
+                    let (t, bt, body_at) = encoded?;
+                    branches.push((test, t, bt, body_at));
+                }
+                let mut joined = branches
+                    .first()
+                    .map(|b| b.2.clone())
+                    .ok_or_else(|| here(NoReading::Any))?;
+                for b in &branches[1..] {
+                    joined = join(&joined, &b.2).ok_or_else(|| here(NoReading::Any))?;
+                }
+                let mut chained: Option<Term> = None;
+                for (test, t, bt, body_at) in branches.into_iter().rev() {
+                    let t = self.coerce(t, &bt, &joined).map_err(at_body(&body_at))?;
+                    chained = Some(match chained {
+                        None => t,
+                        Some(rest) => Term::call("ite", vec![test, t, rest]),
+                    });
+                }
+                for condition in &mut self.defined[from..] {
+                    *condition = Term::bind(x.clone(), matched.clone(), condition.clone());
+                }
+                let body = chained.ok_or_else(|| here(NoReading::Any))?;
+                Ok((Term::bind(x, matched, body), joined))
             }
             Expr::Fold { .. } => Err(here(NoReading::Fold)),
             Expr::Label { .. } => Err(here(NoReading::Label)),
@@ -712,24 +940,57 @@ impl Encoder {
     pub(super) fn records(&mut self) -> Result<Section, ExportError> {
         let at = at_place(Place::Body { at: String::new() });
         let mut records = Vec::new();
-        for (name, fields) in self.records.clone() {
-            let mut selectors = Vec::new();
-            for (field, ty) in &fields {
-                selectors.push((
-                    selector(&name, field).map_err(&at)?,
-                    self.sort(ty).map_err(&at)?,
-                ));
-            }
-            records.push(Entry {
-                comments: vec![describe(&Type::Record(fields))],
-                command: Some(Command::DeclareDatatype {
-                    name: Term::symbol("", &name).map_err(&at)?,
-                    selectors,
-                }),
-            });
+        for (name, datatype) in self.datatypes.clone() {
+            let entry = match datatype {
+                Datatype::Record(fields) => {
+                    let mut selectors = Vec::new();
+                    for (field, ty) in &fields {
+                        selectors.push((
+                            selector(&name, field).map_err(&at)?,
+                            self.sort(ty).map_err(&at)?,
+                        ));
+                    }
+                    Entry {
+                        comments: vec![describe(&Type::Record(fields))],
+                        command: Some(Command::DeclareDatatype {
+                            name: Term::symbol("", &name).map_err(&at)?,
+                            selectors,
+                        }),
+                    }
+                }
+                Datatype::Variant(cases) => {
+                    let mut constructors = Vec::new();
+                    for (case, case_ty) in &cases {
+                        let mut selectors = Vec::new();
+                        for (field, ty) in case_fields(case_ty).map_err(&at)? {
+                            selectors.push((
+                                case_selector(&name, case, &field).map_err(&at)?,
+                                self.sort(&ty).map_err(&at)?,
+                            ));
+                        }
+                        constructors.push((case_constructor(&name, case).map_err(&at)?, selectors));
+                    }
+                    let cases: Vec<&String> = cases.keys().collect();
+                    Entry {
+                        comments: vec![format!(
+                            "A variant with the cases {}.",
+                            cases
+                                .iter()
+                                .map(|c| c.as_str())
+                                .collect::<Vec<_>>()
+                                .join(", ")
+                        )],
+                        command: Some(Command::DeclareVariant {
+                            name: Term::symbol("", &name).map_err(&at)?,
+                            constructors,
+                        }),
+                    }
+                }
+            };
+            records.push(entry);
         }
         Ok(Section {
-            heading: "Records.",
+            heading: "Records and variants.",
             entries: records,
         })
     }

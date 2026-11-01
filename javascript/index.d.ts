@@ -10,7 +10,9 @@ export type Type =
   | "Bool"
   | "Any"
   | { readonly List: Type }
-  | { readonly Record: Readonly<Record<string, Type>> };
+  | { readonly Record: Readonly<Record<string, Type>> }
+  /** A record whose `tag` field names its case, and which has that case's type. */
+  | { readonly Variant: { readonly tag: string; readonly cases: Readonly<Record<string, Type>> } };
 
 export interface Param {
   readonly name: string;
@@ -29,6 +31,14 @@ export type Expr =
   | { readonly e: "get"; readonly of: Expr; readonly field: string }
   /** The untrusted sources a value may depend on, as a sorted list. Empty: trusted. */
   | { readonly e: "label"; readonly of: Expr }
+  /** The case of a variant, read off its `on` field (`kind` by default), with `bind` holding it at that case's type. */
+  | {
+      readonly e: "match";
+      readonly of: Expr;
+      readonly on?: string;
+      readonly cases: Readonly<Record<string, { readonly bind: string; readonly body: Expr }>>;
+      readonly otherwise?: Expr;
+    }
   | {
       readonly e: "fold";
       readonly over: Expr;
@@ -79,7 +89,10 @@ export type Problem =
   | { readonly kind: "mismatch"; readonly at: Path; readonly expected: Type; readonly got: Type }
   | { readonly kind: "notARecord"; readonly at: Path; readonly got: Type }
   | { readonly kind: "noSuchField"; readonly at: Path; readonly field: string; readonly of: Type }
-  | { readonly kind: "notAList"; readonly at: Path; readonly got: Type };
+  | { readonly kind: "notAList"; readonly at: Path; readonly got: Type }
+  | { readonly kind: "notAVariant"; readonly at: Path; readonly on: string; readonly got: Type }
+  | { readonly kind: "noSuchCase"; readonly at: Path; readonly case: string }
+  | { readonly kind: "notExhaustive"; readonly at: Path; readonly missing: readonly string[] };
 
 /** Why an expression failed to evaluate (`crates/kernel/src/labeled.rs`). */
 export type EvalError =
@@ -93,7 +106,8 @@ export type EvalError =
   | { readonly kind: "unknownOperator"; readonly at: Path; readonly op: string }
   | { readonly kind: "notABool"; readonly at: Path; readonly got: Value }
   | { readonly kind: "noSuchField"; readonly at: Path; readonly field: string; readonly of: Value }
-  | { readonly kind: "notAList"; readonly at: Path; readonly got: Value };
+  | { readonly kind: "notAList"; readonly at: Path; readonly got: Value }
+  | { readonly kind: "noCase"; readonly at: Path; readonly got: Value };
 
 /** Untrusted sources. Empty: trusted. */
 export type Label = readonly string[];
@@ -435,7 +449,9 @@ export interface Kernel {
   ):
     | { readonly kind: "value"; readonly value: Value }
     | { readonly kind: "failed"; readonly error: EvalError };
-  checkHarness(harness: Harness): readonly HarnessProblem[];
+  /** Against an interface, the harness's input is typed by `inputType`; without one, it is `Any`. */
+  checkHarness(harness: Harness, iface?: Interface): readonly HarnessProblem[];
+  inputType(harness: Harness, iface: Interface): Type;
   checkInterface(iface: Interface): readonly HarnessProblem[];
   install(
     capabilities: readonly Installation[],

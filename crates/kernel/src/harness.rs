@@ -358,9 +358,70 @@ pub fn step_type(state: &Type) -> Type {
     ]))
 }
 
-/// Problems with a harness. The input is typed `Any`: which input arrives, and its shape, is checked by the
-/// interpreter when it arrives, against the interface.
-pub fn check_harness(harness: &Harness) -> Vec<HarnessProblem> {
+/// The type of what `δ` receives against this interface: a variant over input kinds. A result's case is itself a
+/// variant over the operation it answers (`op`), so matching on it gives the operation's output type; a spawned
+/// child's result is `Any`, since the child's harness is chosen at run time. A message's case is a variant over
+/// channels, each with its type.
+pub fn input_type(harness: &Harness, interface: &Interface) -> Type {
+    let record = |fields: Vec<(&str, Type)>| {
+        Type::Record(
+            fields
+                .into_iter()
+                .map(|(n, t)| (n.to_string(), t))
+                .collect(),
+        )
+    };
+    let variant = |tag: &str, cases: BTreeMap<String, Type>| Type::Variant {
+        tag: tag.to_string(),
+        cases,
+    };
+    let mut results: BTreeMap<String, Type> = interface
+        .operations
+        .iter()
+        .map(|(name, o)| {
+            let case = record(vec![("call", Type::Int), ("value", o.output.clone())]);
+            (name.clone(), case)
+        })
+        .collect();
+    results.insert(
+        "spawn".to_string(),
+        record(vec![("call", Type::Int), ("value", Type::Any)]),
+    );
+    let ends: BTreeMap<String, Type> = interface
+        .operations
+        .iter()
+        .filter(|(_, o)| o.mode == Mode::Stream)
+        .map(|(name, _)| (name.clone(), record(vec![("call", Type::Int)])))
+        .collect();
+    let messages: BTreeMap<String, Type> = interface
+        .channels
+        .iter()
+        .map(|(name, c)| (name.clone(), record(vec![("value", c.ty.clone())])))
+        .collect();
+    let called = || record(vec![("call", Type::Int), ("op", Type::String)]);
+    let mut failed = called();
+    if let Type::Record(fields) = &mut failed {
+        fields.insert("error".to_string(), Type::Any);
+    }
+    variant(
+        "kind",
+        BTreeMap::from([
+            (
+                "start".to_string(),
+                record(vec![("value", harness.arg.clone())]),
+            ),
+            ("ret".to_string(), variant("op", results)),
+            ("end".to_string(), variant("op", ends)),
+            ("failed".to_string(), failed),
+            ("refused".to_string(), called()),
+            ("msg".to_string(), variant("channel", messages)),
+        ]),
+    )
+}
+
+/// Problems with a harness. Against an interface, its input has the type `input_type` gives; without one, it is
+/// typed `Any` and checked only when it arrives.
+pub fn check_harness(harness: &Harness, interface: Option<&Interface>) -> Vec<HarnessProblem> {
     let mut problems = Vec::new();
     if !inhabits(&harness.init, &harness.state) {
         problems.push(HarnessProblem::Init {
@@ -368,9 +429,10 @@ pub fn check_harness(harness: &Harness) -> Vec<HarnessProblem> {
             got: harness.init.clone(),
         });
     }
+    let input = interface.map_or(Type::Any, |i| input_type(harness, i));
     let scope = vec![
         ("state".to_string(), harness.state.clone()),
-        ("input".to_string(), Type::Any),
+        ("input".to_string(), input),
     ];
     let (ty, found) = infer(&harness.step, scope);
     problems.extend(found.into_iter().map(|problem| HarnessProblem::Expr {

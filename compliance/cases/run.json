@@ -2423,6 +2423,7 @@
               "input": {
                 "call": 0,
                 "kind": "ret",
+                "op": "net.fetch",
                 "value": "page"
               },
               "kind": "in",

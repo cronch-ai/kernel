@@ -152,7 +152,7 @@ pub enum EvalError {
     Operator {
         at: Path,
         op: String,
-        error: OpEvalError,
+        error: Box<OpEvalError>,
     },
     UnknownVariable {
         at: Path,
@@ -172,6 +172,11 @@ pub enum EvalError {
         of: Value,
     },
     NotAList {
+        at: Path,
+        got: Value,
+    },
+    /// A `match` on a value whose tag no case and no `otherwise` covers.
+    NoCase {
         at: Path,
         got: Value,
     },
@@ -241,7 +246,7 @@ impl Evaluator {
                     .map_err(|error| EvalError::Operator {
                         at: at.to_string(),
                         op: op.clone(),
-                        error,
+                        error: Box::new(error),
                     })
             }
             Expr::Label { of } => {
@@ -302,6 +307,42 @@ impl Evaluator {
                     field: field.clone(),
                     of: v.value(),
                 })
+            }
+            Expr::Match {
+                of,
+                on,
+                cases,
+                otherwise,
+            } => {
+                let v = self.eval(of, &child(at, "of"), pc)?;
+                // Which case runs depends on the tag, and on the shape that holds it.
+                let tag = v.field(on);
+                let mut inner = pc.clone();
+                inner.extend(v.top().iter().cloned());
+                if let Some(t) = &tag {
+                    inner.extend(t.label());
+                }
+                let name = tag
+                    .as_ref()
+                    .and_then(|t| t.value().as_str().map(str::to_string));
+                let taken = match name.as_ref().and_then(|n| cases.get(n).map(|c| (n, c))) {
+                    Some((n, case)) => {
+                        let body_at = child(at, &format!("cases/{n}/body"));
+                        self.bind(vec![(case.bind.clone(), v)], |e| {
+                            e.eval(&case.body, &body_at, &inner)
+                        })?
+                    }
+                    None => match otherwise {
+                        Some(o) => self.eval(o, &child(at, "otherwise"), &inner)?,
+                        None => {
+                            return Err(EvalError::NoCase {
+                                at: at.to_string(),
+                                got: v.value(),
+                            });
+                        }
+                    },
+                };
+                Ok(taken.raised(&inner))
             }
             Expr::Fold {
                 over,
@@ -415,6 +456,25 @@ mod tests {
         );
         assert_eq!(count.value(), json!(1));
         assert_eq!(count.label(), web());
+    }
+
+    #[test]
+    fn a_match_carries_its_tags_label() {
+        // Only the tag is untrusted: which case runs depends on it, so the constant chosen carries its label.
+        let v = LValue::Record {
+            label: Label::new(),
+            fields: BTreeMap::from([
+                ("kind".to_string(), LValue::new(&json!("a"), &web())),
+                ("n".to_string(), LValue::trusted(&json!(1))),
+            ]),
+        };
+        let m = json!({ "e": "match", "of": { "e": "var", "name": "v" }, "cases": {
+            "a": { "bind": "x", "body": { "e": "lit", "v": "chose a" } },
+            "b": { "bind": "x", "body": { "e": "lit", "v": "chose b" } },
+        }});
+        let out = run(m, vec![("v", v)]);
+        assert_eq!(out.value(), json!("chose a"));
+        assert_eq!(out.label(), web());
     }
 
     #[test]

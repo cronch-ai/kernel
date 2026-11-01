@@ -4,7 +4,7 @@
 //! expanded within a budget of nodes, since a few lines of sharing can describe a value exponentially larger than its
 //! text. A value read here is still only a proposal: the kernel re-checks the counterexample it is part of.
 
-use super::encode::record_names;
+use super::encode::{case_fields, record_names, variant_names};
 use crate::ir::Type;
 use serde::Serialize;
 use serde_json::{Number, Value};
@@ -398,6 +398,36 @@ impl<'s> Reader<'s> {
                 for ((field, t), arg) in fields.iter().zip(args) {
                     out.insert(field.clone(), self.value(arg, t, scope, depth + 1)?);
                 }
+                Ok(Value::Object(out))
+            }
+            Type::Variant { tag, cases } => {
+                let name = variant_names(tag, cases);
+                let (head, args): (&Sexp, &[Sexp]) = match s {
+                    Sexp::List(items) if !items.is_empty() => (&items[0], &items[1..]),
+                    atom => (atom, &[]),
+                };
+                let Sexp::Atom(head) = head else {
+                    return Err(wrong());
+                };
+                let case = head.strip_prefix(&format!("{name}#")).ok_or_else(wrong)?;
+                let case_ty = cases.get(case).ok_or_else(wrong)?;
+                let fields = case_fields(case_ty).map_err(|_| wrong())?;
+                if args.len() != fields.len() {
+                    return Err(wrong());
+                }
+                let mut out = serde_json::Map::new();
+                for ((field, t), arg) in fields.iter().zip(args) {
+                    let v = self.value(arg, t, scope, depth + 1)?;
+                    if field.is_empty() {
+                        let Value::Object(inner) = v else {
+                            return Err(wrong());
+                        };
+                        out.extend(inner);
+                    } else {
+                        out.insert(field.clone(), v);
+                    }
+                }
+                out.insert(tag.clone(), Value::String(case.to_string()));
                 Ok(Value::Object(out))
             }
         }

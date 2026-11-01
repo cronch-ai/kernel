@@ -5573,6 +5573,7 @@
               "input": {
                 "call": 0,
                 "kind": "ret",
+                "op": "shell.approve",
                 "value": "always"
               },
               "kind": "in",
@@ -5597,6 +5598,7 @@
               "input": {
                 "call": 1,
                 "kind": "ret",
+                "op": "spawn",
                 "value": "always"
               },
               "kind": "in",

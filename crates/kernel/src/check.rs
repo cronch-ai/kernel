@@ -7,7 +7,7 @@
 
 use crate::ir::{Expr, Type};
 use crate::ops::{self, Op, OpTypeError};
-use crate::types::{conforms, join, of_value};
+use crate::types::{conforms, join, of_value, record_view};
 use serde::Serialize;
 use std::collections::BTreeMap;
 
@@ -52,6 +52,21 @@ pub enum Problem {
     NotAList {
         at: Path,
         got: Type,
+    },
+    /// A `match` on something that isn't a variant tagged by its `on` field.
+    NotAVariant {
+        at: Path,
+        on: String,
+        got: Type,
+    },
+    NoSuchCase {
+        at: Path,
+        case: String,
+    },
+    /// A `match` that covers neither every case nor has an `otherwise`.
+    NotExhaustive {
+        at: Path,
+        missing: Vec<String>,
     },
 }
 
@@ -183,6 +198,11 @@ impl Checker {
             }
             Expr::Get { of, field } => match self.infer(of, &child(at, "of"))? {
                 Type::Any => Some(Type::Any),
+                // A field every case has is typed; one only some cases have is read gradually, and checked when it is.
+                variant @ Type::Variant { .. } => match record_view(&variant) {
+                    Type::Record(fields) => Some(fields.get(field).cloned().unwrap_or(Type::Any)),
+                    _ => Some(Type::Any),
+                },
                 Type::Record(fields) => match fields.get(field) {
                     Some(t) => Some(t.clone()),
                     None => self.problem(Problem::NoSuchField {
@@ -199,6 +219,87 @@ impl Checker {
             Expr::Label { of } => {
                 self.infer(of, &child(at, "of"))?;
                 Some(Type::List(Box::new(Type::String)))
+            }
+            Expr::Match {
+                of,
+                on,
+                cases,
+                otherwise,
+            } => {
+                let of_at = child(at, "of");
+                let of_ty = self.infer(of, &of_at);
+                // Each case's binding type: the variant's case, or `Any` if what is matched is unchecked.
+                let declared: Option<BTreeMap<String, Type>> = match &of_ty {
+                    None | Some(Type::Any) => None,
+                    Some(Type::Variant {
+                        tag,
+                        cases: declared,
+                    }) if tag == on => Some(declared.clone()),
+                    Some(got) => {
+                        return self.problem(Problem::NotAVariant {
+                            at: of_at,
+                            on: on.clone(),
+                            got: got.clone(),
+                        });
+                    }
+                };
+                if let Some(declared) = &declared {
+                    for name in cases.keys().filter(|c| !declared.contains_key(*c)) {
+                        self.problem(Problem::NoSuchCase {
+                            at: child(at, &format!("cases/{name}")),
+                            case: name.clone(),
+                        });
+                    }
+                    let missing: Vec<String> = declared
+                        .keys()
+                        .filter(|c| !cases.contains_key(*c))
+                        .cloned()
+                        .collect();
+                    if otherwise.is_none() && !missing.is_empty() {
+                        self.problem(Problem::NotExhaustive {
+                            at: at.to_string(),
+                            missing,
+                        });
+                    }
+                } else if otherwise.is_none() && of_ty.is_some() {
+                    // Matching an unchecked value: only a default covers what it might be.
+                    self.problem(Problem::NotExhaustive {
+                        at: at.to_string(),
+                        missing: vec![],
+                    });
+                }
+                let mut result: Option<Option<Type>> = None;
+                let mut merge = |this: &mut Self, t: Option<Type>, body_at: String| {
+                    result = Some(match (result.take(), t) {
+                        (None, t) => t,
+                        (Some(Some(acc)), Some(t)) => match join(&acc, &t) {
+                            Some(j) => Some(j),
+                            None => this.problem(Problem::Mismatch {
+                                at: body_at,
+                                expected: acc,
+                                got: t,
+                            }),
+                        },
+                        _ => None,
+                    });
+                };
+                for (name, case) in cases {
+                    let bound = declared
+                        .as_ref()
+                        .and_then(|d| d.get(name).cloned())
+                        .unwrap_or(Type::Any);
+                    self.scope.push((case.bind.clone(), bound));
+                    let body_at = child(at, &format!("cases/{name}/body"));
+                    let t = self.infer(&case.body, &body_at);
+                    self.scope.pop();
+                    merge(self, t, body_at);
+                }
+                if let Some(o) = otherwise {
+                    let body_at = child(at, "otherwise");
+                    let t = self.infer(o, &body_at);
+                    merge(self, t, body_at);
+                }
+                result.flatten()
             }
             Expr::Fold {
                 over,

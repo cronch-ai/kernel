@@ -42,7 +42,7 @@
         "ok": true,
         "result": {
           "kind": "exported",
-          "text": "; Exported from Cronch. Each definition's identity is the content key of its deterministic CBOR, not this text.\n(set-logic ALL)\n\n; Records.\n; {path: String}\n(declare-datatype |record:a46c4da8| ((|record:a46c4da8| (|record:a46c4da8.path| String))))\n\n; Definitions.\n(define-fun |def:pre| ((|v:args| |record:a46c4da8|)) Bool (str.prefixof \"/workspace/\" (|record:a46c4da8.path| |v:args|)))\n"
+          "text": "; Exported from Cronch. Each definition's identity is the content key of its deterministic CBOR, not this text.\n(set-logic ALL)\n\n; Records and variants.\n; {path: String}\n(declare-datatype |record:a46c4da8| ((|record:a46c4da8| (|record:a46c4da8.path| String))))\n\n; Definitions.\n(define-fun |def:pre| ((|v:args| |record:a46c4da8|)) Bool (str.prefixof \"/workspace/\" (|record:a46c4da8.path| |v:args|)))\n"
         }
       }
     },

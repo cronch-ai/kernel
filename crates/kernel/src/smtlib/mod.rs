@@ -95,7 +95,10 @@ pub enum ExportError {
     /// It doesn't type-check: only well-typed definitions are exported.
     IllFormed { problems: Vec<Problem> },
     /// A part has no faithful reading.
-    NoReading { place: Place, reason: NoReading },
+    NoReading {
+        place: Place,
+        reason: Box<NoReading>,
+    },
 }
 
 /// The definition an export stopped at, and why.
@@ -205,10 +208,10 @@ mod tests {
                 .error,
             ExportError::NoReading {
                 place: Place::Body { at: String::new() },
-                reason: NoReading::Equality {
+                reason: Box::new(NoReading::Equality {
                     left: a.clone(),
                     right: a
-                },
+                }),
             }
         );
         let fold = json!({ "e": "fold", "over": { "e": "lit", "v": [1] }, "init": { "e": "lit", "v": 0 }, "acc": "a", "item": "x", "body": { "e": "var", "name": "a" } });
@@ -218,7 +221,7 @@ mod tests {
                 .error,
             ExportError::NoReading {
                 place: Place::Body { at: String::new() },
-                reason: NoReading::Fold
+                reason: Box::new(NoReading::Fold)
             }
         );
     }

@@ -65,7 +65,7 @@ fn a_child_calls_through_its_parents_interface_and_answers_it() {
     assert_eq!(events[2]["origin"], json!([]));
     assert_eq!(
         events[2]["input"],
-        json!({ "kind": "ret", "call": 0, "value": 1 })
+        json!({ "kind": "ret", "call": 0, "op": "spawn", "value": 1 })
     );
     assert_eq!(system["root"]["children"], Value::Null);
 }

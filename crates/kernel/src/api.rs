@@ -4,7 +4,8 @@ use crate::cbor::{self, DecodeError};
 use crate::check::infer;
 use crate::evidence::{Evidence, Method, Subject, prove, verify};
 use crate::harness::{
-    Harness, Installation, Interface, Narrowing, check_harness, check_interface, install, narrow,
+    Harness, Installation, Interface, Narrowing, check_harness, check_interface, input_type,
+    install, narrow,
 };
 use crate::ir::{Expr, Type};
 use crate::key::{Kind, key};
@@ -33,8 +34,18 @@ pub enum Request {
         #[serde(default)]
         vars: BTreeMap<String, Value>,
     },
-    /// Problems with a harness.
-    CheckHarness { harness: Harness },
+    /// Problems with a harness, against an interface if one is given.
+    CheckHarness {
+        harness: Harness,
+        #[serde(default)]
+        interface: Option<Interface>,
+    },
+    /// The type of what a harness's step receives against an interface.
+    InputType {
+        harness: Harness,
+        #[serde(default)]
+        interface: Interface,
+    },
     /// Problems with an interface's contracts.
     CheckInterface { interface: Interface },
     /// The interface of several capabilities, each under its prefix.
@@ -118,7 +129,12 @@ fn respond(request: Request) -> Value {
                 Err(error) => json!({ "kind": "failed", "error": error }),
             }
         }
-        Request::CheckHarness { harness } => json!({ "problems": check_harness(&harness) }),
+        Request::CheckHarness { harness, interface } => {
+            json!({ "problems": check_harness(&harness, interface.as_ref()) })
+        }
+        Request::InputType { harness, interface } => {
+            json!({ "type": input_type(&harness, &interface) })
+        }
         Request::CheckInterface { interface } => {
             json!({ "problems": check_interface(&interface) })
         }

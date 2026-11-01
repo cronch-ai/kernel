@@ -188,3 +188,21 @@ pub fn all(exprs: Vec<Value>) -> Value {
         .reduce(|a, b| op("and", vec![a, b]))
         .unwrap_or(lit(json!(true)))
 }
+
+/// `match of on tag { case as bind: body, ... } otherwise`.
+pub fn match_(
+    of: Value,
+    on: &str,
+    cases: Vec<(&str, &str, Value)>,
+    otherwise: Option<Value>,
+) -> Value {
+    let cases: serde_json::Map<String, Value> = cases
+        .into_iter()
+        .map(|(case, bind, body)| (case.to_string(), json!({ "bind": bind, "body": body })))
+        .collect();
+    let mut m = json!({ "e": "match", "of": of, "on": on, "cases": cases });
+    if let Some(o) = otherwise {
+        m["otherwise"] = o;
+    }
+    m
+}

@@ -46,7 +46,9 @@ export async function instantiate(source) {
   return {
     infer: (expr, vars) => call({ op: "infer", expr, vars: vars ?? {} }),
     evaluate: (expr, vars) => call({ op: "evaluate", expr, vars: vars ?? {} }),
-    checkHarness: (harness) => call({ op: "checkHarness", harness }).problems,
+    checkHarness: (harness, iface) =>
+      call({ op: "checkHarness", harness, interface: iface ?? null }).problems,
+    inputType: (harness, iface) => call({ op: "inputType", harness, interface: iface }).type,
     checkInterface: (iface) => call({ op: "checkInterface", interface: iface }).problems,
     install: (capabilities) => call({ op: "install", capabilities }),
     narrow: (iface, narrowings) => call({ op: "narrow", interface: iface, narrowings }),

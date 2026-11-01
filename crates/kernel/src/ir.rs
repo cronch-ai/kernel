@@ -19,6 +19,12 @@ pub enum Type {
     Any,
     List(Box<Type>),
     Record(BTreeMap<String, Type>),
+    /// A tagged union: a record whose `tag` field names its case, and which has that case's type. A case is a record
+    /// type, or another variant with a different tag.
+    Variant {
+        tag: String,
+        cases: BTreeMap<String, Type>,
+    },
 }
 
 /// A named, typed parameter.
@@ -70,6 +76,16 @@ pub enum Expr {
     Label {
         of: Box<Expr>,
     },
+    /// The case of `of`, a variant, read off its `on` field (`kind` by default): the body of that case, with `bind`
+    /// holding the value at the case's type. Cases must cover the variant unless there is an `otherwise`.
+    Match {
+        of: Box<Expr>,
+        #[serde(default = "default_tag", skip_serializing_if = "is_default_tag")]
+        on: String,
+        cases: BTreeMap<String, Case>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        otherwise: Option<Box<Expr>>,
+    },
     /// `acc` starts as `init` and becomes `body` once per item of `over`, in order, with `item` bound to that item.
     /// The only iteration there is: it runs once per item of a list it is given, so evaluation always terminates.
     Fold {
@@ -79,4 +95,19 @@ pub enum Expr {
         item: String,
         body: Box<Expr>,
     },
+}
+
+/// One case of a `match`.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct Case {
+    pub bind: String,
+    pub body: Expr,
+}
+
+pub fn default_tag() -> String {
+    "kind".to_string()
+}
+
+fn is_default_tag(tag: &str) -> bool {
+    tag == "kind"
 }
