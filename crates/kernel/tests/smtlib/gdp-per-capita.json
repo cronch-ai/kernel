@@ -1,0 +1,75 @@
+{
+  "description": "Nested Asks stay uninterpreted; facts, assumptions and opaque inputs; prose and Checker validators are comments.",
+  "ask": {
+    "spec": {
+      "name": "GDPPerCapita",
+      "params": [{ "name": "country", "type": "String" }],
+      "output": "Float",
+      "description": "GDP per capita for the country, in current US dollars.",
+      "validators": [
+        { "kind": "min", "value": 0 },
+        { "kind": "prose", "text": "compatible GDP/population basis" },
+        { "kind": "checker", "actor": "auditor", "note": "same year for both figures" }
+      ]
+    },
+    "args": { "country": "Kenya" }
+  },
+  "world": { "facts": { "year": { "value": 2023, "type": "Int", "source": "the requester" } } },
+  "answer": {
+    "procedure": {
+      "e": "let",
+      "name": "adjustment",
+      "be": {
+        "e": "assume",
+        "v": 1.0,
+        "type": "Float",
+        "note": "no revision since publication",
+        "source": "World Bank"
+      },
+      "in": {
+        "e": "op",
+        "op": "mul",
+        "args": [
+          { "e": "var", "name": "adjustment" },
+          {
+            "e": "op",
+            "op": "div",
+            "args": [
+              {
+                "e": "ask",
+                "spec": {
+                  "name": "GDP",
+                  "params": [
+                    { "name": "country", "type": "String" },
+                    { "name": "year", "type": "Int" }
+                  ],
+                  "output": "Float",
+                  "description": "Nominal GDP in current US dollars."
+                },
+                "args": {
+                  "country": { "e": "var", "name": "country" },
+                  "year": { "e": "fact", "name": "year" }
+                }
+              },
+              {
+                "e": "ask",
+                "spec": {
+                  "name": "Population",
+                  "params": [
+                    { "name": "country", "type": "String" },
+                    { "name": "year", "type": "Int" }
+                  ],
+                  "output": "Int"
+                },
+                "args": {
+                  "country": { "e": "var", "name": "country" },
+                  "year": { "e": "fact", "name": "year" }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

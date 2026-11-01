@@ -1,0 +1,292 @@
+{
+  "description": "Nested Asks stay uninterpreted: the claim fails for some answers to them, which the counterexample names.",
+  "claim": {
+    "name": "NonNegative",
+    "about": {
+      "name": "PerCapita",
+      "params": [
+        {
+          "name": "country",
+          "type": "String"
+        }
+      ],
+      "output": "Float"
+    },
+    "vars": [
+      {
+        "name": "country",
+        "type": "String"
+      }
+    ],
+    "holds": {
+      "e": "op",
+      "op": "ge",
+      "args": [
+        {
+          "e": "ask",
+          "spec": {
+            "name": "PerCapita",
+            "params": [
+              {
+                "name": "country",
+                "type": "String"
+              }
+            ],
+            "output": "Float"
+          },
+          "args": {
+            "country": {
+              "e": "var",
+              "name": "country"
+            }
+          }
+        },
+        {
+          "e": "lit",
+          "v": 0
+        }
+      ]
+    }
+  },
+  "answer": {
+    "procedure": {
+      "e": "op",
+      "op": "div",
+      "args": [
+        {
+          "e": "ask",
+          "spec": {
+            "name": "GDP",
+            "params": [
+              {
+                "name": "country",
+                "type": "String"
+              }
+            ],
+            "output": "Float"
+          },
+          "args": {
+            "country": {
+              "e": "var",
+              "name": "country"
+            }
+          }
+        },
+        {
+          "e": "ask",
+          "spec": {
+            "name": "Population",
+            "params": [
+              {
+                "name": "country",
+                "type": "String"
+              }
+            ],
+            "output": "Int"
+          },
+          "args": {
+            "country": {
+              "e": "var",
+              "name": "country"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "found": ["refutes", "undefined"],
+  "witnesses": [
+    {
+      "witness": {
+        "vars": {
+          "country": "Kenya"
+        }
+      },
+      "verdict": "incomplete"
+    },
+    {
+      "witness": {
+        "vars": {
+          "country": "Kenya"
+        },
+        "holes": [
+          {
+            "ask": {
+              "spec": {
+                "name": "GDP",
+                "params": [
+                  {
+                    "name": "country",
+                    "type": "String"
+                  }
+                ],
+                "output": "Float"
+              },
+              "args": {
+                "country": "Kenya"
+              }
+            },
+            "value": -1.0
+          },
+          {
+            "ask": {
+              "spec": {
+                "name": "Population",
+                "params": [
+                  {
+                    "name": "country",
+                    "type": "String"
+                  }
+                ],
+                "output": "Int"
+              },
+              "args": {
+                "country": "Kenya"
+              }
+            },
+            "value": 2
+          }
+        ]
+      },
+      "verdict": "refutes"
+    },
+    {
+      "witness": {
+        "vars": {
+          "country": "Kenya"
+        },
+        "holes": [
+          {
+            "ask": {
+              "spec": {
+                "name": "GDP",
+                "params": [
+                  {
+                    "name": "country",
+                    "type": "String"
+                  }
+                ],
+                "output": "Float"
+              },
+              "args": {
+                "country": "Kenya"
+              }
+            },
+            "value": 4.0
+          },
+          {
+            "ask": {
+              "spec": {
+                "name": "Population",
+                "params": [
+                  {
+                    "name": "country",
+                    "type": "String"
+                  }
+                ],
+                "output": "Int"
+              },
+              "args": {
+                "country": "Kenya"
+              }
+            },
+            "value": 2
+          }
+        ]
+      },
+      "verdict": "notRefuted"
+    },
+    {
+      "witness": {
+        "vars": {
+          "country": "Kenya"
+        },
+        "holes": [
+          {
+            "ask": {
+              "spec": {
+                "name": "GDP",
+                "params": [
+                  {
+                    "name": "country",
+                    "type": "String"
+                  }
+                ],
+                "output": "Float"
+              },
+              "args": {
+                "country": "Kenya"
+              }
+            },
+            "value": 4.0
+          },
+          {
+            "ask": {
+              "spec": {
+                "name": "Population",
+                "params": [
+                  {
+                    "name": "country",
+                    "type": "String"
+                  }
+                ],
+                "output": "Int"
+              },
+              "args": {
+                "country": "Kenya"
+              }
+            },
+            "value": 0
+          }
+        ]
+      },
+      "verdict": "undefined"
+    },
+    {
+      "witness": {
+        "vars": {
+          "country": "Kenya"
+        },
+        "holes": [
+          {
+            "ask": {
+              "spec": {
+                "name": "GDP",
+                "params": [
+                  {
+                    "name": "country",
+                    "type": "String"
+                  }
+                ],
+                "output": "Float"
+              },
+              "args": {
+                "country": "Kenya"
+              }
+            },
+            "value": "lots"
+          },
+          {
+            "ask": {
+              "spec": {
+                "name": "Population",
+                "params": [
+                  {
+                    "name": "country",
+                    "type": "String"
+                  }
+                ],
+                "output": "Int"
+              },
+              "args": {
+                "country": "Kenya"
+              }
+            },
+            "value": 2
+          }
+        ]
+      },
+      "verdict": "invalid"
+    }
+  ]
+}
