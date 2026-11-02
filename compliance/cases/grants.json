@@ -91,6 +91,20 @@
               }
             }
           },
+          "grant": {
+            "Record": {
+              "allow": {
+                "List": {
+                  "List": "String"
+                }
+              },
+              "once": {
+                "List": {
+                  "List": "String"
+                }
+              }
+            }
+          },
           "operations": {
             "fs.write": {
               "effect": true,
@@ -505,6 +519,20 @@
                     "type": {
                       "Record": {
                         "kind": "String"
+                      }
+                    }
+                  }
+                },
+                "grant": {
+                  "Record": {
+                    "allow": {
+                      "List": {
+                        "List": "String"
+                      }
+                    },
+                    "once": {
+                      "List": {
+                        "List": "String"
                       }
                     }
                   }
@@ -940,6 +968,20 @@
                   "type": {
                     "Record": {
                       "kind": "String"
+                    }
+                  }
+                }
+              },
+              "grant": {
+                "Record": {
+                  "allow": {
+                    "List": {
+                      "List": "String"
+                    }
+                  },
+                  "once": {
+                    "List": {
+                      "List": "String"
                     }
                   }
                 }
@@ -1382,6 +1424,20 @@
                     }
                   }
                 },
+                "grant": {
+                  "Record": {
+                    "allow": {
+                      "List": {
+                        "List": "String"
+                      }
+                    },
+                    "once": {
+                      "List": {
+                        "List": "String"
+                      }
+                    }
+                  }
+                },
                 "operations": {
                   "fs.write": {
                     "effect": true,
@@ -1820,6 +1876,20 @@
                   "type": {
                     "Record": {
                       "kind": "String"
+                    }
+                  }
+                }
+              },
+              "grant": {
+                "Record": {
+                  "allow": {
+                    "List": {
+                      "List": "String"
+                    }
+                  },
+                  "once": {
+                    "List": {
+                      "List": "String"
                     }
                   }
                 }
@@ -2296,6 +2366,20 @@
                     "type": {
                       "Record": {
                         "kind": "String"
+                      }
+                    }
+                  }
+                },
+                "grant": {
+                  "Record": {
+                    "allow": {
+                      "List": {
+                        "List": "String"
+                      }
+                    },
+                    "once": {
+                      "List": {
+                        "List": "String"
                       }
                     }
                   }
@@ -2961,6 +3045,20 @@
                   "type": {
                     "Record": {
                       "kind": "String"
+                    }
+                  }
+                }
+              },
+              "grant": {
+                "Record": {
+                  "allow": {
+                    "List": {
+                      "List": "String"
+                    }
+                  },
+                  "once": {
+                    "List": {
+                      "List": "String"
                     }
                   }
                 }
@@ -4281,6 +4379,20 @@
                           }
                         }
                       },
+                      "grant": {
+                        "Record": {
+                          "allow": {
+                            "List": {
+                              "List": "String"
+                            }
+                          },
+                          "once": {
+                            "List": {
+                              "List": "String"
+                            }
+                          }
+                        }
+                      },
                       "operations": {
                         "shell.approve": {
                           "input": {
@@ -4529,6 +4641,20 @@
                     "type": {
                       "Record": {
                         "kind": "String"
+                      }
+                    }
+                  }
+                },
+                "grant": {
+                  "Record": {
+                    "allow": {
+                      "List": {
+                        "List": "String"
+                      }
+                    },
+                    "once": {
+                      "List": {
+                        "List": "String"
                       }
                     }
                   }
@@ -5116,6 +5242,20 @@
                         }
                       }
                     },
+                    "grant": {
+                      "Record": {
+                        "allow": {
+                          "List": {
+                            "List": "String"
+                          }
+                        },
+                        "once": {
+                          "List": {
+                            "List": "String"
+                          }
+                        }
+                      }
+                    },
                     "operations": {
                       "shell.approve": {
                         "input": {
@@ -5364,6 +5504,20 @@
                   "type": {
                     "Record": {
                       "kind": "String"
+                    }
+                  }
+                }
+              },
+              "grant": {
+                "Record": {
+                  "allow": {
+                    "List": {
+                      "List": "String"
+                    }
+                  },
+                  "once": {
+                    "List": {
+                      "List": "String"
                     }
                   }
                 }
@@ -5833,6 +5987,20 @@
                     }
                   }
                 },
+                "grant": {
+                  "Record": {
+                    "allow": {
+                      "List": {
+                        "List": "String"
+                      }
+                    },
+                    "once": {
+                      "List": {
+                        "List": "String"
+                      }
+                    }
+                  }
+                },
                 "operations": {
                   "fs.write": {
                     "effect": true,
@@ -6271,6 +6439,20 @@
                   "type": {
                     "Record": {
                       "kind": "String"
+                    }
+                  }
+                }
+              },
+              "grant": {
+                "Record": {
+                  "allow": {
+                    "List": {
+                      "List": "String"
+                    }
+                  },
+                  "once": {
+                    "List": {
+                      "List": "String"
                     }
                   }
                 }
@@ -6738,6 +6920,20 @@
                     "type": {
                       "Record": {
                         "kind": "String"
+                      }
+                    }
+                  }
+                },
+                "grant": {
+                  "Record": {
+                    "allow": {
+                      "List": {
+                        "List": "String"
+                      }
+                    },
+                    "once": {
+                      "List": {
+                        "List": "String"
                       }
                     }
                   }

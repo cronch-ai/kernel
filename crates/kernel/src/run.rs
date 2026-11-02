@@ -287,8 +287,17 @@ pub enum Event {
 #[derive(Serialize, Clone, Debug, PartialEq)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum InitError {
-    Harness { problems: Vec<HarnessProblem> },
-    Interface { problems: Vec<HarnessProblem> },
+    Harness {
+        problems: Vec<HarnessProblem>,
+    },
+    Interface {
+        problems: Vec<HarnessProblem>,
+    },
+    /// The grant state the run would start with isn't of the type the interface's contracts declare.
+    Grant {
+        expected: Type,
+        got: Value,
+    },
 }
 
 /// The value of a contract's expression, or `None` if it fails to evaluate.
@@ -352,6 +361,12 @@ impl System {
         let problems = check_interface(&interface);
         if !problems.is_empty() {
             return Err(InitError::Interface { problems });
+        }
+        if !inhabits(&grant, &interface.grant) {
+            return Err(InitError::Grant {
+                expected: interface.grant.clone(),
+                got: grant,
+            });
         }
         let mut root = Run::new(harness, interface);
         root.grant = grant;

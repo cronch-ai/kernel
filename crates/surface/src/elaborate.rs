@@ -565,6 +565,10 @@ impl<'a> Cx<'a> {
                 self.report(self.file.name.span, What::Duplicate { name });
                 (Interface::default(), bindings)
             }
+            Err(kernel::harness::InstallError::GrantClash { field }) => {
+                self.report(self.file.name.span, What::GrantClash { field });
+                (Interface::default(), bindings)
+            }
         }
     }
 

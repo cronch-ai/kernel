@@ -137,12 +137,50 @@ pub struct Channel {
 
 /// Operations and channels. A capability is one, published and signed by whoever vouches for its contracts; an
 /// interface is the union of the capabilities installed for a run.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+///
+/// `grant` is the type of the grant state its contracts read and write: a capability declares the part it uses, as
+/// a record type, and installing capabilities together merges their parts. A run's grant state must have it. Absent:
+/// `Any`.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Interface {
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub operations: BTreeMap<String, Operation>,
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub channels: BTreeMap<String, Channel>,
+    #[serde(default = "any", skip_serializing_if = "is_any")]
+    pub grant: Type,
+}
+
+impl Default for Interface {
+    fn default() -> Interface {
+        Interface {
+            operations: BTreeMap::new(),
+            channels: BTreeMap::new(),
+            grant: Type::Any,
+        }
+    }
+}
+
+/// The grant state two capabilities use together: the fields each declares. `Err` names a field they declare at
+/// different types, which can't be both.
+fn merge_grants(a: &Type, b: &Type) -> Result<Type, String> {
+    match (a, b) {
+        (Type::Any, t) | (t, Type::Any) => Ok(t.clone()),
+        (Type::Record(x), Type::Record(y)) => {
+            let mut out = x.clone();
+            for (field, t) in y {
+                match out.get(field) {
+                    Some(existing) if existing != t => return Err(field.clone()),
+                    _ => {
+                        out.insert(field.clone(), t.clone());
+                    }
+                }
+            }
+            Ok(Type::Record(out))
+        }
+        (x, y) if x == y => Ok(x.clone()),
+        _ => Err(String::new()),
+    }
 }
 
 /// A capability to install, under a prefix that keeps its names apart from others' (`fs` + `read` is `fs.read`).
@@ -158,6 +196,8 @@ pub struct Installation {
 pub enum InstallError {
     /// Two capabilities give the same name.
     Clash { name: String },
+    /// Two capabilities declare the same field of the grant state at different types.
+    GrantClash { field: String },
 }
 
 /// The interface of these capabilities together, defined when their names are disjoint.
@@ -183,6 +223,8 @@ pub fn install(installations: &[Installation]) -> Result<Interface, InstallError
                 return Err(InstallError::Clash { name });
             }
         }
+        out.grant = merge_grants(&out.grant, &i.capability.grant)
+            .map_err(|field| InstallError::GrantClash { field })?;
     }
     Ok(out)
 }
@@ -337,7 +379,9 @@ fn check_part(
 /// Problems with the expressions of an interface's contracts.
 pub fn check_interface(interface: &Interface) -> Vec<HarnessProblem> {
     let mut problems = Vec::new();
-    let grant = Type::Any;
+    let grant = interface.grant.clone();
+    // What gives the next grant state must give one of the grant's type.
+    let next_grant = (grant != Type::Any).then(|| grant.clone());
     let sources = Type::List(Box::new(Type::String));
     for (name, o) in &interface.operations {
         let at = |part: &str| Place::Operation {
@@ -372,11 +416,11 @@ pub fn check_interface(interface: &Interface) -> Vec<HarnessProblem> {
             at("onCall"),
             &o.on_call,
             &[("args", args), ("grant", &grant)],
-            None,
+            next_grant.clone(),
             p,
         );
         let vars = [("args", args), ("result", result), ("grant", &grant)];
-        check_part(at("onResult"), &o.on_result, &vars, None, p);
+        check_part(at("onResult"), &o.on_result, &vars, next_grant.clone(), p);
     }
     for (name, c) in &interface.channels {
         let at = |part: &str| Place::Channel {
@@ -389,7 +433,7 @@ pub fn check_interface(interface: &Interface) -> Vec<HarnessProblem> {
             at("onMsg"),
             &c.on_msg,
             &[("value", &c.ty), ("grant", &grant)],
-            None,
+            next_grant.clone(),
             p,
         );
     }

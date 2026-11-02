@@ -423,3 +423,63 @@ fn contracts_are_checked() {
     let refused = call(json!({ "op": "init", "harness": puppet(), "interface": interface }));
     assert_eq!(refused["error"]["kind"], "interface");
 }
+
+#[test]
+fn capabilities_declare_their_part_of_the_grant_state() {
+    let list = |t: &str| json!({ "List": t });
+    let counter = json!({
+        "operations": { "tick": {
+            "input": { "Record": {} }, "output": "Int",
+            "onCall": rec(vec![("ticks", op("add", vec![path("grant", &["ticks"]), lit(json!(1))]))]),
+        }},
+        "grant": { "Record": { "ticks": "Int" } },
+    });
+    let allowlist = json!({
+        "operations": { "go": { "input": { "Record": {} }, "output": "Int",
+            "pre": op("contains", vec![path("grant", &["allow"]), lit(json!("go"))]) } },
+        "grant": { "Record": { "allow": list("String") } },
+    });
+
+    // Installed together, their parts make the run's grant state.
+    let installed = call(json!({ "op": "install", "capabilities": [
+        { "prefix": "c", "capability": counter }, { "prefix": "a", "capability": allowlist },
+    ]}));
+    assert_eq!(
+        installed["interface"]["grant"],
+        json!({ "Record": { "ticks": "Int", "allow": list("String") } })
+    );
+
+    // Two parts that say different things of one field can't both hold.
+    let mut other = allowlist.clone();
+    other["grant"] = json!({ "Record": { "allow": "Bool" } });
+    let clash = call(json!({ "op": "install", "capabilities": [
+        { "prefix": "a", "capability": allowlist }, { "prefix": "b", "capability": other },
+    ]}));
+    assert_eq!(
+        clash["error"],
+        json!({ "kind": "grantClash", "field": "allow" })
+    );
+
+    // A contract that reads a field the part lacks, or gives a next grant state of the wrong type, is caught.
+    let mut misspelt = counter.clone();
+    misspelt["operations"]["tick"]["pre"] = op("ge", vec![path("grant", &["tick"]), lit(json!(0))]);
+    let problems =
+        call(json!({ "op": "checkInterface", "interface": misspelt }))["problems"].clone();
+    assert_eq!(problems[0]["problem"]["kind"], "noSuchField", "{problems}");
+    let mut wrong = counter.clone();
+    wrong["operations"]["tick"]["onCall"] = rec(vec![("ticks", lit(json!("many")))]);
+    let problems = call(json!({ "op": "checkInterface", "interface": wrong }))["problems"].clone();
+    assert_eq!(problems[0]["kind"], "expr", "{problems}");
+    assert_eq!(problems[0]["place"]["part"], "onCall");
+
+    // And a run can't start with a grant state of another type.
+    let harness = json!({ "arg": "Any", "state": { "Record": {} }, "init": {}, "step": step(var("state"), vec![]) });
+    let refused = call(
+        json!({ "op": "init", "harness": harness, "interface": counter, "grant": { "ticks": "none" } }),
+    );
+    assert_eq!(refused["error"]["kind"], "grant");
+    let ready = call(
+        json!({ "op": "init", "harness": harness, "interface": counter, "grant": { "ticks": 0 } }),
+    );
+    assert_eq!(ready["kind"], "ready");
+}

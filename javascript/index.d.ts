@@ -187,7 +187,14 @@ export interface Channel {
 export interface Interface {
   readonly operations?: Readonly<Record<string, Operation>>;
   readonly channels?: Readonly<Record<string, Channel>>;
+  /** The type of the grant state its contracts read and write; installing merges each capability's part. */
+  readonly grant?: Type;
 }
+
+/** Why capabilities can't be installed together. */
+export type InstallError =
+  | { readonly kind: "clash"; readonly name: string }
+  | { readonly kind: "grantClash"; readonly field: string };
 
 export interface Installation {
   readonly prefix?: string;
@@ -270,6 +277,7 @@ export type SourceProblem = { readonly span: Span } & (
   | { readonly kind: "unknownCapability"; readonly name: string; readonly capability: string }
   | { readonly kind: "unknownOperation"; readonly op: string }
   | { readonly kind: "unknownChannel"; readonly channel: string }
+  | { readonly kind: "grantClash"; readonly field: string }
   | { readonly kind: "unknownHarness"; readonly name: string; readonly harness: string }
   | { readonly kind: "notAHarness"; readonly name: string }
   | { readonly kind: "child"; readonly name: string; readonly problems: readonly HarnessProblem[] }
@@ -522,7 +530,8 @@ export type ProveError =
 
 export type InitError =
   | { readonly kind: "harness"; readonly problems: readonly HarnessProblem[] }
-  | { readonly kind: "interface"; readonly problems: readonly HarnessProblem[] };
+  | { readonly kind: "interface"; readonly problems: readonly HarnessProblem[] }
+  | { readonly kind: "grant"; readonly expected: Type; readonly got: Value };
 
 /**
  * `logEntry`: an entry of a run's log, `{ seq, prev, delivery, events }`.

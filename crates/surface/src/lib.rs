@@ -69,6 +69,10 @@ pub enum What {
     UnknownChannel {
         channel: String,
     },
+    /// Two capabilities the harness uses declare the same field of the grant state at different types.
+    GrantClash {
+        field: String,
+    },
     /// A `uses ... = harness` binding names a harness whose term wasn't given.
     UnknownHarness {
         name: String,
