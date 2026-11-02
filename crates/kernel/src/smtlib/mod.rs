@@ -64,6 +64,8 @@ pub enum Place {
 pub enum NoReading {
     /// `Any` has no sort: an unchecked shape can't be declared. Empty list literals have this type.
     Any,
+    /// `Json`, and testing a value's type with `is`, have no reading yet.
+    Json,
     /// An operator with no registered reading.
     Operator { op: String },
     /// A list used as a list of another element type: SMT-LIB has no map over sequences.

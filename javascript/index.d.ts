@@ -9,6 +9,8 @@ export type Type =
   | "String"
   | "Bool"
   | "Any"
+  /** Any JSON value. Every type conforms to it; what it holds is read only after `is` tests it. */
+  | "Json"
   | { readonly List: Type }
   | { readonly Record: Readonly<Record<string, Type>> }
   /** A record whose `tag` field names its case, and which has that case's type. */
@@ -38,6 +40,15 @@ export type Expr =
   | { readonly e: "get"; readonly of: Expr; readonly field: string }
   /** The untrusted sources a value may depend on, as a sorted list. Empty: trusted. */
   | { readonly e: "label"; readonly of: Expr }
+  /** `then` with `bind` holding `of` at `type` if it has that type, `else` if not. */
+  | {
+      readonly e: "is";
+      readonly of: Expr;
+      readonly type: Type;
+      readonly bind: string;
+      readonly then: Expr;
+      readonly else: Expr;
+    }
   /** The case of a variant, read off its `on` field (`kind` by default), with `bind` holding it at that case's type. */
   | {
       readonly e: "match";

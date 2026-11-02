@@ -84,6 +84,15 @@ again = spawn doubler(total) only m.double
 return again
 ";
 
+const PICK: &str = "\
+harness pick(choice: Json) -> Int
+uses m = \"math\"
+type Doubling = {n: Int}
+d = m.double(n: if choice is Doubling as c then c.n else 0)
+return d
+otherwise return -1
+";
+
 fn platform() -> Value {
     json!({ "model": fixture("model"), "approve": fixture("approve"), "notes": fixture("notes") })
 }
@@ -132,6 +141,11 @@ fn cases() -> Vec<Case> {
             "claims",
             "Properties and invariants claimed in source.",
             || vec![elaborate(&format!("{APPROVED_NOTE}{CLAIMS}"), platform())],
+        ),
+        (
+            "json",
+            "A Json argument read only after testing it against a type.",
+            || vec![elaborate(PICK, math())],
         ),
         (
             "spawn",

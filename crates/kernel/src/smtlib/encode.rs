@@ -58,6 +58,7 @@ fn describe(ty: &Type) -> String {
         Type::String => "String".into(),
         Type::Bool => "Bool".into(),
         Type::Any => "Any".into(),
+        Type::Json => "Json".into(),
         Type::List(t) => format!("List({})", describe(t)),
         Type::Record(fields) => {
             let fields: Vec<String> = fields
@@ -187,7 +188,7 @@ fn plain_equality(ty: &Type) -> bool {
     match ty {
         Type::Int | Type::Bool | Type::String => true,
         Type::List(t) => plain_equality(t),
-        Type::Float | Type::Any | Type::Record(_) | Type::Variant { .. } => false,
+        Type::Float | Type::Any | Type::Json | Type::Record(_) | Type::Variant { .. } => false,
     }
 }
 
@@ -440,6 +441,7 @@ impl Encoder {
             Type::List(t) => Ok(Term::call("Seq", vec![self.sort(t)?])),
             Type::Record(fields) => self.constructor(fields),
             Type::Variant { tag, cases } => Term::symbol("", &self.variant(tag, cases)?),
+            Type::Json => Err(NoReading::Json),
             _ => Err(NoReading::Any),
         }
     }
@@ -451,6 +453,7 @@ impl Encoder {
         };
         match (ty, v) {
             (Type::Any, _) => Err(NoReading::Any),
+            (Type::Json, _) => Err(NoReading::Json),
             (Type::Int, Value::Number(n)) => int_literal(n).ok_or_else(mismatch),
             (Type::Float, Value::Number(n)) => n
                 .as_f64()
@@ -629,6 +632,7 @@ impl Encoder {
     ) -> Result<(Term, Type), ExportError> {
         let here = at_body(at);
         match expr {
+            Expr::Is { .. } => Err(here(NoReading::Json)),
             Expr::Lit { v } => {
                 let ty = of_value(v);
                 Ok((self.value(v, &ty).map_err(here)?, ty))

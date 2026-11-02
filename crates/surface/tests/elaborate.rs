@@ -384,3 +384,28 @@ fn problems_are_reported_where_they_are() {
     let p = at("a = m.double(n: 1)\n");
     assert_eq!(kinds(&p), ["noReturn"]);
 }
+
+#[test]
+fn a_json_argument_is_read_after_testing_it() {
+    let source = r#"
+harness pick(choice: Json) -> Int
+uses m = "math"
+type Doubling = {n: Int}
+d = m.double(n: if choice is Doubling as c then c.n else 0)
+return d
+otherwise return -1
+"#;
+    let out = elaborated(source, math());
+    let interface = math_interface();
+    let (_, calls) = run(&out["harness"], &interface, &[start(json!({ "n": 5 }))]);
+    assert_eq!(calls, [json!(["m.double", { "n": 5 }, true])]);
+    let (_, calls) = run(&out["harness"], &interface, &[start(json!("five"))]);
+    assert_eq!(calls, [json!(["m.double", { "n": 0 }, true])]);
+
+    // Read without a test, it is refused.
+    let unread = problems(
+        &source.replace("if choice is Doubling as c then c.n else 0", "choice.n"),
+        math(),
+    );
+    assert!(unread.iter().any(|p| p["kind"] == "type"), "{unread:?}");
+}

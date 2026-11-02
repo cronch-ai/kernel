@@ -185,7 +185,14 @@ impl Checker {
                 let added = self.check(&args[1], item, &child(at, "args/1"));
                 return (list.is_some() && added.is_some()).then(|| want.clone());
             }
-            (Expr::Let { .. } | Expr::If { .. } | Expr::Match { .. } | Expr::Fold { .. }, _) => {
+            (
+                Expr::Let { .. }
+                | Expr::If { .. }
+                | Expr::Is { .. }
+                | Expr::Match { .. }
+                | Expr::Fold { .. },
+                _,
+            ) => {
                 return self.synth(expr, at, Some(want));
             }
             _ => {}
@@ -199,6 +206,28 @@ impl Checker {
                 expected: want.clone(),
                 got,
             })
+        }
+    }
+
+    /// The type of a choice between two branches: `expected`, if each checked against it, or else their join.
+    fn branches(
+        &mut self,
+        then: Option<Type>,
+        otherwise: Option<Type>,
+        at: &str,
+        expected: Option<&Type>,
+    ) -> Option<Type> {
+        if let Some(want) = expected {
+            return (then.is_some() && otherwise.is_some()).then(|| want.clone());
+        }
+        let (t, e) = (then?, otherwise?);
+        match join(&t, &e) {
+            Some(j) => Some(j),
+            None => self.problem(Problem::Mismatch {
+                at: child(at, "else"),
+                expected: t,
+                got: e,
+            }),
         }
     }
 
@@ -266,20 +295,22 @@ impl Checker {
                 }
                 let t = self.typed(then, &child(at, "then"), expected);
                 let e = self.typed(otherwise, &child(at, "else"), expected);
-                if let Some(want) = expected {
-                    return (t.is_some() && e.is_some()).then(|| want.clone());
-                }
-                match (t, e) {
-                    (Some(t), Some(e)) => match join(&t, &e) {
-                        Some(j) => Some(j),
-                        None => self.problem(Problem::Mismatch {
-                            at: child(at, "else"),
-                            expected: t,
-                            got: e,
-                        }),
-                    },
-                    _ => None,
-                }
+                self.branches(t, e, at, expected)
+            }
+            // Any value may be tested, whatever its type; `bind` has the type it was tested against.
+            Expr::Is {
+                of,
+                ty,
+                bind,
+                then,
+                otherwise,
+            } => {
+                self.infer(of, &child(at, "of"));
+                self.scope.push((bind.clone(), ty.clone()));
+                let t = self.typed(then, &child(at, "then"), expected);
+                self.scope.pop();
+                let e = self.typed(otherwise, &child(at, "else"), expected);
+                self.branches(t, e, at, expected)
             }
             Expr::Record { fields } => {
                 let mut types = BTreeMap::new();

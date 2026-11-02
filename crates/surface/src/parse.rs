@@ -15,7 +15,7 @@
 //! use     = name ("=" "harness"? string)?
 //! type    = "List" "[" type "]" | "{" (name ":" type),* "}" | name
 //! variant = case ("|" case)*          case = name ("{" (name ":" type),* "}")?
-//! expr    = "if" expr "then" expr "else" expr | "fold" or "from" expr "with" "(" name "," name ")" "=>" expr | implies
+//! expr    = "if" expr ("is" type "as" name)? "then" expr "else" expr | "fold" or "from" expr "with" "(" name "," name ")" "=>" expr | implies
 //! implies = since ("implies" implies)?  since = or ("since" or)*
 //! or      = and ("or" and)*           and = not ("and" not)*        not = "not" not | compare
 //! compare = sum (("==" | "!=" | "<" | "<=" | ">" | ">=" | "in" | "not" "in") sum)?
@@ -446,6 +446,26 @@ impl Parser {
         let start = self.span();
         if self.eat_word("if") {
             let cond = self.expr()?;
+            if self.eat_word("is") {
+                let ty = self.ty()?;
+                self.word("as")?;
+                let bind = self.name()?;
+                self.word("then")?;
+                let then = self.expr()?;
+                self.word("else")?;
+                let otherwise = self.expr()?;
+                let span = start.to(otherwise.span);
+                return Ok(Expr {
+                    kind: ExprKind::Is {
+                        of: Box::new(cond),
+                        ty,
+                        bind,
+                        then: Box::new(then),
+                        otherwise: Box::new(otherwise),
+                    },
+                    span,
+                });
+            }
             self.word("then")?;
             let then = self.expr()?;
             self.word("else")?;
