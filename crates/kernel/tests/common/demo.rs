@@ -253,6 +253,8 @@ pub fn tools() -> Value {
             "shell.run": { "input": argv, "output": "String", "effect": true, "pre": allowed, "onCall": used_up },
             "shell.approve": { "input": argv, "output": "String", "ret": list(vec![]), "onResult": answered },
         },
-        "channels": { "act": { "type": { "Record": { "kind": "String" } } } }
+        "channels": { "act": { "type": { "Record": { "kind": "String" } } } },
+        // The shell's part of the grant state: argv prefixes allowed always, and argvs approved once.
+        "grant": { "Record": { "allow": { "List": { "List": "String" } }, "once": { "List": { "List": "String" } } } },
     })
 }
