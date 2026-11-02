@@ -212,3 +212,8 @@ pub fn match_(
     }
     m
 }
+
+/// `if of is ty as bind then … else …`.
+pub fn is_type(of: Value, ty: Value, bind: &str, then: Value, otherwise: Value) -> Value {
+    json!({ "e": "is", "of": of, "type": ty, "bind": bind, "then": then, "else": otherwise })
+}

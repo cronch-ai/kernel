@@ -9,9 +9,12 @@ use std::collections::BTreeMap;
 /// * `Any` on either side conforms (gradual: unchecked shapes pass here and are reported elsewhere).
 /// * `Int` conforms to `Float`.
 /// * Lists are covariant; a record conforms when it has every expected field, each conforming (width subtyping).
+/// * Every type conforms to `Json`, and `Json` to nothing else: every value is one, but what one holds is known only
+///   once it is tested with `is`.
 pub fn conforms(actual: &Type, expected: &Type) -> bool {
     match (actual, expected) {
         (Type::Any, _) | (_, Type::Any) => true,
+        (_, Type::Json) => true,
         (Type::Int, Type::Float) => true,
         (Type::List(a), Type::List(e)) => conforms(a, e),
         (Type::Record(a), Type::Record(e)) => e
@@ -98,7 +101,7 @@ pub fn join(a: &Type, b: &Type) -> Option<Type> {
 /// The value inhabits the type.
 pub fn inhabits(value: &Value, ty: &Type) -> bool {
     match (ty, value) {
-        (Type::Any, _) => true,
+        (Type::Any | Type::Json, _) => true,
         (Type::Int, Value::Number(n)) => {
             n.is_i64() || n.is_u64() || n.as_f64().is_some_and(|f| f.fract() == 0.0)
         }

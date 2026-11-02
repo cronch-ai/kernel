@@ -13,6 +13,7 @@
 use crate::check::Path;
 use crate::ir::Expr;
 use crate::ops::{self, Op, OpEvalError};
+use crate::types::inhabits;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use std::collections::{BTreeMap, BTreeSet};
@@ -308,6 +309,26 @@ impl Evaluator {
                     field: field.clone(),
                     of: v.value(),
                 })
+            }
+            Expr::Is {
+                of,
+                ty,
+                bind,
+                then,
+                otherwise,
+            } => {
+                let v = self.eval(of, &child(at, "of"), pc)?;
+                // Whether it has the type depends on all of it.
+                let mut inner = pc.clone();
+                inner.extend(v.label());
+                let taken = if inhabits(&v.value(), ty) {
+                    self.bind(vec![(bind.clone(), v)], |e| {
+                        e.eval(then, &child(at, "then"), &inner)
+                    })?
+                } else {
+                    self.eval(otherwise, &child(at, "else"), &inner)?
+                };
+                Ok(taken.raised(&inner))
             }
             Expr::Match {
                 of,

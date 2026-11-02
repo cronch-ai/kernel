@@ -68,9 +68,10 @@ A2 changes the shape of `Harness`, properties and responses, so it is a breaking
 
 ### A3: `Json` replaces `Any`
 
-- `Json` is a closed recursive type: null, bool, number, string, a list of `Json`, or a record of `Json`. It holds what a contract really means by "any value", such as `approve.ask`'s `args`.
-- A `Json` value is inspected before it is used, with a `match` on its shape whose cases bind the value at the matching type. Nothing reads through it unchecked.
-- SMT encodes it as a recursive datatype, records as lists of key and value pairs, so a state that holds one has a sort.
+- `Json` is any JSON value: null, a boolean, a number, a string, a list of them or a record of them. It holds what a contract really means by "any value", such as `approve.ask`'s `args`. Every type conforms to it, and it conforms to nothing else.
+- **Decided: a `Json` value is read by testing it against a type,** not by matching on its shape. `is` (`if e is T as x then a else b` in source) takes `a` with `x` holding the value at `T` when it inhabits `T`, and `b` otherwise. A model's tool call is tested against the call it may make, and a world error's detail against what the harness knows how to handle, without nested matches. Which branch runs depends on all of the value, so both carry its sources.
+- **Decided: an undeclared child takes and gives `Json`,** so a harness may still spawn something chosen at run time, and inspects what it gives like any other `Json`.
+- SMT reads `Json` as a recursive datatype, and `is` as a recursive predicate saying whether a `Json` term inhabits a type, so a state that holds one has a sort.
 - Then `Type::Any` and the "conforms both ways" rule are deleted, and a partial field read is an error.
 
 The platform's contracts change with A3: `approve.ask`'s `args` becomes `Json`, and any contract that reads `grant` declares its part (A2).
@@ -90,11 +91,15 @@ Each is a kernel PR with compliance vectors, and the platform follows A2 and A3 
 
 - **A1:** expected types in `check.rs`, variant introduction, typed `[]`, and `type` annotations on `let` and `fold`. The SMT encoder encodes against an expected type the same way, so a variant built from a literal gets its constructor: an SMT-LIB definition gains an optional `result`, and an induction obligation's step is encoded at the state type. Minor version.
 - **A2:** errors, harness results and declared children, typed actions, declared grant parts, typed events, and `checkHarness` against an interface. With them, the label rule decided in the surface plan: an input's `kind`, `call` and `op` are the interpreter's, so trusted, and only `value` and `error` carry the sources of what arrived. Breaking version.
-- **A3:** `Json`, its `match`, its SMT encoding, the removal of `Any`, and `null` refused but at `Json`. Breaking version, with the platform's contracts updated.
+- **A3**, in four pieces:
+  - **A3a:** `Json` and `is`, in the checker, the interpreter, induction and the surface language. SMT refuses both until A3b, as it refuses `Any`. Minor version.
+  - **A3b:** `Json`'s SMT datatype and `is`'s predicate.
+  - **A3c:** what the interpreter makes up becomes `Json`: a world error's `detail`, a child's error, an undeclared child's argument and result, `result`, `arg` and a capability's grant when none is declared. An action chosen at run time is tested with `is` against the interface's actions.
+  - **A3d:** `Any` deleted, a partial field read an error, and `null` refused but at `Json`. Breaking version, with the platform's contracts updated.
 
 ## Open questions
 
-1. **Recursive user types.** `Json` is recursive; user types declared with `type` aren't. Allowing recursion in named types would make `Json` one of them, but complicates SMT encoding and termination of the checker.
+1. **Recursive user types.** `Json` is recursive and built in; user types declared with `type` still aren't recursive.
 2. **Record keys in SMT.** Encoding a `Json` record as a list of pairs loses the fact that keys are unique. A proof that relies on that would need it as an axiom.
 3. **How strict width subtyping stays.** A record with more fields conforms to one with fewer. Against a variant case, an extra field is harmless, but against an action it may be a mistake worth reporting.
-4. **Spawning without a declared child.** A2 asks a harness to name its children up front. A harness that spawns whatever a model chose would need a child typed at `Json` to `Json`, which is A3's escape hatch, not `Any`'s.
+4. **Spawning without a declared child.** Decided: such a child takes and gives `Json` (A3c).

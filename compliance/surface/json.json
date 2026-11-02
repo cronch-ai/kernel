@@ -1,0 +1,1356 @@
+{
+  "description": "A Json argument read only after testing it against a type.",
+  "exchanges": [
+    {
+      "request": {
+        "capabilities": {
+          "math": {
+            "operations": {
+              "double": {
+                "input": {
+                  "Record": {
+                    "n": "Int"
+                  }
+                },
+                "output": "Int"
+              }
+            }
+          }
+        },
+        "op": "elaborate",
+        "source": "harness pick(choice: Json) -> Int\nuses m = \"math\"\ntype Doubling = {n: Int}\nd = m.double(n: if choice is Doubling as c then c.n else 0)\nreturn d\notherwise return -1\n"
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "harness": {
+            "arg": "Json",
+            "init": {
+              "arg": null,
+              "next": 0,
+              "nodes": {
+                "d": {
+                  "call": 0,
+                  "error": "",
+                  "kind": "waiting",
+                  "value": 0
+                }
+              }
+            },
+            "result": "Int",
+            "state": {
+              "Record": {
+                "arg": "Json",
+                "next": "Int",
+                "nodes": {
+                  "Record": {
+                    "d": {
+                      "Record": {
+                        "call": "Int",
+                        "error": "String",
+                        "kind": "String",
+                        "value": "Int"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "step": {
+              "be": {
+                "cases": {
+                  "failed": {
+                    "bind": "@in",
+                    "body": {
+                      "be": {
+                        "e": "var",
+                        "name": "state"
+                      },
+                      "e": "let",
+                      "in": {
+                        "be": {
+                          "cond": {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "e": "get",
+                                    "field": "kind",
+                                    "of": {
+                                      "e": "get",
+                                      "field": "d",
+                                      "of": {
+                                        "e": "get",
+                                        "field": "nodes",
+                                        "of": {
+                                          "e": "var",
+                                          "name": "@r"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  {
+                                    "e": "lit",
+                                    "v": "running"
+                                  }
+                                ],
+                                "e": "op",
+                                "op": "eq"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "e": "get",
+                                    "field": "call",
+                                    "of": {
+                                      "e": "get",
+                                      "field": "d",
+                                      "of": {
+                                        "e": "get",
+                                        "field": "nodes",
+                                        "of": {
+                                          "e": "var",
+                                          "name": "@r"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  {
+                                    "e": "get",
+                                    "field": "call",
+                                    "of": {
+                                      "e": "var",
+                                      "name": "@in"
+                                    }
+                                  }
+                                ],
+                                "e": "op",
+                                "op": "eq"
+                              }
+                            ],
+                            "e": "op",
+                            "op": "and"
+                          },
+                          "e": "if",
+                          "else": {
+                            "e": "var",
+                            "name": "@r"
+                          },
+                          "then": {
+                            "e": "record",
+                            "fields": {
+                              "arg": {
+                                "e": "get",
+                                "field": "arg",
+                                "of": {
+                                  "e": "var",
+                                  "name": "@r"
+                                }
+                              },
+                              "next": {
+                                "e": "get",
+                                "field": "next",
+                                "of": {
+                                  "e": "var",
+                                  "name": "@r"
+                                }
+                              },
+                              "nodes": {
+                                "e": "record",
+                                "fields": {
+                                  "d": {
+                                    "e": "record",
+                                    "fields": {
+                                      "call": {
+                                        "e": "get",
+                                        "field": "call",
+                                        "of": {
+                                          "e": "var",
+                                          "name": "@in"
+                                        }
+                                      },
+                                      "error": {
+                                        "e": "get",
+                                        "field": "kind",
+                                        "of": {
+                                          "e": "get",
+                                          "field": "error",
+                                          "of": {
+                                            "e": "var",
+                                            "name": "@in"
+                                          }
+                                        }
+                                      },
+                                      "kind": {
+                                        "e": "lit",
+                                        "v": "failed"
+                                      },
+                                      "value": {
+                                        "e": "get",
+                                        "field": "value",
+                                        "of": {
+                                          "e": "get",
+                                          "field": "d",
+                                          "of": {
+                                            "e": "get",
+                                            "field": "nodes",
+                                            "of": {
+                                              "e": "var",
+                                              "name": "@r"
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "e": "let",
+                        "in": {
+                          "e": "var",
+                          "name": "@r"
+                        },
+                        "name": "@r"
+                      },
+                      "name": "@r"
+                    }
+                  },
+                  "refused": {
+                    "bind": "@in",
+                    "body": {
+                      "be": {
+                        "e": "var",
+                        "name": "state"
+                      },
+                      "e": "let",
+                      "in": {
+                        "be": {
+                          "cond": {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "e": "get",
+                                    "field": "kind",
+                                    "of": {
+                                      "e": "get",
+                                      "field": "d",
+                                      "of": {
+                                        "e": "get",
+                                        "field": "nodes",
+                                        "of": {
+                                          "e": "var",
+                                          "name": "@r"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  {
+                                    "e": "lit",
+                                    "v": "running"
+                                  }
+                                ],
+                                "e": "op",
+                                "op": "eq"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "e": "get",
+                                    "field": "call",
+                                    "of": {
+                                      "e": "get",
+                                      "field": "d",
+                                      "of": {
+                                        "e": "get",
+                                        "field": "nodes",
+                                        "of": {
+                                          "e": "var",
+                                          "name": "@r"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  {
+                                    "e": "get",
+                                    "field": "call",
+                                    "of": {
+                                      "e": "var",
+                                      "name": "@in"
+                                    }
+                                  }
+                                ],
+                                "e": "op",
+                                "op": "eq"
+                              }
+                            ],
+                            "e": "op",
+                            "op": "and"
+                          },
+                          "e": "if",
+                          "else": {
+                            "e": "var",
+                            "name": "@r"
+                          },
+                          "then": {
+                            "e": "record",
+                            "fields": {
+                              "arg": {
+                                "e": "get",
+                                "field": "arg",
+                                "of": {
+                                  "e": "var",
+                                  "name": "@r"
+                                }
+                              },
+                              "next": {
+                                "e": "get",
+                                "field": "next",
+                                "of": {
+                                  "e": "var",
+                                  "name": "@r"
+                                }
+                              },
+                              "nodes": {
+                                "e": "record",
+                                "fields": {
+                                  "d": {
+                                    "e": "record",
+                                    "fields": {
+                                      "call": {
+                                        "e": "get",
+                                        "field": "call",
+                                        "of": {
+                                          "e": "var",
+                                          "name": "@in"
+                                        }
+                                      },
+                                      "error": {
+                                        "e": "lit",
+                                        "v": ""
+                                      },
+                                      "kind": {
+                                        "e": "lit",
+                                        "v": "refused"
+                                      },
+                                      "value": {
+                                        "e": "get",
+                                        "field": "value",
+                                        "of": {
+                                          "e": "get",
+                                          "field": "d",
+                                          "of": {
+                                            "e": "get",
+                                            "field": "nodes",
+                                            "of": {
+                                              "e": "var",
+                                              "name": "@r"
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "e": "let",
+                        "in": {
+                          "e": "var",
+                          "name": "@r"
+                        },
+                        "name": "@r"
+                      },
+                      "name": "@r"
+                    }
+                  },
+                  "ret": {
+                    "bind": "@in",
+                    "body": {
+                      "cases": {
+                        "m.double": {
+                          "bind": "@in",
+                          "body": {
+                            "be": {
+                              "e": "var",
+                              "name": "state"
+                            },
+                            "e": "let",
+                            "in": {
+                              "be": {
+                                "cond": {
+                                  "args": [
+                                    {
+                                      "args": [
+                                        {
+                                          "e": "get",
+                                          "field": "kind",
+                                          "of": {
+                                            "e": "get",
+                                            "field": "d",
+                                            "of": {
+                                              "e": "get",
+                                              "field": "nodes",
+                                              "of": {
+                                                "e": "var",
+                                                "name": "@r"
+                                              }
+                                            }
+                                          }
+                                        },
+                                        {
+                                          "e": "lit",
+                                          "v": "running"
+                                        }
+                                      ],
+                                      "e": "op",
+                                      "op": "eq"
+                                    },
+                                    {
+                                      "args": [
+                                        {
+                                          "e": "get",
+                                          "field": "call",
+                                          "of": {
+                                            "e": "get",
+                                            "field": "d",
+                                            "of": {
+                                              "e": "get",
+                                              "field": "nodes",
+                                              "of": {
+                                                "e": "var",
+                                                "name": "@r"
+                                              }
+                                            }
+                                          }
+                                        },
+                                        {
+                                          "e": "get",
+                                          "field": "call",
+                                          "of": {
+                                            "e": "var",
+                                            "name": "@in"
+                                          }
+                                        }
+                                      ],
+                                      "e": "op",
+                                      "op": "eq"
+                                    }
+                                  ],
+                                  "e": "op",
+                                  "op": "and"
+                                },
+                                "e": "if",
+                                "else": {
+                                  "e": "var",
+                                  "name": "@r"
+                                },
+                                "then": {
+                                  "e": "record",
+                                  "fields": {
+                                    "arg": {
+                                      "e": "get",
+                                      "field": "arg",
+                                      "of": {
+                                        "e": "var",
+                                        "name": "@r"
+                                      }
+                                    },
+                                    "next": {
+                                      "e": "get",
+                                      "field": "next",
+                                      "of": {
+                                        "e": "var",
+                                        "name": "@r"
+                                      }
+                                    },
+                                    "nodes": {
+                                      "e": "record",
+                                      "fields": {
+                                        "d": {
+                                          "e": "record",
+                                          "fields": {
+                                            "call": {
+                                              "e": "get",
+                                              "field": "call",
+                                              "of": {
+                                                "e": "var",
+                                                "name": "@in"
+                                              }
+                                            },
+                                            "error": {
+                                              "e": "lit",
+                                              "v": ""
+                                            },
+                                            "kind": {
+                                              "e": "lit",
+                                              "v": "ok"
+                                            },
+                                            "value": {
+                                              "e": "get",
+                                              "field": "value",
+                                              "of": {
+                                                "e": "var",
+                                                "name": "@in"
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              },
+                              "e": "let",
+                              "in": {
+                                "e": "var",
+                                "name": "@r"
+                              },
+                              "name": "@r"
+                            },
+                            "name": "@r"
+                          }
+                        }
+                      },
+                      "e": "match",
+                      "of": {
+                        "e": "var",
+                        "name": "@in"
+                      },
+                      "on": "op",
+                      "otherwise": {
+                        "e": "var",
+                        "name": "state"
+                      }
+                    }
+                  },
+                  "start": {
+                    "bind": "@in",
+                    "body": {
+                      "e": "record",
+                      "fields": {
+                        "arg": {
+                          "e": "get",
+                          "field": "value",
+                          "of": {
+                            "e": "var",
+                            "name": "@in"
+                          }
+                        },
+                        "next": {
+                          "e": "get",
+                          "field": "next",
+                          "of": {
+                            "e": "var",
+                            "name": "state"
+                          }
+                        },
+                        "nodes": {
+                          "e": "get",
+                          "field": "nodes",
+                          "of": {
+                            "e": "var",
+                            "name": "state"
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "e": "match",
+                "of": {
+                  "e": "var",
+                  "name": "input"
+                },
+                "otherwise": {
+                  "e": "var",
+                  "name": "state"
+                }
+              },
+              "e": "let",
+              "in": {
+                "be": {
+                  "e": "record",
+                  "fields": {
+                    "actions": {
+                      "e": "list",
+                      "items": []
+                    },
+                    "state": {
+                      "e": "var",
+                      "name": "@state"
+                    }
+                  }
+                },
+                "e": "let",
+                "in": {
+                  "be": {
+                    "e": "get",
+                    "field": "state",
+                    "of": {
+                      "e": "var",
+                      "name": "@pre"
+                    }
+                  },
+                  "e": "let",
+                  "in": {
+                    "cond": {
+                      "args": [
+                        {
+                          "e": "lit",
+                          "v": ["failed", "refused"]
+                        },
+                        {
+                          "e": "get",
+                          "field": "kind",
+                          "of": {
+                            "e": "get",
+                            "field": "d",
+                            "of": {
+                              "e": "get",
+                              "field": "nodes",
+                              "of": {
+                                "e": "var",
+                                "name": "@state"
+                              }
+                            }
+                          }
+                        }
+                      ],
+                      "e": "op",
+                      "op": "contains"
+                    },
+                    "e": "if",
+                    "else": {
+                      "be": {
+                        "e": "record",
+                        "fields": {
+                          "actions": {
+                            "e": "get",
+                            "field": "actions",
+                            "of": {
+                              "e": "var",
+                              "name": "@pre"
+                            }
+                          },
+                          "state": {
+                            "e": "var",
+                            "name": "@state"
+                          }
+                        }
+                      },
+                      "e": "let",
+                      "in": {
+                        "be": {
+                          "be": {
+                            "e": "get",
+                            "field": "state",
+                            "of": {
+                              "e": "var",
+                              "name": "@acc"
+                            }
+                          },
+                          "e": "let",
+                          "in": {
+                            "be": {
+                              "e": "get",
+                              "field": "nodes",
+                              "of": {
+                                "e": "var",
+                                "name": "@state"
+                              }
+                            },
+                            "e": "let",
+                            "in": {
+                              "cond": {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "e": "get",
+                                        "field": "kind",
+                                        "of": {
+                                          "e": "get",
+                                          "field": "d",
+                                          "of": {
+                                            "e": "get",
+                                            "field": "nodes",
+                                            "of": {
+                                              "e": "var",
+                                              "name": "@state"
+                                            }
+                                          }
+                                        }
+                                      },
+                                      {
+                                        "e": "lit",
+                                        "v": "waiting"
+                                      }
+                                    ],
+                                    "e": "op",
+                                    "op": "eq"
+                                  },
+                                  {
+                                    "e": "lit",
+                                    "v": true
+                                  }
+                                ],
+                                "e": "op",
+                                "op": "and"
+                              },
+                              "e": "if",
+                              "else": {
+                                "e": "var",
+                                "name": "@acc"
+                              },
+                              "then": {
+                                "cond": {
+                                  "e": "lit",
+                                  "v": false
+                                },
+                                "e": "if",
+                                "else": {
+                                  "be": {
+                                    "e": "get",
+                                    "field": "arg",
+                                    "of": {
+                                      "e": "var",
+                                      "name": "@state"
+                                    }
+                                  },
+                                  "e": "let",
+                                  "in": {
+                                    "e": "record",
+                                    "fields": {
+                                      "actions": {
+                                        "args": [
+                                          {
+                                            "e": "get",
+                                            "field": "actions",
+                                            "of": {
+                                              "e": "var",
+                                              "name": "@acc"
+                                            }
+                                          },
+                                          {
+                                            "e": "record",
+                                            "fields": {
+                                              "args": {
+                                                "e": "record",
+                                                "fields": {
+                                                  "n": {
+                                                    "bind": "c",
+                                                    "e": "is",
+                                                    "else": {
+                                                      "e": "lit",
+                                                      "v": 0
+                                                    },
+                                                    "of": {
+                                                      "e": "var",
+                                                      "name": "choice"
+                                                    },
+                                                    "then": {
+                                                      "e": "get",
+                                                      "field": "n",
+                                                      "of": {
+                                                        "e": "var",
+                                                        "name": "c"
+                                                      }
+                                                    },
+                                                    "type": {
+                                                      "Record": {
+                                                        "n": "Int"
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              },
+                                              "kind": {
+                                                "e": "lit",
+                                                "v": "call"
+                                              },
+                                              "op": {
+                                                "e": "lit",
+                                                "v": "m.double"
+                                              }
+                                            }
+                                          }
+                                        ],
+                                        "e": "op",
+                                        "op": "append"
+                                      },
+                                      "state": {
+                                        "e": "record",
+                                        "fields": {
+                                          "arg": {
+                                            "e": "get",
+                                            "field": "arg",
+                                            "of": {
+                                              "e": "var",
+                                              "name": "@state"
+                                            }
+                                          },
+                                          "next": {
+                                            "args": [
+                                              {
+                                                "e": "get",
+                                                "field": "next",
+                                                "of": {
+                                                  "e": "var",
+                                                  "name": "@state"
+                                                }
+                                              },
+                                              {
+                                                "e": "lit",
+                                                "v": 1
+                                              }
+                                            ],
+                                            "e": "op",
+                                            "op": "add"
+                                          },
+                                          "nodes": {
+                                            "e": "record",
+                                            "fields": {
+                                              "d": {
+                                                "e": "record",
+                                                "fields": {
+                                                  "call": {
+                                                    "e": "get",
+                                                    "field": "next",
+                                                    "of": {
+                                                      "e": "var",
+                                                      "name": "@state"
+                                                    }
+                                                  },
+                                                  "error": {
+                                                    "e": "lit",
+                                                    "v": ""
+                                                  },
+                                                  "kind": {
+                                                    "e": "lit",
+                                                    "v": "running"
+                                                  },
+                                                  "value": {
+                                                    "e": "get",
+                                                    "field": "value",
+                                                    "of": {
+                                                      "e": "get",
+                                                      "field": "d",
+                                                      "of": {
+                                                        "e": "get",
+                                                        "field": "nodes",
+                                                        "of": {
+                                                          "e": "var",
+                                                          "name": "@state"
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "name": "choice"
+                                },
+                                "then": {
+                                  "e": "record",
+                                  "fields": {
+                                    "actions": {
+                                      "e": "get",
+                                      "field": "actions",
+                                      "of": {
+                                        "e": "var",
+                                        "name": "@acc"
+                                      }
+                                    },
+                                    "state": {
+                                      "e": "record",
+                                      "fields": {
+                                        "arg": {
+                                          "e": "get",
+                                          "field": "arg",
+                                          "of": {
+                                            "e": "var",
+                                            "name": "@state"
+                                          }
+                                        },
+                                        "next": {
+                                          "e": "get",
+                                          "field": "next",
+                                          "of": {
+                                            "e": "var",
+                                            "name": "@state"
+                                          }
+                                        },
+                                        "nodes": {
+                                          "e": "record",
+                                          "fields": {
+                                            "d": {
+                                              "e": "record",
+                                              "fields": {
+                                                "call": {
+                                                  "e": "get",
+                                                  "field": "call",
+                                                  "of": {
+                                                    "e": "get",
+                                                    "field": "d",
+                                                    "of": {
+                                                      "e": "get",
+                                                      "field": "nodes",
+                                                      "of": {
+                                                        "e": "var",
+                                                        "name": "@state"
+                                                      }
+                                                    }
+                                                  }
+                                                },
+                                                "error": {
+                                                  "e": "lit",
+                                                  "v": ""
+                                                },
+                                                "kind": {
+                                                  "e": "lit",
+                                                  "v": "skipped"
+                                                },
+                                                "value": {
+                                                  "e": "get",
+                                                  "field": "value",
+                                                  "of": {
+                                                    "e": "get",
+                                                    "field": "d",
+                                                    "of": {
+                                                      "e": "get",
+                                                      "field": "nodes",
+                                                      "of": {
+                                                        "e": "var",
+                                                        "name": "@state"
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            "name": "@nodes"
+                          },
+                          "name": "@state"
+                        },
+                        "e": "let",
+                        "in": {
+                          "be": {
+                            "e": "get",
+                            "field": "state",
+                            "of": {
+                              "e": "var",
+                              "name": "@acc"
+                            }
+                          },
+                          "e": "let",
+                          "in": {
+                            "be": {
+                              "e": "get",
+                              "field": "nodes",
+                              "of": {
+                                "e": "var",
+                                "name": "@state"
+                              }
+                            },
+                            "e": "let",
+                            "in": {
+                              "cond": {
+                                "args": [
+                                  {
+                                    "e": "lit",
+                                    "v": ["ok", "failed", "refused", "skipped"]
+                                  },
+                                  {
+                                    "e": "get",
+                                    "field": "kind",
+                                    "of": {
+                                      "e": "get",
+                                      "field": "d",
+                                      "of": {
+                                        "e": "get",
+                                        "field": "nodes",
+                                        "of": {
+                                          "e": "var",
+                                          "name": "@state"
+                                        }
+                                      }
+                                    }
+                                  }
+                                ],
+                                "e": "op",
+                                "op": "contains"
+                              },
+                              "e": "if",
+                              "else": {
+                                "e": "var",
+                                "name": "@acc"
+                              },
+                              "then": {
+                                "be": {
+                                  "e": "get",
+                                  "field": "arg",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "@state"
+                                  }
+                                },
+                                "e": "let",
+                                "in": {
+                                  "be": {
+                                    "e": "get",
+                                    "field": "value",
+                                    "of": {
+                                      "e": "get",
+                                      "field": "d",
+                                      "of": {
+                                        "e": "get",
+                                        "field": "nodes",
+                                        "of": {
+                                          "e": "var",
+                                          "name": "@state"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "e": "let",
+                                  "in": {
+                                    "e": "record",
+                                    "fields": {
+                                      "actions": {
+                                        "args": [
+                                          {
+                                            "e": "get",
+                                            "field": "actions",
+                                            "of": {
+                                              "e": "var",
+                                              "name": "@acc"
+                                            }
+                                          },
+                                          {
+                                            "e": "record",
+                                            "fields": {
+                                              "kind": {
+                                                "e": "lit",
+                                                "v": "halt"
+                                              },
+                                              "value": {
+                                                "e": "var",
+                                                "name": "d"
+                                              }
+                                            }
+                                          }
+                                        ],
+                                        "e": "op",
+                                        "op": "append"
+                                      },
+                                      "state": {
+                                        "e": "var",
+                                        "name": "@state"
+                                      }
+                                    }
+                                  },
+                                  "name": "d"
+                                },
+                                "name": "choice"
+                              }
+                            },
+                            "name": "@nodes"
+                          },
+                          "name": "@state"
+                        },
+                        "name": "@acc",
+                        "type": {
+                          "Record": {
+                            "actions": {
+                              "List": {
+                                "Variant": {
+                                  "cases": {
+                                    "call": {
+                                      "Variant": {
+                                        "cases": {
+                                          "m.double": {
+                                            "Record": {
+                                              "args": {
+                                                "Record": {
+                                                  "n": "Int"
+                                                }
+                                              }
+                                            }
+                                          }
+                                        },
+                                        "tag": "op"
+                                      }
+                                    },
+                                    "cancel": {
+                                      "Record": {
+                                        "call": "Int"
+                                      }
+                                    },
+                                    "halt": {
+                                      "Record": {
+                                        "value": "Int"
+                                      }
+                                    },
+                                    "spawn": {
+                                      "Record": {}
+                                    }
+                                  },
+                                  "tag": "kind"
+                                }
+                              }
+                            },
+                            "state": {
+                              "Record": {
+                                "arg": "Json",
+                                "next": "Int",
+                                "nodes": {
+                                  "Record": {
+                                    "d": {
+                                      "Record": {
+                                        "call": "Int",
+                                        "error": "String",
+                                        "kind": "String",
+                                        "value": "Int"
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "name": "@acc",
+                      "type": {
+                        "Record": {
+                          "actions": {
+                            "List": {
+                              "Variant": {
+                                "cases": {
+                                  "call": {
+                                    "Variant": {
+                                      "cases": {
+                                        "m.double": {
+                                          "Record": {
+                                            "args": {
+                                              "Record": {
+                                                "n": "Int"
+                                              }
+                                            }
+                                          }
+                                        }
+                                      },
+                                      "tag": "op"
+                                    }
+                                  },
+                                  "cancel": {
+                                    "Record": {
+                                      "call": "Int"
+                                    }
+                                  },
+                                  "halt": {
+                                    "Record": {
+                                      "value": "Int"
+                                    }
+                                  },
+                                  "spawn": {
+                                    "Record": {}
+                                  }
+                                },
+                                "tag": "kind"
+                              }
+                            }
+                          },
+                          "state": {
+                            "Record": {
+                              "arg": "Json",
+                              "next": "Int",
+                              "nodes": {
+                                "Record": {
+                                  "d": {
+                                    "Record": {
+                                      "call": "Int",
+                                      "error": "String",
+                                      "kind": "String",
+                                      "value": "Int"
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "then": {
+                      "e": "record",
+                      "fields": {
+                        "actions": {
+                          "args": [
+                            {
+                              "e": "get",
+                              "field": "actions",
+                              "of": {
+                                "e": "var",
+                                "name": "@pre"
+                              }
+                            },
+                            {
+                              "e": "record",
+                              "fields": {
+                                "kind": {
+                                  "e": "lit",
+                                  "v": "halt"
+                                },
+                                "value": {
+                                  "be": {
+                                    "e": "get",
+                                    "field": "arg",
+                                    "of": {
+                                      "e": "var",
+                                      "name": "@state"
+                                    }
+                                  },
+                                  "e": "let",
+                                  "in": {
+                                    "args": [
+                                      {
+                                        "e": "lit",
+                                        "v": 1
+                                      }
+                                    ],
+                                    "e": "op",
+                                    "op": "neg"
+                                  },
+                                  "name": "choice"
+                                }
+                              }
+                            }
+                          ],
+                          "e": "op",
+                          "op": "append"
+                        },
+                        "state": {
+                          "e": "var",
+                          "name": "@state"
+                        }
+                      }
+                    }
+                  },
+                  "name": "@state"
+                },
+                "name": "@pre",
+                "type": {
+                  "Record": {
+                    "actions": {
+                      "List": {
+                        "Variant": {
+                          "cases": {
+                            "call": {
+                              "Variant": {
+                                "cases": {
+                                  "m.double": {
+                                    "Record": {
+                                      "args": {
+                                        "Record": {
+                                          "n": "Int"
+                                        }
+                                      }
+                                    }
+                                  }
+                                },
+                                "tag": "op"
+                              }
+                            },
+                            "cancel": {
+                              "Record": {
+                                "call": "Int"
+                              }
+                            },
+                            "halt": {
+                              "Record": {
+                                "value": "Int"
+                              }
+                            },
+                            "spawn": {
+                              "Record": {}
+                            }
+                          },
+                          "tag": "kind"
+                        }
+                      }
+                    },
+                    "state": {
+                      "Record": {
+                        "arg": "Json",
+                        "next": "Int",
+                        "nodes": {
+                          "Record": {
+                            "d": {
+                              "Record": {
+                                "call": "Int",
+                                "error": "String",
+                                "kind": "String",
+                                "value": "Int"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "name": "@state"
+            }
+          },
+          "harnesses": [],
+          "invariants": [],
+          "kind": "elaborated",
+          "properties": [],
+          "sourceMap": {
+            "invariants": {},
+            "nodes": {
+              "d": {
+                "end": {
+                  "column": 2,
+                  "line": 4
+                },
+                "start": {
+                  "column": 1,
+                  "line": 4
+                }
+              }
+            },
+            "properties": {}
+          },
+          "uses": [
+            {
+              "capability": "math",
+              "name": "m"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

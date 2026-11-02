@@ -170,6 +170,8 @@ pub(crate) struct Cx<'a> {
     pub(crate) calls: BTreeMap<usize, Call>,
     may_skip: BTreeSet<usize>,
     fresh: usize,
+    /// The types the file declares, by name, once resolved.
+    named: BTreeMap<String, Type>,
 }
 
 pub(crate) fn problem(span: Span, what: What) -> Problem {
@@ -277,7 +279,7 @@ fn default_value(ty: &Type) -> Value {
         Type::Float => json!(0.0),
         Type::String => json!(""),
         Type::Bool => json!(false),
-        Type::Any => Value::Null,
+        Type::Any | Type::Json => Value::Null,
         Type::List(_) => json!([]),
         Type::Record(fields) => Value::Object(
             fields
@@ -379,8 +381,8 @@ impl<'a> Cx<'a> {
         let file = self.file;
         let mut declared: BTreeMap<String, &TypeExpr> = BTreeMap::new();
         for (name, ty) in &file.types {
-            let builtin =
-                ["String", "Int", "Float", "Bool", "Any", "List"].contains(&name.text.as_str());
+            let builtin = ["String", "Int", "Float", "Bool", "Any", "Json", "List"]
+                .contains(&name.text.as_str());
             if builtin || declared.insert(name.text.clone(), ty).is_some() {
                 self.report(
                     name.span,
@@ -403,7 +405,14 @@ impl<'a> Cx<'a> {
         let arg = self.resolve_type(&file.param_type, &declared, &mut resolved, &mut Vec::new());
         let result =
             self.resolve_type(&file.result_type, &declared, &mut resolved, &mut Vec::new());
+        self.named = resolved;
         (arg, result)
+    }
+
+    /// A type written in an expression, its names resolved against the file's.
+    fn type_in_expr(&mut self, te: &TypeExpr) -> Type {
+        let mut resolved = self.named.clone();
+        self.resolve_type(te, &BTreeMap::new(), &mut resolved, &mut Vec::new())
     }
 
     fn named_type(
@@ -420,6 +429,7 @@ impl<'a> Cx<'a> {
             "Float" => return Type::Float,
             "Bool" => return Type::Bool,
             "Any" => return Type::Any,
+            "Json" => return Type::Json,
             _ => {}
         }
         if let Some(t) = resolved.get(name) {
@@ -703,6 +713,19 @@ impl<'a> Cx<'a> {
                 self.walk(t, locals, reads);
                 self.walk(o, locals, reads);
             }
+            ExprKind::Is {
+                of,
+                bind,
+                then,
+                otherwise,
+                ..
+            } => {
+                self.walk(of, locals, reads);
+                locals.push(bind.text.clone());
+                self.walk(then, locals, reads);
+                locals.pop();
+                self.walk(otherwise, locals, reads);
+            }
             ExprKind::Match(scrutinee, arms) => {
                 match self.outcome_of(scrutinee, locals) {
                     Some(i) => {
@@ -902,6 +925,26 @@ impl<'a> Cx<'a> {
                 self.lower(t, locals),
                 self.lower(o, locals),
             ),
+            ExprKind::Is {
+                of,
+                ty,
+                bind,
+                then,
+                otherwise,
+            } => {
+                let of = self.lower(of, locals);
+                let ty = self.type_in_expr(ty);
+                locals.push(bind.text.clone());
+                let then = self.lower(then, locals);
+                locals.pop();
+                K::Is {
+                    of: Box::new(of),
+                    ty,
+                    bind: bind.text.clone(),
+                    then: Box::new(then),
+                    otherwise: Box::new(self.lower(otherwise, locals)),
+                }
+            }
             ExprKind::Match(scrutinee, arms) => match self.outcome_of(scrutinee, locals) {
                 Some(i) => self.lower_outcome(e.span, i, arms, locals),
                 None => self.lower_match(e.span, scrutinee, arms, locals),
@@ -1809,6 +1852,7 @@ pub fn elaborate(
         calls: BTreeMap::new(),
         may_skip: BTreeSet::new(),
         fresh: 0,
+        named: BTreeMap::new(),
     };
     let (arg, result) = cx.types();
     let mut spawned = Vec::new();

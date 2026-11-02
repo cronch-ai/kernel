@@ -17,6 +17,9 @@ pub enum Type {
     String,
     Bool,
     Any,
+    /// Any JSON value: null, a boolean, a number, a string, a list of them or a record of them. Every value is one, so
+    /// every type conforms to it, and it conforms to nothing else: what it holds is read only by testing it with `is`.
+    Json,
     List(Box<Type>),
     Record(BTreeMap<String, Type>),
     /// A tagged union: a record whose `tag` field names its case, and which has that case's type. A case is a record
@@ -88,6 +91,17 @@ pub enum Expr {
         cases: BTreeMap<String, Case>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         otherwise: Option<Box<Expr>>,
+    },
+    /// Whether `of` has type `type`: if it does, `then`, with `bind` holding it at that type; if not, `else`. How a
+    /// `Json` value is read, such as a tool call a model chose, checked against the operations it may name.
+    Is {
+        of: Box<Expr>,
+        #[serde(rename = "type")]
+        ty: Type,
+        bind: String,
+        then: Box<Expr>,
+        #[serde(rename = "else")]
+        otherwise: Box<Expr>,
     },
     /// `acc` starts as `init` and becomes `body` once per item of `over`, in order, with `item` bound to that item.
     /// The only iteration there is: it runs once per item of a list it is given, so evaluation always terminates.

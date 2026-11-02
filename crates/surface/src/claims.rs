@@ -73,6 +73,12 @@ fn mentions(k: &K, name: &str) -> bool {
         K::Record { fields } => fields.values().any(|f| mentions(f, name)),
         K::List { items } => items.iter().any(|i| mentions(i, name)),
         K::Get { of, .. } | K::Label { of } => mentions(of, name),
+        K::Is {
+            of,
+            then,
+            otherwise,
+            ..
+        } => mentions(of, name) || mentions(then, name) || mentions(otherwise, name),
         K::Match {
             of,
             cases,

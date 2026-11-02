@@ -37,6 +37,19 @@ pub fn project(expr: &Expr, field: &str) -> Expr {
             then: Box::new(project(then, field)),
             otherwise: Box::new(project(otherwise, field)),
         },
+        Expr::Is {
+            of,
+            ty,
+            bind,
+            then,
+            otherwise,
+        } => Expr::Is {
+            of: of.clone(),
+            ty: ty.clone(),
+            bind: bind.clone(),
+            then: Box::new(project(then, field)),
+            otherwise: Box::new(project(otherwise, field)),
+        },
         Expr::Let { name, be, body, ty } => {
             let body = project(body, field);
             // A binding the projection reads only through one field is bound to that field alone, so what computes
@@ -116,6 +129,19 @@ fn each_use(expr: &Expr, name: &str, visit: &mut impl FnMut(&Expr) -> bool) {
         Expr::Record { fields } => fields.values().for_each(go),
         Expr::List { items } => items.iter().for_each(go),
         Expr::Get { of, .. } | Expr::Label { of } => go(of),
+        Expr::Is {
+            of,
+            bind,
+            then,
+            otherwise,
+            ..
+        } => {
+            go(of);
+            if bind != name {
+                go(then);
+            }
+            go(otherwise);
+        }
         Expr::Match {
             of,
             cases,
@@ -223,6 +249,23 @@ fn unwrap_field(body: &Expr, name: &str, field: &str) -> Expr {
             field: f.clone(),
         },
         Expr::Label { of } => Expr::Label { of: again(of) },
+        Expr::Is {
+            of,
+            ty,
+            bind,
+            then,
+            otherwise,
+        } => Expr::Is {
+            of: again(of),
+            ty: ty.clone(),
+            bind: bind.clone(),
+            then: if bind == name {
+                then.clone()
+            } else {
+                again(then)
+            },
+            otherwise: again(otherwise),
+        },
         Expr::Match {
             of,
             on,

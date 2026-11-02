@@ -112,6 +112,37 @@ fn cases() -> Vec<Case> {
             },
         ),
         (
+            "json",
+            "Json: everything conforms to it, nothing reads through it, and `is` tests a value against a type.",
+            |r| {
+                let successor = is_type(
+                    var("x"),
+                    json!("Int"),
+                    "n",
+                    op("add", vec![var("n"), lit(json!(1))]),
+                    lit(json!(0)),
+                );
+                r.call(json!({ "op": "infer", "expr": successor, "vars": { "x": "Json" } }));
+                r.call(json!({ "op": "infer", "expr": op("add", vec![var("x"), lit(json!(1))]), "vars": { "x": "Json" } }));
+                r.call(
+                    json!({ "op": "infer", "expr": get(var("x"), "a"), "vars": { "x": "Json" } }),
+                );
+                for x in [json!(41), json!("41"), json!(1.5), json!(null)] {
+                    r.call(json!({ "op": "evaluate", "expr": successor, "vars": { "x": x } }));
+                }
+                let call = json!({ "Record": { "op": "String", "args": { "Record": { "text": "String" } } } });
+                let text = is_type(
+                    var("x"),
+                    call,
+                    "c",
+                    path("c", &["args", "text"]),
+                    lit(json!("")),
+                );
+                r.call(json!({ "op": "evaluate", "expr": text, "vars": { "x": { "op": "a", "args": { "text": "hi" }, "extra": 1 } } }));
+                r.call(json!({ "op": "evaluate", "expr": text, "vars": { "x": { "op": "a", "args": { "text": 7 } } } }));
+            },
+        ),
+        (
             "run",
             "A run that fetches and sends, a refused call, withheld inputs, and a harness its interface can't run.",
             |r| {

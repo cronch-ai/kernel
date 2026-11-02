@@ -292,7 +292,7 @@ impl<'s> Reader<'s> {
         }
         let wrong = || Self::mismatch(ty, s);
         match ty {
-            Type::Any => Err(wrong()),
+            Type::Any | Type::Json => Err(wrong()),
             Type::Bool => match s {
                 Sexp::Atom(a) if a == "true" => Ok(Value::Bool(true)),
                 Sexp::Atom(a) if a == "false" => Ok(Value::Bool(false)),

@@ -1,0 +1,394 @@
+{
+  "description": "Json: everything conforms to it, nothing reads through it, and `is` tests a value against a type.",
+  "exchanges": [
+    {
+      "request": {
+        "expr": {
+          "bind": "n",
+          "e": "is",
+          "else": {
+            "e": "lit",
+            "v": 0
+          },
+          "of": {
+            "e": "var",
+            "name": "x"
+          },
+          "then": {
+            "args": [
+              {
+                "e": "var",
+                "name": "n"
+              },
+              {
+                "e": "lit",
+                "v": 1
+              }
+            ],
+            "e": "op",
+            "op": "add"
+          },
+          "type": "Int"
+        },
+        "op": "infer",
+        "vars": {
+          "x": "Json"
+        }
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "problems": [],
+          "type": "Int"
+        }
+      }
+    },
+    {
+      "request": {
+        "expr": {
+          "args": [
+            {
+              "e": "var",
+              "name": "x"
+            },
+            {
+              "e": "lit",
+              "v": 1
+            }
+          ],
+          "e": "op",
+          "op": "add"
+        },
+        "op": "infer",
+        "vars": {
+          "x": "Json"
+        }
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "problems": [
+            {
+              "at": "",
+              "error": {
+                "expected": "Float",
+                "got": "Json",
+                "index": 0,
+                "kind": "operand"
+              },
+              "kind": "operator",
+              "op": "add"
+            }
+          ],
+          "type": null
+        }
+      }
+    },
+    {
+      "request": {
+        "expr": {
+          "e": "get",
+          "field": "a",
+          "of": {
+            "e": "var",
+            "name": "x"
+          }
+        },
+        "op": "infer",
+        "vars": {
+          "x": "Json"
+        }
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "problems": [
+            {
+              "at": "",
+              "got": "Json",
+              "kind": "notARecord"
+            }
+          ],
+          "type": null
+        }
+      }
+    },
+    {
+      "request": {
+        "expr": {
+          "bind": "n",
+          "e": "is",
+          "else": {
+            "e": "lit",
+            "v": 0
+          },
+          "of": {
+            "e": "var",
+            "name": "x"
+          },
+          "then": {
+            "args": [
+              {
+                "e": "var",
+                "name": "n"
+              },
+              {
+                "e": "lit",
+                "v": 1
+              }
+            ],
+            "e": "op",
+            "op": "add"
+          },
+          "type": "Int"
+        },
+        "op": "evaluate",
+        "vars": {
+          "x": 41
+        }
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "kind": "value",
+          "value": 42
+        }
+      }
+    },
+    {
+      "request": {
+        "expr": {
+          "bind": "n",
+          "e": "is",
+          "else": {
+            "e": "lit",
+            "v": 0
+          },
+          "of": {
+            "e": "var",
+            "name": "x"
+          },
+          "then": {
+            "args": [
+              {
+                "e": "var",
+                "name": "n"
+              },
+              {
+                "e": "lit",
+                "v": 1
+              }
+            ],
+            "e": "op",
+            "op": "add"
+          },
+          "type": "Int"
+        },
+        "op": "evaluate",
+        "vars": {
+          "x": "41"
+        }
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "kind": "value",
+          "value": 0
+        }
+      }
+    },
+    {
+      "request": {
+        "expr": {
+          "bind": "n",
+          "e": "is",
+          "else": {
+            "e": "lit",
+            "v": 0
+          },
+          "of": {
+            "e": "var",
+            "name": "x"
+          },
+          "then": {
+            "args": [
+              {
+                "e": "var",
+                "name": "n"
+              },
+              {
+                "e": "lit",
+                "v": 1
+              }
+            ],
+            "e": "op",
+            "op": "add"
+          },
+          "type": "Int"
+        },
+        "op": "evaluate",
+        "vars": {
+          "x": 1.5
+        }
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "kind": "value",
+          "value": 0
+        }
+      }
+    },
+    {
+      "request": {
+        "expr": {
+          "bind": "n",
+          "e": "is",
+          "else": {
+            "e": "lit",
+            "v": 0
+          },
+          "of": {
+            "e": "var",
+            "name": "x"
+          },
+          "then": {
+            "args": [
+              {
+                "e": "var",
+                "name": "n"
+              },
+              {
+                "e": "lit",
+                "v": 1
+              }
+            ],
+            "e": "op",
+            "op": "add"
+          },
+          "type": "Int"
+        },
+        "op": "evaluate",
+        "vars": {
+          "x": null
+        }
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "kind": "value",
+          "value": 0
+        }
+      }
+    },
+    {
+      "request": {
+        "expr": {
+          "bind": "c",
+          "e": "is",
+          "else": {
+            "e": "lit",
+            "v": ""
+          },
+          "of": {
+            "e": "var",
+            "name": "x"
+          },
+          "then": {
+            "e": "get",
+            "field": "text",
+            "of": {
+              "e": "get",
+              "field": "args",
+              "of": {
+                "e": "var",
+                "name": "c"
+              }
+            }
+          },
+          "type": {
+            "Record": {
+              "args": {
+                "Record": {
+                  "text": "String"
+                }
+              },
+              "op": "String"
+            }
+          }
+        },
+        "op": "evaluate",
+        "vars": {
+          "x": {
+            "args": {
+              "text": "hi"
+            },
+            "extra": 1,
+            "op": "a"
+          }
+        }
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "kind": "value",
+          "value": "hi"
+        }
+      }
+    },
+    {
+      "request": {
+        "expr": {
+          "bind": "c",
+          "e": "is",
+          "else": {
+            "e": "lit",
+            "v": ""
+          },
+          "of": {
+            "e": "var",
+            "name": "x"
+          },
+          "then": {
+            "e": "get",
+            "field": "text",
+            "of": {
+              "e": "get",
+              "field": "args",
+              "of": {
+                "e": "var",
+                "name": "c"
+              }
+            }
+          },
+          "type": {
+            "Record": {
+              "args": {
+                "Record": {
+                  "text": "String"
+                }
+              },
+              "op": "String"
+            }
+          }
+        },
+        "op": "evaluate",
+        "vars": {
+          "x": {
+            "args": {
+              "text": 7
+            },
+            "op": "a"
+          }
+        }
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "kind": "value",
+          "value": ""
+        }
+      }
+    }
+  ]
+}

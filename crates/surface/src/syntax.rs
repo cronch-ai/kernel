@@ -76,6 +76,14 @@ pub enum ExprKind {
     Unary(Unary, Box<Expr>),
     Binary(Binary, Box<Expr>, Box<Expr>),
     If(Box<Expr>, Box<Expr>, Box<Expr>),
+    /// `if e is T as x then a else b`: `a` with `x` holding `e` at `T` if `e` has that type, `b` if not.
+    Is {
+        of: Box<Expr>,
+        ty: TypeExpr,
+        bind: Name,
+        then: Box<Expr>,
+        otherwise: Box<Expr>,
+    },
     Match(Box<Expr>, Vec<Arm>),
     Fold {
         over: Box<Expr>,
