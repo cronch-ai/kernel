@@ -39,14 +39,14 @@ Bidirectional checking: an expression is checked against the type it must have w
 - a harness's state type;
 - an operation's input type, for a call's arguments;
 - a step's type, `{state, actions}`;
-- a `let`'s or a fold's accumulator, once it is annotated or inferred from its first use.
+- a `let`'s bound value, or a fold's accumulator, when it is annotated.
 
 Checked against a type:
 - **A record literal against a variant** is that variant's case when its tag field is a string literal naming one: `{kind: "ok", value: v}` against `waiting | ok {value: T} | …` is the `ok` case, and `v` is checked against `T`. This is variant introduction, the missing rule.
-- **`[]` against `List(T)`** is a `List(T)`.
-- **`null`** is refused everywhere but at `Json` (A3).
+- **`[]` against `List(T)`** is a `List(T)`, and so is any list literal whose items each check against `T`.
+- **Annotations:** `let` and `fold` gain an optional `type`, for the bound value and the accumulator. A sequential step builds its state in `let`s, where nothing else would say what type is expected, so without them variant introduction would reach only the last expression. An absent annotation isn't serialized, so every existing term keeps its key.
 
-Partial field reads stay `Any` in A1 and become an error in A3, when there is no `Any` to give them.
+Partial field reads stay `Any` in A1, and `null` stays `Any`. Both become errors in A3, when there is no `Any` to give them, except `null` at `Json`.
 
 A1 changes no term's meaning, and a term that checks today still checks, so it is a minor version. The surface language can then make slots variants, keep fan-out lists typed, and type its actions.
 
@@ -82,9 +82,9 @@ Once A1 lands, the workarounds go, each in its own change:
 
 Each is a kernel PR with compliance vectors, and the platform follows A2 and A3 in lockstep.
 
-- **A1:** expected types in `check.rs`, variant introduction, typed `[]`, and `null` refused. Minor version.
+- **A1:** expected types in `check.rs`, variant introduction, typed `[]`, and `type` annotations on `let` and `fold`. Minor version.
 - **A2:** errors, harness results and declared children, typed actions, declared grant parts, typed events, and `checkHarness` against an interface. Breaking version.
-- **A3:** `Json`, its `match`, its SMT encoding, and the removal of `Any`. Breaking version, with the platform's contracts updated.
+- **A3:** `Json`, its `match`, its SMT encoding, the removal of `Any`, and `null` refused but at `Json`. Breaking version, with the platform's contracts updated.
 
 ## Open questions
 
