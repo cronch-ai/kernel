@@ -94,7 +94,7 @@ property no_effect_without_approval:
   - `match node { ok(v) => ..., failed(e) => ..., refused => ..., skipped => ... }` reads its outcome instead. It must cover `ok`, and `skipped` if the node can be skipped, or have a `_` arm.
   - A call node that fails or is refused ends the run through `otherwise`, unless every read of it is a `match` with arms for both, or a `_`. A node nothing reads ends the run too, since nothing handles its failure.
 - **`return expr`**, once per harness, is `halt(expr)`, emitted once every call, and everything `expr` reads, has settled. `return` may not read, as a value, a node that can be skipped (one with a guard, or that reads such a node). It must `match` it.
-- **`otherwise return expr`** is what a failure or refusal read as a value halts with. Without it, the run halts with `{"failed": name}`. `expr` can't read nodes.
+- **`otherwise return expr`** is what a failure or refusal read as a value halts with. Without it, the run halts with `{"failed": name}`, so a harness whose result type doesn't admit that, and that has a failure it doesn't handle, must have an `otherwise`: the kernel checks every halt against the result type. `expr` can't read nodes.
 - **Types:** `String`, `Int`, `Float`, `Bool`, `Any`, `List[T]`, records as `{field: T}`, and named record and variant types declared with `type`. A `|` of tagged records is a variant. The names are the kernel's.
 - **Expressions** are the pure fragment, mapped one-to-one onto `Expr`:
   - literals, names, field access (`r.text`), records (`{text: s}`), lists;
@@ -122,7 +122,7 @@ property no_effect_without_approval:
   - The calls get consecutive identifiers, so the slot keeps the first, and `items`, each call's kind. The number of calls is bounded by the list, not the graph.
   - Only operations with one result fan out, and a fan-out can't be cancelled with `until`.
   - The kernel has no typed empty list, so the slot's lists are rebuilt as lists of `Any` when a result arrives. The source's own expressions still see the node at `List[T]`.
-- **Spawning:** `summary = spawn summarizer(draft) only model.generate without fs.write` is a call node filled by a child run, with the kernel's spawn semantics. Its value is `Any`, as in the kernel.
+- **Spawning:** `summary = spawn summarizer(draft) only model.generate without fs.write` is a call node filled by a child run, with the kernel's spawn semantics. The harness declares each child it spawns, by the name its header binds, with the child's argument and result types, so the node's value has the child's result type.
   - `only` and `without` are the kernel's `only` and `drop` narrowings, so the child can never do what the parent couldn't.
   - The target is bound in the header: `uses summarizer = harness "harness:sha256-…"` names a registered harness, so the body never carries a key. A `spawn` action carries the child's whole term, so `elaborate` takes the terms of the harnesses the header names, as it takes the contracts of capabilities, and returns the bindings as `harnesses`.
   - The child is checked against the narrowed interface when the parent is elaborated, so a child that would be refused at run time is reported with its problems instead.

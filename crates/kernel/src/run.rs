@@ -41,7 +41,7 @@
 
 use crate::harness::{
     Harness, HarnessProblem, Interface, Mode, Narrowing, Operation, check_harness, check_interface,
-    narrow,
+    narrow, spawn_op,
 };
 use crate::ir::{Expr, Type};
 use crate::labeled::{self, EvalError, LValue, Label};
@@ -109,7 +109,14 @@ pub struct Run {
 pub struct Child {
     /// The identifier of the spawn that started it, which is also its name in delivery paths.
     pub call: u64,
+    /// The operation its result arrives on: `spawn.<name>` for a declared child, `spawn` otherwise.
+    #[serde(default = "spawn_op_undeclared")]
+    pub op: String,
     pub run: Run,
+}
+
+fn spawn_op_undeclared() -> String {
+    "spawn".to_string()
 }
 
 /// How many inputs the interpreter may deliver to itself in response to one delivery. A tree of runs that keeps
@@ -230,6 +237,8 @@ pub enum StepError {
     BadAction { action: Value },
     /// The runs kept answering each other for `DRAIN_LIMIT` inputs without the world getting a turn.
     Runaway,
+    /// `halt` with a value outside the harness's result type.
+    Result { expected: Type, got: Value },
 }
 
 fn eval_error(e: EvalError) -> StepError {
@@ -506,11 +515,11 @@ impl Run {
         for c in finished {
             let inbound = match c.run.outcome {
                 Some(Outcome::Halted { value, label }) => Inbound {
-                    input: json!({ "kind": "ret", "call": c.call, "op": "spawn", "value": value }),
+                    input: json!({ "kind": "ret", "call": c.call, "op": c.op, "value": value }),
                     label,
                 },
                 Some(Outcome::Failed { error }) => Inbound {
-                    input: json!({ "kind": "failed", "call": c.call, "op": "spawn", "error": error }),
+                    input: json!({ "kind": "failed", "call": c.call, "op": c.op, "error": error }),
                     label: c.run.seen,
                 },
                 None => unreachable!("partitioned on outcome"),
@@ -654,9 +663,16 @@ impl Run {
         }
     }
 
-    /// The child a spawn action starts, if it can start.
+    /// The child a spawn action starts, if it can start. A spawn that names a declared child starts only a harness
+    /// with that child's signature, with an argument the signature takes.
     fn child(&self, action: &Value, arg: &LValue) -> Option<Run> {
         let harness: Harness = serde_json::from_value(action.get("harness")?.clone()).ok()?;
+        if let Some(name) = action.get("name") {
+            let signature = self.harness.spawns.get(name.as_str()?)?;
+            if !signature.admits(&harness) || !inhabits(&arg.value(), &signature.arg) {
+                return None;
+            }
+        }
         let narrowings: Vec<Narrowing> = match action.get("narrow") {
             None => Vec::new(),
             Some(n) => serde_json::from_value(n.clone()).ok()?,
@@ -781,6 +797,10 @@ impl Run {
                     let arg = action
                         .field("arg")
                         .unwrap_or_else(|| LValue::new(&Value::Null, action.top()));
+                    let op = match value["name"].as_str() {
+                        Some(name) => spawn_op(name),
+                        None => spawn_op_undeclared(),
+                    };
                     match self.child(&value, &arg) {
                         Some(mut run) => {
                             events.push(out(Some(k), true, false, None));
@@ -788,12 +808,12 @@ impl Run {
                                 input: json!({ "kind": "start", "value": arg.value() }),
                                 label: arg.label(),
                             });
-                            self.children.push(Child { call: k, run });
+                            self.children.push(Child { call: k, op, run });
                         }
                         None => {
                             events.push(out(Some(k), false, false, None));
                             self.queue.push_back(Inbound {
-                                input: json!({ "kind": "refused", "call": k, "op": "spawn" }),
+                                input: json!({ "kind": "refused", "call": k, "op": op }),
                                 label: Label::new(),
                             });
                         }
@@ -802,10 +822,10 @@ impl Run {
                 Some("cancel") if value["call"].is_u64() => {
                     let k = value["call"].as_u64().unwrap_or_default();
                     if let Some(i) = self.children.iter().position(|c| c.call == k) {
-                        self.children.remove(i);
+                        let op = self.children.remove(i).op;
                         events.push(out(Some(k), true, false, None));
                         self.queue.push_back(Inbound {
-                            input: json!({ "kind": "failed", "call": k, "op": "spawn", "error": { "cancelled": true } }),
+                            input: json!({ "kind": "failed", "call": k, "op": op, "error": { "cancelled": true } }),
                             label: Label::new(),
                         });
                     } else {
@@ -817,6 +837,13 @@ impl Run {
                     let value = action
                         .field("value")
                         .unwrap_or_else(|| LValue::new(&Value::Null, action.top()));
+                    if !inhabits(&value.value(), &self.harness.result) {
+                        let error = StepError::Result {
+                            expected: self.harness.result.clone(),
+                            got: value.value(),
+                        };
+                        return self.fail(origin, inbound.input, error, events);
+                    }
                     self.outcome = Some(Outcome::Halted {
                         value: value.value(),
                         label: value.label(),

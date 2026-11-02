@@ -139,6 +139,11 @@ pub enum What {
     },
     /// `always` anywhere but around a whole property, which is always `□` already.
     NestedAlways,
+    /// A node's failure would end the run with `{"failed": node}`, which the result type doesn't admit, and there is no
+    /// `otherwise` to say what to halt with instead.
+    NeedsOtherwise {
+        node: String,
+    },
     /// `otherwise` reads a node.
     OtherwiseReadsNode {
         node: String,

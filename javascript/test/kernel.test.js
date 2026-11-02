@@ -192,6 +192,7 @@ test("elaborates a harness from source and runs it", () => {
     "a = m.double(n: n)",
     "b = m.double(n: a)",
     "return b",
+    "otherwise return -1",
   ].join("\n");
   const elaborated = kernel.elaborate(source, capabilities);
   assert.equal(elaborated.kind, "elaborated", JSON.stringify(elaborated));

@@ -137,9 +137,21 @@ export type LValue =
 /** `⟨A, S, s₀, δ⟩`. `step` is over `state` and `input`, and gives `{ state, actions }`. */
 export interface Harness {
   readonly arg: Type;
+  /** What a run halts with; a halt outside it fails the step. Absent: `Any`. */
+  readonly result?: Type;
+  /**
+   * The children it may spawn, by name. A `spawn` action with `name` starts only a harness with that signature,
+   * and its result arrives as `ret` on the operation `spawn.<name>`.
+   */
+  readonly spawns?: Readonly<Record<string, Signature>>;
   readonly state: Type;
   readonly init: Value;
   readonly step: Expr;
+}
+
+export interface Signature {
+  readonly arg: Type;
+  readonly result: Type;
 }
 
 /** An operation and its contract. Every expression is over `args`, and as named: `grant`, `result`. */
@@ -199,6 +211,7 @@ export type HarnessProblem =
   | { readonly kind: "expr"; readonly place: HarnessPlace; readonly problem: Problem }
   | { readonly kind: "init"; readonly expected: Type; readonly got: Value }
   | { readonly kind: "step"; readonly expected: Type; readonly got: Type }
+  | { readonly kind: "spawnClash"; readonly name: string }
   | {
       readonly kind: "part";
       readonly place: HarnessPlace;
@@ -275,6 +288,7 @@ export type SourceProblem = { readonly span: Span } & (
   | { readonly kind: "notASlot"; readonly node: string }
   | { readonly kind: "helper"; readonly name: string; readonly expected: string }
   | { readonly kind: "nestedAlways" }
+  | { readonly kind: "needsOtherwise"; readonly node: string }
   | { readonly kind: "otherwiseReadsNode"; readonly node: string }
   | { readonly kind: "type"; readonly problem: Problem }
   | { readonly kind: "mismatch"; readonly expected: Type; readonly got: Type }
@@ -314,7 +328,8 @@ export type StepError =
   | { readonly kind: "eval"; readonly error: EvalError }
   | { readonly kind: "notAStep"; readonly got: Value }
   | { readonly kind: "badAction"; readonly action: Value }
-  | { readonly kind: "runaway" };
+  | { readonly kind: "runaway" }
+  | { readonly kind: "result"; readonly expected: Type; readonly got: Value };
 
 export type Outcome =
   | { readonly kind: "halted"; readonly value: Value; readonly label?: Label }

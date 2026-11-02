@@ -216,6 +216,7 @@ total = a + b       # a pure node, read by `return`
 a = m.double(n: n)
 b = m.square(n: n + 1)
 return total
+otherwise return -1
 "#;
     let out = elaborated(source, math());
     assert_eq!(out["uses"], json!([{ "name": "m", "capability": "math" }]));
@@ -240,8 +241,9 @@ return total
 #[test]
 fn a_failure_ends_the_run_unless_a_match_handles_it() {
     let interface = math_interface();
+    // `{"failed": node}` is what a run halts with when nothing says otherwise, so the result type must admit it.
     let unhandled = r#"
-harness h(n: Int) -> Int
+harness h(n: Int) -> Any
 uses m = "math"
 a = m.double(n: n)
 return a
@@ -303,6 +305,7 @@ type Unused = a | b {x: Int}
 a = m.double(n: n) when n > 10
 b = m.square(n: a)
 return match b { ok(v) => v, skipped => 0 }
+otherwise return -1
 "#;
     let out = elaborated(source, math());
     let (outcome, calls) = run(&out["harness"], &math_interface(), &[start(json!(1))]);
@@ -319,7 +322,7 @@ fn kinds(problems: &[Value]) -> Vec<&str> {
 
 #[test]
 fn problems_are_reported_where_they_are() {
-    let header = "harness h(n: Int) -> Int\nuses m = \"math\"\n";
+    let header = "harness h(n: Int) -> Any\nuses m = \"math\"\n";
     let at = |source: &str| problems(&format!("{header}{source}"), math());
 
     let p = at("a = m.double(n: n\nreturn a\n");
@@ -366,6 +369,13 @@ fn problems_are_reported_where_they_are() {
 
     let p = at("a = m.double(n: 1)\nreturn match a { failed(e) => 0, _ => 1 } + len(a)\n");
     assert_eq!(kinds(&p), ["type"]);
+
+    let p = problems(
+        "harness h(n: Int) -> Int\nuses m = \"math\"\na = m.double(n: n)\nreturn a\n",
+        math(),
+    );
+    assert_eq!(p[0]["kind"], "needsOtherwise");
+    assert_eq!(p[0]["node"], "a");
 
     let p = problems("harness h(n: Int) -> Int\nuses q\nreturn 1\n", math());
     assert_eq!(p[0]["kind"], "unknownCapability");

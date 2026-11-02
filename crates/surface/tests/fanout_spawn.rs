@@ -68,7 +68,7 @@ fn failed(call: u64) -> Value {
 }
 
 const DOUBLE_ALL: &str = r#"
-harness double_all(xs: List[Int]) -> List[Int]
+harness double_all(xs: List[Int]) -> Any
 uses m = "math"
 doubled = for x in xs: m.double(n: x + 1)
 return doubled
@@ -130,6 +130,7 @@ harness child(n: Int) -> Int
 uses m = "math"
 a = m.double(n: n)
 return a
+otherwise return -1
 "#;
 
 #[test]
