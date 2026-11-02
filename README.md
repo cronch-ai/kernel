@@ -45,7 +45,7 @@ npm test --prefix javascript
 npm run lint
 ```
 
-Pushes to `main` publish a GitHub release once `javascript/package.json` is at version 1.0 or higher.
+Pushes to `main` publish a GitHub release of the version in `javascript/package.json`. A push that doesn't change the version fails the release job, since that release exists already; making it skip instead is still to do.
 
 ## License
 
