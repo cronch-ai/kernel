@@ -4,10 +4,12 @@
 //! file    = "harness" name "(" name ":" type ")" "->" type NL decl*
 //! decl    = "uses" use ("," use)* NL
 //!         | "type" name "=" (variant | type) NL
-//!         | "return" expr NL
+//!         | "carry" name ":" type "=" expr NL
+//!         | "next" name "=" expr NL
+//!         | "return" expr ("when" expr)? NL
 //!         | "otherwise" "return" expr NL
 //!         | ("property" | "invariant") name ":" NL? expr NL
-//!         | name "=" (expr | receive | spawn | each) ("when" expr)? ("until" name)? NL
+//!         | name "=" (expr | receive | spawn | each | "perform" expr) ("when" expr)? ("until" name)? NL
 //! receive = "receive" name? "from" path
 //! spawn   = "spawn" name "(" expr ")" ("only" path ("," path)*)? ("without" path ("," path)*)?
 //! each    = "for" name "in" expr ":" expr
@@ -32,10 +34,13 @@ use crate::{Problem, What};
 use serde_json::{Value, json};
 
 /// Words that can't name a node, a parameter or a binding. A field may still be called any of them.
-pub const KEYWORDS: [&str; 28] = [
+pub const KEYWORDS: [&str; 31] = [
     "harness",
     "uses",
     "type",
+    "carry",
+    "next",
+    "perform",
     "return",
     "otherwise",
     "when",
@@ -222,6 +227,8 @@ impl Parser {
             uses: Vec::new(),
             types: Vec::new(),
             nodes: Vec::new(),
+            carries: Vec::new(),
+            nexts: Vec::new(),
             returns: Vec::new(),
             otherwise: Vec::new(),
             properties: Vec::new(),
@@ -263,8 +270,25 @@ impl Parser {
                 self.ty()?
             };
             file.types.push((name, ty));
+        } else if self.eat_word("carry") {
+            let name = self.name()?;
+            self.sym(":")?;
+            let ty = self.ty()?;
+            self.sym("=")?;
+            let init = self.expr()?;
+            file.carries.push(Carry { name, ty, init });
+        } else if self.eat_word("next") {
+            let name = self.name()?;
+            self.sym("=")?;
+            file.nexts.push((name, self.expr()?));
         } else if self.eat_word("return") {
-            file.returns.push(self.expr()?);
+            let value = self.expr()?;
+            let when = if self.eat_word("when") {
+                Some(self.expr()?)
+            } else {
+                None
+            };
+            file.returns.push(Return { value, when });
         } else if self.is_word("property") || self.is_word("invariant") {
             let property = self.eat_word("property");
             if !property {
@@ -293,6 +317,14 @@ impl Parser {
                 self.spawn()?
             } else if self.is_word("for") {
                 self.each()?
+            } else if self.is_word("perform") {
+                let start = self.word("perform")?;
+                let action = self.expr()?;
+                let span = start.to(action.span);
+                Expr {
+                    kind: ExprKind::Perform(Box::new(action)),
+                    span,
+                }
             } else {
                 self.expr()?
             };
@@ -314,7 +346,7 @@ impl Parser {
             });
         } else {
             return self
-                .fail("a declaration: `uses`, `type`, `return`, `otherwise` or `name = ...`");
+                .fail("a declaration: `uses`, `type`, `carry`, `next`, `return`, `otherwise` or `name = ...`");
         }
         self.newline()
     }

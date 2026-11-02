@@ -315,6 +315,10 @@ export type SourceProblem = { readonly span: Span } & (
   | { readonly kind: "nestedAlways" }
   | { readonly kind: "needsOtherwise"; readonly node: string }
   | { readonly kind: "otherwiseReadsNode"; readonly node: string }
+  | { readonly kind: "carryReads"; readonly name: string }
+  | { readonly kind: "notACarry"; readonly name: string }
+  | { readonly kind: "nextWithoutLoop" }
+  | { readonly kind: "roundNeedsOtherwise" }
   | { readonly kind: "type"; readonly problem: Problem }
   | { readonly kind: "mismatch"; readonly expected: Type; readonly got: Type }
   /** The kernel rejected the elaborated term: a bug in the elaborator, not the source. */

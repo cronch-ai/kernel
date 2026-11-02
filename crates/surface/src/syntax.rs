@@ -112,6 +112,8 @@ pub enum ExprKind {
         only: Option<Vec<Name>>,
         without: Vec<Name>,
     },
+    /// `perform e`: the action `e` holds, if it is a call the interface allows. Only a node can be one.
+    Perform(Box<Expr>),
     /// `receive m from channel`: the first message on a channel. Only a node can be one.
     Receive {
         binder: Option<Name>,
@@ -161,6 +163,22 @@ pub struct Node {
     pub until: Option<Name>,
 }
 
+/// `carry name: T = init`: a value carried from each round to the next.
+#[derive(Clone, Debug)]
+pub struct Carry {
+    pub name: Name,
+    pub ty: TypeExpr,
+    /// Over the parameter: the value in the first round.
+    pub init: Expr,
+}
+
+#[derive(Clone, Debug)]
+pub struct Return {
+    pub value: Expr,
+    /// When the run halts at the end of a round. Without it, it halts after the first.
+    pub when: Option<Expr>,
+}
+
 #[derive(Clone, Debug)]
 pub struct File {
     pub name: Name,
@@ -170,8 +188,11 @@ pub struct File {
     pub uses: Vec<Use>,
     pub types: Vec<(Name, TypeExpr)>,
     pub nodes: Vec<Node>,
+    pub carries: Vec<Carry>,
+    /// `next name = e`: a carried value for the next round.
+    pub nexts: Vec<(Name, Expr)>,
     /// Every `return`, so more than one can be reported.
-    pub returns: Vec<Expr>,
+    pub returns: Vec<Return>,
     pub otherwise: Vec<Expr>,
     /// `property name: formula`, each `□formula` over the events of a run.
     pub properties: Vec<(Name, Expr)>,
