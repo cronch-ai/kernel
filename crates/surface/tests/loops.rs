@@ -369,12 +369,12 @@ fn approval_since_the_last_choice_holds_up_to_a_depth_and_fails_without_it() {
 #[test]
 fn a_loop_without_calls_to_wait_on_stalls() {
     let counter = r#"
-harness count(n: Int) -> Json
+harness count(n: Int) -> {failed: String}
 uses notes
 carry k: Int = n
 seen = notes.read()
 next k = k + 1
-return k when k >= n + 2
+return {failed: str(k)} when k >= n + 2
 "#;
     let harness = elaborated(counter)["harness"].clone();
     let (events, system) = run(
@@ -388,7 +388,7 @@ return k when k >= n + 2
         ],
     );
     assert_eq!(actions(&events).len(), 4);
-    assert_eq!(system["root"]["outcome"]["value"], json!(7));
+    assert_eq!(system["root"]["outcome"]["value"], json!({ "failed": "7" }));
 
     // Every call skipped: the next round would wait on nothing, so the run stalls.
     let idle = counter.replace("notes.read()", "notes.read() when k < 0");
@@ -402,14 +402,14 @@ return k when k >= n + 2
         system["root"]["outcome"]["value"],
         json!({ "failed": "round" })
     );
-    let idle = format!("{idle}otherwise return k\n");
+    let idle = format!("{idle}otherwise return {{failed: str(k)}}\n");
     let harness = elaborated(&idle)["harness"].clone();
     let (_, system) = run(
         &harness,
         no_grant(),
         &[json!({ "kind": "start", "value": 5 })],
     );
-    assert_eq!(system["root"]["outcome"]["value"], json!(6));
+    assert_eq!(system["root"]["outcome"]["value"], json!({ "failed": "6" }));
 }
 
 #[test]
@@ -489,12 +489,13 @@ fn loops_are_checked() {
 #[test]
 fn a_loops_invariant_has_an_induction_obligation() {
     let source = r#"
-harness count(n: Int) -> Json
+harness count(n: Int) -> Int
 uses notes
 carry k: Int = 0
 saved = notes.append(text: "x")
 next k = k + 1
 return k when k >= 3
+otherwise return -1
 invariant small: k <= 3
 "#;
     let out = elaborated(source);

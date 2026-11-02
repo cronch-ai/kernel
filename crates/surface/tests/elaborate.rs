@@ -31,7 +31,7 @@ fn platform_interface() -> Value {
 }
 
 const APPROVED_NOTE: &str = r#"
-harness approved_note(prompt: String) -> Json
+harness approved_note(prompt: String) -> String
 
 uses model, approve, notes
 
@@ -243,10 +243,10 @@ fn a_failure_ends_the_run_unless_a_match_handles_it() {
     let interface = math_interface();
     // `{"failed": node}` is what a run halts with when nothing says otherwise, so the result type must admit it.
     let unhandled = r#"
-harness h(n: Int) -> Json
+harness h(n: Int) -> {failed: String}
 uses m = "math"
 a = m.double(n: n)
-return a
+return {failed: str(a)}
 "#;
     let out = elaborated(unhandled, math());
     let (outcome, _) = run(&out["harness"], &interface, &[start(json!(1)), failed(0)]);
@@ -322,8 +322,8 @@ fn kinds(problems: &[Value]) -> Vec<&str> {
 
 #[test]
 fn problems_are_reported_where_they_are() {
-    let header = "harness h(n: Int) -> Json\nuses m = \"math\"\n";
-    let at = |source: &str| problems(&format!("{header}{source}"), math());
+    let header = "harness h(n: Int) -> Int\nuses m = \"math\"\n";
+    let at = |source: &str| problems(&format!("{header}{source}otherwise return 0\n"), math());
 
     let p = at("a = m.double(n: n\nreturn a\n");
     assert_eq!(kinds(&p), ["syntax"]);
@@ -364,7 +364,10 @@ fn problems_are_reported_where_they_are() {
         })
     );
 
-    let p = at("a = m.double(n: 1)\nreturn a\notherwise return a\n");
+    let p = problems(
+        &format!("{header}a = m.double(n: 1)\nreturn a\notherwise return a\n"),
+        math(),
+    );
     assert_eq!(kinds(&p), ["otherwiseReadsNode"]);
 
     let p = at("a = m.double(n: 1)\nreturn match a { failed(e) => 0, _ => 1 } + len(a)\n");
@@ -383,29 +386,4 @@ fn problems_are_reported_where_they_are() {
 
     let p = at("a = m.double(n: 1)\n");
     assert_eq!(kinds(&p), ["noReturn"]);
-}
-
-#[test]
-fn a_json_argument_is_read_after_testing_it() {
-    let source = r#"
-harness pick(choice: Json) -> Int
-uses m = "math"
-type Doubling = {n: Int}
-d = m.double(n: if choice is Doubling as c then c.n else 0)
-return d
-otherwise return -1
-"#;
-    let out = elaborated(source, math());
-    let interface = math_interface();
-    let (_, calls) = run(&out["harness"], &interface, &[start(json!({ "n": 5 }))]);
-    assert_eq!(calls, [json!(["m.double", { "n": 5 }, true])]);
-    let (_, calls) = run(&out["harness"], &interface, &[start(json!("five"))]);
-    assert_eq!(calls, [json!(["m.double", { "n": 0 }, true])]);
-
-    // Read without a test, it is refused.
-    let unread = problems(
-        &source.replace("if choice is Doubling as c then c.n else 0", "choice.n"),
-        math(),
-    );
-    assert!(unread.iter().any(|p| p["kind"] == "type"), "{unread:?}");
 }

@@ -1,7 +1,6 @@
 //! From Cronch definitions to a `Script`: the walk over types, values and expressions, reading each through the
 //! registries.
 
-use super::json;
 use super::readings::{self, Reading, SORTS};
 use super::script::{Command, Entry, Section, Term};
 use super::{Definition, ExportError, NoReading, Place};
@@ -61,7 +60,6 @@ fn describe(ty: &Type) -> String {
         Type::Float => "Float".into(),
         Type::String => "String".into(),
         Type::Bool => "Bool".into(),
-        Type::Json => "Json".into(),
         Type::List(t) => format!("List({})", describe(t)),
         Type::Record(fields) => {
             let fields: Vec<String> = fields
@@ -192,7 +190,6 @@ fn plain_equality(ty: &Type) -> bool {
         Type::Int | Type::Bool | Type::String => true,
         Type::List(t) => plain_equality(t),
         Type::Float
-        | Type::Json
         | Type::Action
         | Type::Returned
         | Type::Call
@@ -202,10 +199,10 @@ fn plain_equality(ty: &Type) -> bool {
 }
 
 /// Whether some term of the type's sort is no value the kernel could hold: an integer beyond what hosts carry
-/// exactly, a float that isn't finite, a `Json` term that isn't JSON.
+/// exactly, or a float that isn't finite.
 fn constrained(ty: &Type, floats: Floats) -> bool {
     match ty {
-        Type::Json | Type::Int => true,
+        Type::Int => true,
         Type::Float => floats == Floats::Exact,
         Type::List(t) => constrained(t, floats),
         Type::Record(fields) => fields.values().any(|t| constrained(t, floats)),
@@ -280,8 +277,6 @@ pub struct Encoder {
     /// infinite or NaN result, each under the branch it is on. SMT-LIB's functions are total, so these are stated.
     defined: Vec<Term>,
     floats: Floats,
-    /// Whether `Json`'s datatypes and functions are used, and so declared.
-    json: bool,
     /// Functions the encoding declares as it needs them, by name, each after the ones it calls: maps over sequences,
     /// and the text of values `str` writes as JSON.
     helpers: Vec<(String, Entry)>,
@@ -296,7 +291,6 @@ impl Encoder {
             guards: Vec::new(),
             defined: Vec::new(),
             floats: Floats::Exact,
-            json: false,
             helpers: Vec::new(),
         }
     }
@@ -511,50 +505,6 @@ impl Encoder {
         Ok(f)
     }
 
-    /// A function saying whether `holds`, given of an item `x`, holds of every item of a sequence of `Json`.
-    fn every(
-        &mut self,
-        item: &Type,
-        holds: impl FnOnce(&mut Self, Term) -> Read<Term>,
-    ) -> Read<Term> {
-        let name = format!("is.{}", short_hash(&json!(["is", item])));
-        let f = Term::symbol("map:", &name)?;
-        if self.helpers.iter().any(|(n, _)| *n == name) {
-            return Ok(f);
-        }
-        let seq = self.sort(&Type::List(Box::new(Type::Json)))?;
-        let s = Term::atom("s");
-        let len = Term::call("seq.len", vec![s.clone()]);
-        let first = holds(
-            self,
-            Term::call("seq.nth", vec![s.clone(), Term::atom("0")]),
-        )?;
-        let rest = Term::call(
-            "seq.extract",
-            vec![
-                s.clone(),
-                Term::atom("1"),
-                Term::call("-", vec![len.clone(), Term::atom("1")]),
-            ],
-        );
-        let body = Term::call(
-            "or",
-            vec![
-                Term::call("=", vec![len, Term::atom("0")]),
-                Term::call("and", vec![first, Term::app(f.clone(), vec![rest])]),
-            ],
-        );
-        self.declare_map(
-            name,
-            format!(
-                "Whether every item of a List(Json) is a {}.",
-                describe(item)
-            ),
-            (f.clone(), vec![(s, seq)], Term::atom("Bool"), body),
-        );
-        Ok(f)
-    }
-
     fn declare_map(
         &mut self,
         name: String,
@@ -615,10 +565,6 @@ impl Encoder {
             Type::List(t) => Ok(Term::call("Seq", vec![self.sort(t)?])),
             Type::Record(fields) => self.constructor(fields),
             Type::Variant { tag, cases } => Term::symbol("", &self.variant(tag, cases)?),
-            Type::Json => {
-                self.json = true;
-                json::sort()
-            }
             _ => Err(NoReading::Unchecked),
         }
     }
@@ -629,7 +575,6 @@ impl Encoder {
             got: v.clone(),
         };
         match (ty, v) {
-            (Type::Json, _) => self.json_value(v),
             (Type::Int, Value::Number(n)) => int_literal(n).ok_or_else(mismatch),
             (Type::Float, Value::Number(n)) => n
                 .as_f64()
@@ -730,267 +675,7 @@ impl Encoder {
                     });
                 Ok(Term::bind(x, term, chained))
             }
-            (_, Type::Json) => self.json_of(term, from),
             _ => Err(NoReading::Unchecked),
-        }
-    }
-
-    /// A JSON value as a `Json` term.
-    fn json_value(&mut self, v: &Value) -> Read<Term> {
-        self.sort(&Type::Json)?;
-        match v {
-            Value::Null => json::null(),
-            Value::Bool(b) => json::wrap("bool", Term::atom(b.to_string())),
-            Value::Number(n) => {
-                let f = n.as_f64().ok_or(NoReading::Value {
-                    expected: Type::Json,
-                    got: v.clone(),
-                })?;
-                json::wrap("number", float_literal(self.floats, f))
-            }
-            Value::String(text) => json::wrap("string", Term::string(text)?),
-            Value::Array(items) => {
-                let sort = self.sort(&Type::List(Box::new(Type::Json)))?;
-                let empty = Term::List(vec![Term::atom("as"), Term::atom("seq.empty"), sort]);
-                let mut units = Vec::new();
-                for item in items {
-                    units.push(Term::call("seq.unit", vec![self.json_value(item)?]));
-                }
-                json::wrap("list", Term::fold("seq.++", empty, units))
-            }
-            Value::Object(map) => {
-                let mut entries: Vec<(&String, &Value)> = map.iter().collect();
-                entries.sort_by(|a, b| a.0.cmp(b.0));
-                let mut fields = Vec::new();
-                for (key, value) in entries {
-                    fields.push((Term::string(key)?, self.json_value(value)?));
-                }
-                json::record(fields)
-            }
-        }
-    }
-
-    /// A term of type `from` as the `Json` value it is.
-    fn json_of(&mut self, term: Term, from: &Type) -> Read<Term> {
-        self.sort(&Type::Json)?;
-        match from {
-            Type::Action | Type::Call | Type::Returned => Err(NoReading::Unchecked),
-            Type::Json => Ok(term),
-            Type::Int | Type::Float => json::wrap("number", as_float(self.floats, term, from)),
-            Type::String => json::wrap("string", term),
-            Type::Bool => json::wrap("bool", term),
-            Type::List(item) if **item == Type::Json => json::wrap("list", term),
-            Type::List(item) => {
-                let f = self.map("json", item, &Type::Json, |e, x| e.json_of(x, item))?;
-                json::wrap("list", Term::app(f, vec![term]))
-            }
-            Type::Record(_) | Type::Variant { .. } => {
-                let x = self.fresh();
-                let mut cases = self.json_cases(x.clone(), from)?;
-                let (_, last) = cases.pop().ok_or(NoReading::Unchecked)?;
-                let keyed = |fields: BTreeMap<String, Term>| -> Read<Vec<(Term, Term)>> {
-                    fields
-                        .into_iter()
-                        .map(|(k, v)| Ok((Term::string(&k)?, v)))
-                        .collect()
-                };
-                let mut out = json::record(keyed(last)?)?;
-                for (condition, fields) in cases.into_iter().rev() {
-                    let record = json::record(keyed(fields)?)?;
-                    out = Term::call("ite", vec![condition, record, out]);
-                }
-                Ok(Term::bind(x, term, out))
-            }
-        }
-    }
-
-    /// The records a record or variant term may be, each with the condition it is that one and its fields as `Json`,
-    /// in key order. A variant's case carries its tag.
-    fn json_cases(&mut self, term: Term, ty: &Type) -> Read<Vec<(Term, BTreeMap<String, Term>)>> {
-        match ty {
-            Type::Record(fields) => {
-                let mut out = BTreeMap::new();
-                for (field, t) in fields {
-                    let read = self.select(fields, field, term.clone())?;
-                    out.insert(field.clone(), self.json_of(read, t)?);
-                }
-                Ok(vec![(Term::atom("true"), out)])
-            }
-            Type::Variant { tag, cases } => {
-                let name = self.variant(tag, cases)?;
-                let mut out = Vec::new();
-                for (case, case_ty) in cases {
-                    let test = tester(&name, case, term.clone())?;
-                    let inner = match case_ty {
-                        Type::Record(fields) => {
-                            let mut map = BTreeMap::new();
-                            for (field, t) in fields {
-                                let read = Term::app(
-                                    case_selector(&name, case, field)?,
-                                    vec![term.clone()],
-                                );
-                                map.insert(field.clone(), self.json_of(read, t)?);
-                            }
-                            vec![(Term::atom("true"), map)]
-                        }
-                        Type::Variant { .. } => {
-                            let nested =
-                                Term::app(case_selector(&name, case, "")?, vec![term.clone()]);
-                            self.json_cases(nested, case_ty)?
-                        }
-                        _ => return Err(NoReading::Unchecked),
-                    };
-                    for (condition, mut map) in inner {
-                        map.insert(tag.clone(), json::wrap("string", Term::string(case)?)?);
-                        out.push((Term::call("and", vec![test.clone(), condition]), map));
-                    }
-                }
-                Ok(out)
-            }
-            _ => Err(NoReading::Unchecked),
-        }
-    }
-
-    /// Whether the `Json` term `j` is a value of `ty`, as `types::inhabits` decides.
-    fn json_is(&mut self, ty: &Type, j: Term) -> Read<Term> {
-        let number = || json::select("number.v", j.clone());
-        Ok(match ty {
-            Type::Action | Type::Call | Type::Returned => return Err(NoReading::Unchecked),
-            Type::Json => Term::atom("true"),
-            Type::Bool => json::tester("bool", j)?,
-            Type::String => json::tester("string", j)?,
-            Type::Float => json::tester("number", j)?,
-            Type::Int => {
-                let integral = match self.floats {
-                    Floats::Exact => Term::call(
-                        "and",
-                        vec![
-                            Term::call("not", vec![Term::call("fp.isInfinite", vec![number()?])]),
-                            Term::call(
-                                "fp.eq",
-                                vec![
-                                    Term::call(
-                                        "fp.roundToIntegral",
-                                        vec![Term::atom("RNE"), number()?],
-                                    ),
-                                    number()?,
-                                ],
-                            ),
-                        ],
-                    ),
-                    Floats::Real => Term::call("is_int", vec![number()?]),
-                };
-                Term::call("and", vec![json::tester("number", j.clone())?, integral])
-            }
-            Type::List(item) if **item == Type::Json => json::tester("list", j)?,
-            Type::List(item) => {
-                let f = self.every(item, |e, x| e.json_is(item, x))?;
-                let items = json::select("list.v", j.clone())?;
-                Term::call(
-                    "and",
-                    vec![json::tester("list", j)?, Term::app(f, vec![items])],
-                )
-            }
-            Type::Record(fields) => {
-                let r = json::select("record.v", j.clone())?;
-                let mut all = vec![json::tester("record", j)?];
-                for (field, t) in fields {
-                    let key = Term::string(field)?;
-                    all.push(json::has(r.clone(), key.clone())?);
-                    all.push(self.json_is(t, json::get(r.clone(), key)?)?);
-                }
-                Term::call("and", all)
-            }
-            Type::Variant { tag, cases } => {
-                let r = json::select("record.v", j.clone())?;
-                let tag_value = json::get(r.clone(), Term::string(tag)?)?;
-                let mut any = Vec::new();
-                for (case, case_ty) in cases {
-                    any.push(Term::call(
-                        "and",
-                        vec![
-                            Term::call(
-                                "=",
-                                vec![
-                                    json::select("string.v", tag_value.clone())?,
-                                    Term::string(case)?,
-                                ],
-                            ),
-                            self.json_is(case_ty, j.clone())?,
-                        ],
-                    ));
-                }
-                Term::call(
-                    "and",
-                    vec![
-                        json::tester("record", j)?,
-                        json::has(r, Term::string(tag)?)?,
-                        json::tester("string", tag_value)?,
-                        Term::fold("or", Term::atom("false"), any),
-                    ],
-                )
-            }
-        })
-    }
-
-    /// The `Json` term `j` read at `ty`, where `json_is` holds of it.
-    fn json_as(&mut self, ty: &Type, j: Term) -> Read<Term> {
-        let number = || json::select("number.v", j.clone());
-        match ty {
-            Type::Action | Type::Call | Type::Returned => Err(NoReading::Unchecked),
-            Type::Json => Ok(j),
-            Type::Bool => json::select("bool.v", j),
-            Type::String => json::select("string.v", j),
-            Type::Float => number(),
-            Type::Int => Ok(match self.floats {
-                Floats::Exact => {
-                    Term::call("to_int", vec![Term::call("fp.to_real", vec![number()?])])
-                }
-                Floats::Real => Term::call("to_int", vec![number()?]),
-            }),
-            Type::List(item) if **item == Type::Json => json::select("list.v", j),
-            Type::List(item) => {
-                let f = self.map("read", &Type::Json, item, |e, x| e.json_as(item, x))?;
-                Ok(Term::app(f, vec![json::select("list.v", j)?]))
-            }
-            Type::Record(fields) => {
-                let r = json::select("record.v", j)?;
-                let constructor = self.constructor(fields)?;
-                let mut args = Vec::new();
-                for (field, t) in fields {
-                    args.push(self.json_as(t, json::get(r.clone(), Term::string(field)?)?)?);
-                }
-                Ok(Term::app(constructor, args))
-            }
-            Type::Variant { tag, cases } => {
-                let name = self.variant(tag, cases)?;
-                let r = json::select("record.v", j.clone())?;
-                let tag_value =
-                    json::select("string.v", json::get(r.clone(), Term::string(tag)?)?)?;
-                let mut branches = Vec::new();
-                for (case, case_ty) in cases {
-                    let mut args = Vec::new();
-                    for (field, t) in case_fields(case_ty)? {
-                        args.push(if field.is_empty() {
-                            self.json_as(&t, j.clone())?
-                        } else {
-                            self.json_as(&t, json::get(r.clone(), Term::string(&field)?)?)?
-                        });
-                    }
-                    let built = Term::app(case_constructor(&name, case)?, args);
-                    branches.push((
-                        Term::call("=", vec![tag_value.clone(), Term::string(case)?]),
-                        built,
-                    ));
-                }
-                let (_, last) = branches.pop().ok_or(NoReading::EmptyVariant)?;
-                Ok(branches
-                    .into_iter()
-                    .rev()
-                    .fold(last, |rest, (test, built)| {
-                        Term::call("ite", vec![test, built, rest])
-                    }))
-            }
         }
     }
 
@@ -1001,7 +686,6 @@ impl Encoder {
             return Ok(None);
         }
         Ok(Some(match ty {
-            Type::Json => json::ok(term)?,
             Type::Int => carried(term),
             Type::Float => finite(term),
             Type::Record(fields) => {
@@ -1164,55 +848,11 @@ impl Encoder {
     ) -> Result<(Term, Type), ExportError> {
         let here = at_body(at);
         match expr {
-            Expr::Is {
-                of,
-                ty,
-                bind,
-                then,
-                otherwise,
-            } => {
-                let (t, of_ty) = self.expr(of, &child(at, "of"))?;
-                let j = self.coerce(t, &of_ty, &Type::Json).map_err(&here)?;
-                let x = self.fresh();
-                let from = self.defined.len();
-                let test = self.json_is(ty, x.clone()).map_err(&here)?;
-                let bound = self.json_as(ty, x.clone()).map_err(&here)?;
-                let var = local(bind).map_err(&here)?;
-                // Only the branch taken is evaluated, so each requires only where it is taken.
-                self.guards.push(test.clone());
-                self.scope.push((bind.clone(), ty.clone()));
-                let inner = self.defined.len();
-                let then = self.encode(then, &child(at, "then"), expected);
-                self.scope.pop();
-                for condition in &mut self.defined[inner..] {
-                    *condition = Term::bind(var.clone(), bound.clone(), condition.clone());
-                }
-                self.guards.pop();
-                self.guards.push(Term::call("not", vec![test.clone()]));
-                let otherwise = self.encode(otherwise, &child(at, "else"), expected);
-                self.guards.pop();
-                let ((t, then_ty), (e, else_ty)) = (then?, otherwise?);
-                let result = if let Some(want) = expected {
-                    want.clone()
-                } else if conforms(&else_ty, &then_ty) {
-                    then_ty.clone()
-                } else {
-                    else_ty.clone()
-                };
-                let t = self
-                    .coerce(t, &then_ty, &result)
-                    .map_err(at_body(&child(at, "then")))?;
-                let e = self
-                    .coerce(e, &else_ty, &result)
-                    .map_err(at_body(&child(at, "else")))?;
-                let body = Term::call("ite", vec![test, Term::bind(var, bound, t), e]);
-                for condition in &mut self.defined[from..] {
-                    *condition = Term::bind(x.clone(), j.clone(), condition.clone());
-                }
-                Ok((Term::bind(x, j, body), result))
-            }
             Expr::Lit { v } => {
-                let ty = of_value(v);
+                let ty = match expected {
+                    Some(want) if crate::types::inhabits(v, want) => want.clone(),
+                    _ => of_value(v).ok_or_else(|| here(NoReading::Unchecked))?,
+                };
                 Ok((self.value(v, &ty).map_err(here)?, ty))
             }
             Expr::Var { name } => match self.scope.iter().rev().find(|(n, _)| n == name) {
@@ -1312,11 +952,11 @@ impl Encoder {
                     let item_at = child(at, &format!("items/{i}"));
                     encoded.push((self.expr(e, &item_at)?, item_at));
                 }
-                // An empty list literal, read where no list type is expected, is a `List(Json)`, as the checker reads it.
+                // An empty list literal where no list type is expected has no reading, as the checker has no type for it.
                 let element = encoded
                     .first()
                     .map(|((_, ty), _)| ty.clone())
-                    .unwrap_or(Type::Json);
+                    .ok_or_else(|| here(NoReading::Unchecked))?;
                 let sort = self
                     .sort(&Type::List(Box::new(element.clone())))
                     .map_err(&here)?;
@@ -1637,11 +1277,6 @@ impl Encoder {
     pub(super) fn records(&mut self) -> Result<Section, ExportError> {
         let at = at_place(Place::Body { at: String::new() });
         let mut records = Vec::new();
-        if self.json {
-            let number = self.sort(&Type::Float).map_err(&at)?;
-            let finite = (self.floats == Floats::Exact).then_some(finite as fn(Term) -> Term);
-            records.extend(json::declarations(number, finite).map_err(&at)?);
-        }
         for (name, datatype) in self.datatypes.clone() {
             let entry = match datatype {
                 Datatype::Record(fields) => {

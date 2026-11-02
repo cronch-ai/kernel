@@ -8,7 +8,7 @@
             "Record": {}
           },
           "init": {},
-          "result": "Json",
+          "result": "String",
           "state": {
             "Record": {}
           },
@@ -150,11 +150,7 @@
         "interface": {
           "channels": {
             "act": {
-              "type": {
-                "Record": {
-                  "kind": "String"
-                }
-              }
+              "type": "Action"
             },
             "user": {
               "type": "String"
@@ -342,7 +338,7 @@
           "evidence": {
             "assumptions": [
               {
-                "interface": "sha256:274ffd31ce52b0d63dd92c006422108acff2f175382d0f5d46aa5dfaba1beb21",
+                "interface": "sha256:6994ba4df23feee465b7e8302f0a09073ad8bdc4e480075f900529d5741b9568",
                 "kind": "contracts"
               },
               {
@@ -370,8 +366,8 @@
               }
             ],
             "grant": "sha256:f192c92f3aeac8e9398fb4e40a7802990f13a78467067fd77e22ea4f4c634dff",
-            "harness": "sha256:a3a13fc4f6a4f2cb0266239326a902c4adbcdc87d33159364bc7de3dc97dc64e",
-            "interface": "sha256:274ffd31ce52b0d63dd92c006422108acff2f175382d0f5d46aa5dfaba1beb21",
+            "harness": "sha256:6d513afe7b75b30afcc117770e18e06fa36e017c1a12eb4de3a75655d9faf17a",
+            "interface": "sha256:6994ba4df23feee465b7e8302f0a09073ad8bdc4e480075f900529d5741b9568",
             "method": {
               "deliveries": [
                 {
@@ -396,7 +392,7 @@
             "property": "sha256:044e72fbb412811697057948cb8e00415bcff097b46254a1a8d0e35d21e4d958",
             "verdict": "refuted"
           },
-          "key": "sha256:8198583f3710dabce849a600018b4fa6471a1f8c6977986b18865cf5dfcefcaa",
+          "key": "sha256:dbcc904b19da67b256fc06e7a6eb964283891ef36ac7ac04bfd2995efc66e8f1",
           "kind": "evidence"
         }
       }
@@ -406,7 +402,7 @@
         "evidence": {
           "assumptions": [
             {
-              "interface": "sha256:274ffd31ce52b0d63dd92c006422108acff2f175382d0f5d46aa5dfaba1beb21",
+              "interface": "sha256:6994ba4df23feee465b7e8302f0a09073ad8bdc4e480075f900529d5741b9568",
               "kind": "contracts"
             },
             {
@@ -434,8 +430,8 @@
             }
           ],
           "grant": "sha256:f192c92f3aeac8e9398fb4e40a7802990f13a78467067fd77e22ea4f4c634dff",
-          "harness": "sha256:a3a13fc4f6a4f2cb0266239326a902c4adbcdc87d33159364bc7de3dc97dc64e",
-          "interface": "sha256:274ffd31ce52b0d63dd92c006422108acff2f175382d0f5d46aa5dfaba1beb21",
+          "harness": "sha256:6d513afe7b75b30afcc117770e18e06fa36e017c1a12eb4de3a75655d9faf17a",
+          "interface": "sha256:6994ba4df23feee465b7e8302f0a09073ad8bdc4e480075f900529d5741b9568",
           "method": {
             "deliveries": [
               {
@@ -465,7 +461,7 @@
             "Record": {}
           },
           "init": {},
-          "result": "Json",
+          "result": "String",
           "state": {
             "Record": {}
           },
@@ -607,11 +603,7 @@
         "interface": {
           "channels": {
             "act": {
-              "type": {
-                "Record": {
-                  "kind": "String"
-                }
-              }
+              "type": "Action"
             },
             "user": {
               "type": "String"
@@ -789,7 +781,7 @@
             "Record": {}
           },
           "init": {},
-          "result": "Json",
+          "result": "String",
           "state": {
             "Record": {}
           },
@@ -884,11 +876,7 @@
         "interface": {
           "channels": {
             "act": {
-              "type": {
-                "Record": {
-                  "kind": "String"
-                }
-              }
+              "type": "Action"
             },
             "user": {
               "type": "String"
@@ -1084,7 +1072,7 @@
           "evidence": {
             "assumptions": [
               {
-                "interface": "sha256:274ffd31ce52b0d63dd92c006422108acff2f175382d0f5d46aa5dfaba1beb21",
+                "interface": "sha256:6994ba4df23feee465b7e8302f0a09073ad8bdc4e480075f900529d5741b9568",
                 "kind": "contracts"
               },
               {
@@ -1101,8 +1089,8 @@
             ],
             "depth": 3,
             "grant": "sha256:f192c92f3aeac8e9398fb4e40a7802990f13a78467067fd77e22ea4f4c634dff",
-            "harness": "sha256:8f3398ec28fae51350ab0f8a1ce9d772820ba867e494fe5fbae4f130eafd2ed6",
-            "interface": "sha256:274ffd31ce52b0d63dd92c006422108acff2f175382d0f5d46aa5dfaba1beb21",
+            "harness": "sha256:e805598bacb8275bb998f9e0f3cd7d676a4dc0f0401cfa2d8602e53837a1fc0a",
+            "interface": "sha256:6994ba4df23feee465b7e8302f0a09073ad8bdc4e480075f900529d5741b9568",
             "method": {
               "alphabet": [
                 {
@@ -1133,7 +1121,7 @@
             "property": "sha256:044e72fbb412811697057948cb8e00415bcff097b46254a1a8d0e35d21e4d958",
             "verdict": "holdsUpTo"
           },
-          "key": "sha256:f723dc84e839158c85fa19149068bce0bb8cba62cbac39bdb7f4068019ad51fb",
+          "key": "sha256:33efbb6d0c2cfcf03cf482e5ae472d5b2389fe35b75e53bd281face2bb562b52",
           "kind": "evidence"
         }
       }
@@ -1145,7 +1133,7 @@
             "Record": {}
           },
           "init": {},
-          "result": "Json",
+          "result": "String",
           "state": {
             "Record": {}
           },
@@ -1240,11 +1228,7 @@
         "interface": {
           "channels": {
             "act": {
-              "type": {
-                "Record": {
-                  "kind": "String"
-                }
-              }
+              "type": "Action"
             },
             "user": {
               "type": "String"
@@ -1439,7 +1423,7 @@
           "evidence": {
             "assumptions": [
               {
-                "interface": "sha256:274ffd31ce52b0d63dd92c006422108acff2f175382d0f5d46aa5dfaba1beb21",
+                "interface": "sha256:6994ba4df23feee465b7e8302f0a09073ad8bdc4e480075f900529d5741b9568",
                 "kind": "contracts"
               },
               {
@@ -1455,8 +1439,8 @@
               }
             ],
             "grant": "sha256:f192c92f3aeac8e9398fb4e40a7802990f13a78467067fd77e22ea4f4c634dff",
-            "harness": "sha256:8f3398ec28fae51350ab0f8a1ce9d772820ba867e494fe5fbae4f130eafd2ed6",
-            "interface": "sha256:274ffd31ce52b0d63dd92c006422108acff2f175382d0f5d46aa5dfaba1beb21",
+            "harness": "sha256:e805598bacb8275bb998f9e0f3cd7d676a4dc0f0401cfa2d8602e53837a1fc0a",
+            "interface": "sha256:6994ba4df23feee465b7e8302f0a09073ad8bdc4e480075f900529d5741b9568",
             "method": {
               "alphabet": [
                 {
@@ -1487,7 +1471,7 @@
             "property": "sha256:044e72fbb412811697057948cb8e00415bcff097b46254a1a8d0e35d21e4d958",
             "verdict": "holds"
           },
-          "key": "sha256:061fb5e154458e71d6848fc09ea1c54d4fe0c9727b30865c3fede448c77c4562",
+          "key": "sha256:53c4f6d0ad5b87e56656b3f91608b61c694067c8ef51b055a130fed06ba5af03",
           "kind": "evidence"
         }
       }
@@ -1497,7 +1481,7 @@
         "evidence": {
           "assumptions": [
             {
-              "interface": "sha256:274ffd31ce52b0d63dd92c006422108acff2f175382d0f5d46aa5dfaba1beb21",
+              "interface": "sha256:6994ba4df23feee465b7e8302f0a09073ad8bdc4e480075f900529d5741b9568",
               "kind": "contracts"
             },
             {
@@ -1513,8 +1497,8 @@
             }
           ],
           "grant": "sha256:f192c92f3aeac8e9398fb4e40a7802990f13a78467067fd77e22ea4f4c634dff",
-          "harness": "sha256:8f3398ec28fae51350ab0f8a1ce9d772820ba867e494fe5fbae4f130eafd2ed6",
-          "interface": "sha256:274ffd31ce52b0d63dd92c006422108acff2f175382d0f5d46aa5dfaba1beb21",
+          "harness": "sha256:e805598bacb8275bb998f9e0f3cd7d676a4dc0f0401cfa2d8602e53837a1fc0a",
+          "interface": "sha256:6994ba4df23feee465b7e8302f0a09073ad8bdc4e480075f900529d5741b9568",
           "method": {
             "alphabet": [
               {
@@ -1550,7 +1534,7 @@
             "Record": {}
           },
           "init": {},
-          "result": "Json",
+          "result": "String",
           "state": {
             "Record": {}
           },
@@ -1645,11 +1629,7 @@
         "interface": {
           "channels": {
             "act": {
-              "type": {
-                "Record": {
-                  "kind": "String"
-                }
-              }
+              "type": "Action"
             },
             "user": {
               "type": "String"

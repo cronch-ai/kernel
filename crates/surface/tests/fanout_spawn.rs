@@ -68,10 +68,11 @@ fn failed(call: u64) -> Value {
 }
 
 const DOUBLE_ALL: &str = r#"
-harness double_all(xs: List[Int]) -> Json
+harness double_all(xs: List[Int]) -> List[Int]
 uses m = "math"
 doubled = for x in xs: m.double(n: x + 1)
 return doubled
+otherwise return [-1]
 "#;
 
 #[test]
@@ -109,7 +110,7 @@ fn a_fan_out_fails_if_any_of_its_calls_does() {
         &harness,
         &[start(json!([1, 2])), ret(0, json!(4)), failed(1)],
     );
-    assert_eq!(outcome["value"], json!({ "failed": "doubled" }));
+    assert_eq!(outcome["value"], json!([-1]));
 
     let handled = r#"
 harness h(xs: List[Int]) -> Int
@@ -137,11 +138,12 @@ otherwise return -1
 fn a_spawned_harness_runs_as_a_child_and_its_value_comes_back() {
     let child = elaborated(CHILD, json!({}))["harness"].clone();
     let parent = r#"
-harness parent(n: Int) -> Json
+harness parent(n: Int) -> Int
 uses m = "math"
 uses doubler = harness "registered:doubler"
 r = spawn doubler(n + 1) only m.double
 return r
+otherwise return -1
 "#;
     let out = elaborated(parent, json!({ "registered:doubler": child }));
     assert_eq!(
@@ -175,38 +177,43 @@ fn spawns_and_fan_outs_are_checked() {
         out["problems"].as_array().unwrap().clone()
     };
     let header =
-        "harness h(n: Int) -> Json\nuses m = \"math\"\nuses doubler = harness \"doubler\"\n";
+        "harness h(n: Int) -> Int\nuses m = \"math\"\nuses doubler = harness \"doubler\"\n";
 
     // The child calls `m.double`, which a narrowing to `m.square` takes away.
     let p = problems(&format!(
-        "{header}r = spawn doubler(n) only m.square\nreturn r\n"
+        "{header}r = spawn doubler(n) only m.square\nreturn r\notherwise return 0\n"
     ));
     assert_eq!(p[0]["kind"], "child");
     let p = problems(&format!(
-        "{header}r = spawn doubler(n) without m.triple\nreturn r\n"
+        "{header}r = spawn doubler(n) without m.triple\nreturn r\notherwise return 0\n"
     ));
     assert_eq!(p[0]["kind"], "unknownOperation");
-    let p = problems(&format!("{header}r = spawn doubler(\"n\")\nreturn r\n"));
+    let p = problems(&format!(
+        "{header}r = spawn doubler(\"n\")\nreturn r\notherwise return 0\n"
+    ));
     assert_eq!(p[0]["kind"], "mismatch");
-    let p = problems(&format!("{header}r = spawn m(n)\nreturn r\n"));
+    let p = problems(&format!(
+        "{header}r = spawn m(n)\nreturn r\notherwise return 0\n"
+    ));
     assert_eq!(p[0]["kind"], "notAHarness");
-    let p = problems("harness h(n: Int) -> Json\nuses ghost = harness \"nowhere\"\nreturn 1\n");
+    let p = problems("harness h(n: Int) -> String\nuses ghost = harness \"nowhere\"\nreturn 1\n");
     assert_eq!(p[0]["kind"], "unknownHarness");
 
     let p = problems(&format!(
-        "{header}d = for x in n: m.double(n: x)\nreturn d\n"
+        "{header}d = for x in n: m.double(n: x)\nreturn d\notherwise return 0\n"
     ));
-    assert_eq!(p[0]["kind"], "mismatch");
+    assert_eq!(p[0]["kind"], "type");
+    assert_eq!(p[0]["problem"]["kind"], "notAList");
     let p = problems(&format!(
-        "{header}d = for x in [n]: m.count(n: x)\nreturn d\n"
+        "{header}d = for x in [n]: m.count(n: x)\nreturn d\notherwise return 0\n"
     ));
     assert_eq!(p[0]["kind"], "argument");
     let p = problems(&format!(
-        "{header}s = m.double(n: n)\nd = for x in [n]: m.double(n: x) until s\nreturn d\n"
+        "{header}s = m.double(n: n)\nd = for x in [n]: m.double(n: x) until s\nreturn d\notherwise return 0\n"
     ));
     assert_eq!(p[0]["kind"], "until");
     let p = problems(&format!(
-        "{header}d = len(for x in [n]: m.double(n: x))\nreturn d\n"
+        "{header}d = len(for x in [n]: m.double(n: x))\nreturn d\notherwise return 0\n"
     ));
     assert_eq!(p[0]["kind"], "syntax");
 }

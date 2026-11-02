@@ -11,7 +11,7 @@ pub struct Name {
 
 #[derive(Clone, Debug)]
 pub enum TypeExpr {
-    /// `String`, `Int`, `Float`, `Bool`, `Json`, `Action`, or a type declared with `type`.
+    /// `String`, `Int`, `Float`, `Bool`, `Call`, `Returned`, or a type declared with `type`.
     Named(Name),
     List(Box<TypeExpr>, Span),
     Record(Vec<(Name, TypeExpr)>, Span),
@@ -76,14 +76,6 @@ pub enum ExprKind {
     Unary(Unary, Box<Expr>),
     Binary(Binary, Box<Expr>, Box<Expr>),
     If(Box<Expr>, Box<Expr>, Box<Expr>),
-    /// `if e is T as x then a else b`: `a` with `x` holding `e` at `T` if `e` has that type, `b` if not.
-    Is {
-        of: Box<Expr>,
-        ty: TypeExpr,
-        bind: Name,
-        then: Box<Expr>,
-        otherwise: Box<Expr>,
-    },
     Match(Box<Expr>, Vec<Arm>),
     Fold {
         over: Box<Expr>,

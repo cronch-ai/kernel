@@ -140,7 +140,7 @@ pub struct Channel {
 ///
 /// `grant` is the type of the grant state its contracts read and write: a capability declares the part it uses, as
 /// a record type, and installing capabilities together merges their parts. A run's grant state must have it. Absent:
-/// `Json`, which says nothing of it, so a capability that reads the grant must declare what it reads.
+/// the empty record, so a capability that reads the grant must declare what it reads.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Interface {
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
@@ -556,11 +556,12 @@ pub fn check_interface(interface: &Interface) -> Vec<HarnessProblem> {
             part: part.to_string(),
         };
         let p = &mut problems;
-        check_part(at("inv"), &c.inv, &[("value", &c.ty)], Some(Type::Bool), p);
+        let value = output_type(&c.ty, &Type::Bool, interface);
+        check_part(at("inv"), &c.inv, &[("value", &value)], Some(Type::Bool), p);
         check_update(
             at("onMsg"),
             &c.on_msg,
-            &[("value", &c.ty), ("grant", &grant)],
+            &[("value", &value), ("grant", &grant)],
             &grant,
             p,
         );
@@ -666,7 +667,10 @@ pub fn input_type(harness: &Harness, interface: &Interface) -> Type {
     let messages: BTreeMap<String, Type> = interface
         .channels
         .iter()
-        .map(|(name, c)| (name.clone(), record(vec![("value", c.ty.clone())])))
+        .map(|(name, c)| {
+            let ty = output_type(&c.ty, &harness.result, interface);
+            (name.clone(), record(vec![("value", ty)]))
+        })
         .collect();
     let called = || record(vec![("call", Type::Int), ("op", Type::String)]);
     let mut failed = called();
@@ -678,7 +682,10 @@ pub fn input_type(harness: &Harness, interface: &Interface) -> Type {
         BTreeMap::from([
             (
                 "start".to_string(),
-                record(vec![("value", harness.arg.clone())]),
+                record(vec![(
+                    "value",
+                    output_type(&harness.arg, &harness.result, interface),
+                )]),
             ),
             ("ret".to_string(), variant("op", results)),
             ("end".to_string(), variant("op", ends)),

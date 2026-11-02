@@ -9,7 +9,7 @@
             "Record": {}
           },
           "init": {},
-          "result": "Json",
+          "result": "String",
           "state": {
             "Record": {}
           },
@@ -151,11 +151,7 @@
         "interface": {
           "channels": {
             "act": {
-              "type": {
-                "Record": {
-                  "kind": "String"
-                }
-              }
+              "type": "Action"
             },
             "user": {
               "type": "String"
@@ -214,7 +210,7 @@
                   "Record": {}
                 },
                 "init": {},
-                "result": "Json",
+                "result": "String",
                 "state": {
                   "Record": {}
                 },
@@ -356,11 +352,7 @@
               "interface": {
                 "channels": {
                   "act": {
-                    "type": {
-                      "Record": {
-                        "kind": "String"
-                      }
-                    }
+                    "type": "Action"
                   },
                   "user": {
                     "type": "String"
@@ -436,7 +428,7 @@
                 "Record": {}
               },
               "init": {},
-              "result": "Json",
+              "result": "String",
               "state": {
                 "Record": {}
               },
@@ -578,11 +570,7 @@
             "interface": {
               "channels": {
                 "act": {
-                  "type": {
-                    "Record": {
-                      "kind": "String"
-                    }
-                  }
+                  "type": "Action"
                 },
                 "user": {
                   "type": "String"
@@ -682,7 +670,7 @@
                   "Record": {}
                 },
                 "init": {},
-                "result": "Json",
+                "result": "String",
                 "state": {
                   "Record": {}
                 },
@@ -824,11 +812,7 @@
               "interface": {
                 "channels": {
                   "act": {
-                    "type": {
-                      "Record": {
-                        "kind": "String"
-                      }
-                    }
+                    "type": "Action"
                   },
                   "user": {
                     "type": "String"
@@ -921,7 +905,7 @@
                 "Record": {}
               },
               "init": {},
-              "result": "Json",
+              "result": "String",
               "state": {
                 "Record": {}
               },
@@ -1063,11 +1047,7 @@
             "interface": {
               "channels": {
                 "act": {
-                  "type": {
-                    "Record": {
-                      "kind": "String"
-                    }
-                  }
+                  "type": "Action"
                 },
                 "user": {
                   "type": "String"
@@ -1166,7 +1146,7 @@
                   "Record": {}
                 },
                 "init": {},
-                "result": "Json",
+                "result": "String",
                 "state": {
                   "Record": {}
                 },
@@ -1308,11 +1288,7 @@
               "interface": {
                 "channels": {
                   "act": {
-                    "type": {
-                      "Record": {
-                        "kind": "String"
-                      }
-                    }
+                    "type": "Action"
                   },
                   "user": {
                     "type": "String"
@@ -1405,7 +1381,7 @@
                 "Record": {}
               },
               "init": {},
-              "result": "Json",
+              "result": "String",
               "state": {
                 "Record": {}
               },
@@ -1547,11 +1523,7 @@
             "interface": {
               "channels": {
                 "act": {
-                  "type": {
-                    "Record": {
-                      "kind": "String"
-                    }
-                  }
+                  "type": "Action"
                 },
                 "user": {
                   "type": "String"
@@ -1651,7 +1623,7 @@
                   "Record": {}
                 },
                 "init": {},
-                "result": "Json",
+                "result": "String",
                 "state": {
                   "Record": {}
                 },
@@ -1793,11 +1765,7 @@
               "interface": {
                 "channels": {
                   "act": {
-                    "type": {
-                      "Record": {
-                        "kind": "String"
-                      }
-                    }
+                    "type": "Action"
                   },
                   "user": {
                     "type": "String"
@@ -1890,7 +1858,7 @@
                 "Record": {}
               },
               "init": {},
-              "result": "Json",
+              "result": "String",
               "state": {
                 "Record": {}
               },
@@ -2032,11 +2000,7 @@
             "interface": {
               "channels": {
                 "act": {
-                  "type": {
-                    "Record": {
-                      "kind": "String"
-                    }
-                  }
+                  "type": "Action"
                 },
                 "user": {
                   "type": "String"
@@ -2158,7 +2122,7 @@
                   "Record": {}
                 },
                 "init": {},
-                "result": "Json",
+                "result": "String",
                 "state": {
                   "Record": {}
                 },
@@ -2300,11 +2264,7 @@
               "interface": {
                 "channels": {
                   "act": {
-                    "type": {
-                      "Record": {
-                        "kind": "String"
-                      }
-                    }
+                    "type": "Action"
                   },
                   "user": {
                     "type": "String"
@@ -2394,7 +2354,7 @@
             "Record": {}
           },
           "init": {},
-          "result": "Json",
+          "result": "String",
           "state": {
             "Record": {}
           },
@@ -2536,11 +2496,7 @@
         "interface": {
           "channels": {
             "act": {
-              "type": {
-                "Record": {
-                  "kind": "String"
-                }
-              }
+              "type": "Action"
             },
             "user": {
               "type": "String"
@@ -2603,7 +2559,7 @@
                   "Record": {}
                 },
                 "init": {},
-                "result": "Json",
+                "result": "String",
                 "state": {
                   "Record": {}
                 },
@@ -2745,11 +2701,7 @@
               "interface": {
                 "channels": {
                   "act": {
-                    "type": {
-                      "Record": {
-                        "kind": "String"
-                      }
-                    }
+                    "type": "Action"
                   },
                   "user": {
                     "type": "String"
@@ -2829,7 +2781,7 @@
                 "Record": {}
               },
               "init": {},
-              "result": "Json",
+              "result": "String",
               "state": {
                 "Record": {}
               },
@@ -2971,11 +2923,7 @@
             "interface": {
               "channels": {
                 "act": {
-                  "type": {
-                    "Record": {
-                      "kind": "String"
-                    }
-                  }
+                  "type": "Action"
                 },
                 "user": {
                   "type": "String"
@@ -3089,7 +3037,7 @@
                   "Record": {}
                 },
                 "init": {},
-                "result": "Json",
+                "result": "String",
                 "state": {
                   "Record": {}
                 },
@@ -3231,11 +3179,7 @@
               "interface": {
                 "channels": {
                   "act": {
-                    "type": {
-                      "Record": {
-                        "kind": "String"
-                      }
-                    }
+                    "type": "Action"
                   },
                   "user": {
                     "type": "String"
@@ -3305,7 +3249,7 @@
             "Record": {}
           },
           "init": {},
-          "result": "Json",
+          "result": "String",
           "state": {
             "Record": {}
           },

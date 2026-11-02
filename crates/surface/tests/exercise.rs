@@ -38,7 +38,7 @@ fn interface() -> Value {
 }
 
 const TURN: &str = r#"
-harness turn(prompt: String) -> Json
+harness turn(prompt: String) -> String
 
 uses model, fs, session
 
@@ -47,7 +47,7 @@ chunks = model.generate(messages: [{role: "user", content: prompt}]) until stop
 reply  = fold chunks from "" with (text, chunk) => concat(text, chunk)
 saved  = fs.write(path: "/workspace/reply.md", text: reply) until stop
 
-return saved
+return str(saved)
 
 otherwise return "interrupted"
 "#;
@@ -179,7 +179,7 @@ fn a_streamed_reply_is_written_once_it_ends() {
     );
     let written = json!({ "path": "/workspace/reply.md", "text": "old pond, a frog" });
     assert_eq!(actions(&events)[1], json!(["call", "fs.write", written]));
-    assert_eq!(outcome["value"], json!(17));
+    assert_eq!(outcome["value"], json!("17"));
 }
 
 #[test]
@@ -241,7 +241,7 @@ fn p4_holds_up_to_a_depth_and_fails_without_until() {
 
 #[test]
 fn receives_and_untils_are_checked() {
-    let header = "harness h(n: Int) -> Json\nuses model, fs, session\n";
+    let header = "harness h(n: Int) -> String\nuses model, fs, session\n";
     let problems = |body: &str| {
         let out = call(
             json!({ "op": "elaborate", "source": format!("{header}{body}"), "capabilities": capabilities() }),

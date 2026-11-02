@@ -28,7 +28,7 @@ fn interface() -> Value {
 }
 
 const APPROVED_NOTE: &str = r#"
-harness approved_note(prompt: String) -> Json
+harness approved_note(prompt: String) -> String
 
 uses model, approve, notes
 
@@ -244,7 +244,7 @@ fn quantifiers_and_since_connect_events() {
 
 #[test]
 fn claims_are_checked_where_they_are() {
-    let header = "harness h(prompt: String) -> Json\nuses model, approve, notes\ndraft = model.generate(messages: [])\ntext = draft\nreturn draft\n";
+    let header = "harness h(prompt: String) -> String\nuses model, approve, notes\ndraft = model.generate(messages: [])\ntext = draft\nreturn draft\notherwise return \"\"\n";
     let at = |claim: &str| problems(&format!("{header}{claim}\n"));
 
     let p = at("property p: called(notes.remove)");
@@ -258,7 +258,7 @@ fn claims_are_checked_where_they_are() {
         p[0],
         json!({
             "kind": "notASlot", "node": "text",
-            "span": { "start": { "line": 6, "column": 13 }, "end": { "line": 6, "column": 23 } },
+            "span": { "start": { "line": 7, "column": 13 }, "end": { "line": 7, "column": 23 } },
         })
     );
     let p = at("property p: msg(model.generate)");
@@ -267,7 +267,7 @@ fn claims_are_checked_where_they_are() {
     assert_eq!(p[0]["kind"], "unknownFunction");
     let p = at("invariant i: draft.kind");
     assert_eq!(p[0]["kind"], "mismatch");
-    let p = problems("harness h(n: Int) -> Json\nx = n since n\nreturn x\n");
+    let p = problems("harness h(n: Int) -> String\nx = n since n\nreturn x\n");
     assert_eq!(p[0]["kind"], "propertyOnly");
     let p = at("property p: effect()\nproperty p: effect()");
     assert_eq!(p[0]["kind"], "duplicate");

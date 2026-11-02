@@ -589,7 +589,10 @@ impl Run {
             if self.started {
                 return Err(Withheld::AlreadyStarted);
             }
-            Self::typed(value, &self.harness.arg)?;
+            Self::typed(
+                value,
+                &output_type(&self.harness.arg, &self.harness.result, &self.interface),
+            )?;
             return Ok(admitted(label.clone(), None));
         }
         if !self.started {
@@ -651,7 +654,10 @@ impl Run {
                         channel: channel.clone(),
                     }
                 })?;
-                Self::typed(value, &declared.ty)?;
+                Self::typed(
+                    value,
+                    &output_type(&declared.ty, &self.harness.result, &self.interface),
+                )?;
                 let message = LValue::new(value, &declared.label);
                 if !holds(&declared.inv, vec![("value", message.clone())]) {
                     return Err(Withheld::Invariant {
@@ -704,7 +710,8 @@ impl Run {
     fn child(&self, action: &Value, arg: &LValue) -> Option<Run> {
         let harness: Harness = serde_json::from_value(action.get("harness")?.clone()).ok()?;
         let signature = self.harness.spawns.get(action.get("name")?.as_str()?)?;
-        if !signature.admits(&harness) || !inhabits(&arg.value(), &signature.arg) {
+        let accepted = output_type(&signature.arg, &self.harness.result, &self.interface);
+        if !signature.admits(&harness) || !inhabits(&arg.value(), &accepted) {
             return None;
         }
         let narrowings: Vec<Narrowing> = match action.get("narrow") {
@@ -714,7 +721,10 @@ impl Run {
         let interface = narrow(&self.interface, &narrowings).ok()?;
         let well_formed = check_harness(&harness, &interface).is_empty()
             && check_interface(&interface).is_empty()
-            && inhabits(&arg.value(), &harness.arg);
+            && inhabits(
+                &arg.value(),
+                &output_type(&harness.arg, &harness.result, &interface),
+            );
         well_formed.then(|| {
             let mut run = Run::new(harness, interface);
             run.grant = self.grant.clone();

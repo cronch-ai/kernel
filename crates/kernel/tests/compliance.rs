@@ -103,7 +103,7 @@ fn cases() -> Vec<Case> {
                 let set = json!({ "e": "let", "name": "next", "type": state,
                     "be": rec(vec![("slot", ok)]), "in": step(var("next"), vec![]) });
                 let harness = json!({
-                    "result": "Json", "arg": "Int", "state": state, "init": { "slot": { "kind": "waiting" } },
+                    "result": "String", "arg": "Int", "state": state, "init": { "slot": { "kind": "waiting" } },
                     "step": let_("n", lit(json!(1)), set),
                 });
                 r.call(json!({ "op": "checkHarness", "harness": harness, "interface": {} }));
@@ -112,52 +112,20 @@ fn cases() -> Vec<Case> {
             },
         ),
         (
-            "json",
-            "Json: everything conforms to it, nothing reads through it, and `is` tests a value against a type.",
+            "untyped",
+            "A literal with no type of its own, a literal taking the type expected of it, and `[]` taking its type from the other branch.",
             |r| {
-                let successor = is_type(
-                    var("x"),
-                    json!("Int"),
-                    "n",
-                    op("add", vec![var("n"), lit(json!(1))]),
-                    lit(json!(0)),
-                );
-                r.call(json!({ "op": "infer", "expr": successor, "vars": { "x": "Json" } }));
-                r.call(json!({ "op": "infer", "expr": op("add", vec![var("x"), lit(json!(1))]), "vars": { "x": "Json" } }));
-                r.call(
-                    json!({ "op": "infer", "expr": get(var("x"), "a"), "vars": { "x": "Json" } }),
-                );
-                for x in [json!(41), json!("41"), json!(1.5), json!(null)] {
-                    r.call(json!({ "op": "evaluate", "expr": successor, "vars": { "x": x } }));
-                }
-                let call = json!({ "Record": { "op": "String", "args": { "Record": { "text": "String" } } } });
-                let text = is_type(
-                    var("x"),
-                    call,
-                    "c",
-                    path("c", &["args", "text"]),
-                    lit(json!("")),
-                );
-                r.call(json!({ "op": "evaluate", "expr": text, "vars": { "x": { "op": "a", "args": { "text": "hi" }, "extra": 1 } } }));
-                r.call(json!({ "op": "evaluate", "expr": text, "vars": { "x": { "op": "a", "args": { "text": 7 } } } }));
-                // In SMT-LIB: a state that holds Json, and a model read back.
-                let keeper = json!({
-                    "result": "Json", "arg": "Json", "state": { "Record": { "last": "Json" } }, "init": { "last": null },
-                    "step": match_(var("input"), "kind", vec![
-                        ("start", "s", step(rec(vec![("last", path("s", &["value"]))]), vec![])),
-                    ], Some(step(var("state"), vec![]))),
-                });
-                let text = is_type(
-                    path("state", &["last"]),
-                    json!({ "Record": { "text": "String" } }),
-                    "r",
-                    op("ne", vec![path("r", &["text"]), lit(json!(""))]),
-                    lit(json!(true)),
-                );
-                let obligation =
-                    r.call(json!({ "op": "obligation", "harness": keeper, "invariant": text }));
-                let reply = r#"((|q:state| (|record:953bcaaa| (|json:list| (as seq.empty (Seq |json:Json|))))) (|q:input| (|variant:1fef169b#start| (|json:record| (|json:field| "text" (|json:string| "") |json:end|)))))"#;
-                r.call(json!({ "op": "readValues", "reply": reply, "types": obligation["reads"] }));
+                r.call(json!({ "op": "infer", "expr": lit(json!(null)), "vars": {} }));
+                r.call(json!({ "op": "infer", "expr": list(vec![]), "vars": {} }));
+                let typed = json!({ "e": "let", "name": "x", "type": { "List": "Int" }, "be": list(vec![]), "in": var("x") });
+                r.call(json!({ "op": "infer", "expr": typed, "vars": {} }));
+                let branches = if_(lit(json!(true)), list(vec![lit(json!(1))]), list(vec![]));
+                r.call(json!({ "op": "infer", "expr": branches, "vars": {} }));
+                r.call(json!({ "op": "infer", "expr": get(var("x"), "value"), "vars": {
+                    "x": { "Variant": { "tag": "kind", "cases": {
+                        "a": { "Record": { "value": "Int" } }, "b": { "Record": { "value": "String" } },
+                    }}},
+                } }));
             },
         ),
         (
@@ -191,7 +159,7 @@ fn cases() -> Vec<Case> {
                 let spawn = msg(
                     "act",
                     json!({ "kind": "spawn", "name": "worker", "harness": worker(), "narrow": [{ "kind": "only", "ops": ["shell.approve"] }],
-                                            "arg": { "op": "shell.approve", "args": { "argv": publish } } }),
+                                            "arg": { "kind": "call", "op": "shell.approve", "args": { "argv": publish } } }),
                 );
                 let (system, _) = r.deliver(system, spawn);
                 let mut answer = ret(0, json!("always"));
@@ -280,7 +248,7 @@ fn cases() -> Vec<Case> {
                 r.call(request);
                 let count = json!({ "operations": { "count": { "input": { "Record": {} }, "output": "Int" } } });
                 let counter = json!({
-                    "result": "Json", "arg": { "Record": {} }, "state": { "Record": { "n": "Int" } }, "init": { "n": 0 },
+                    "result": "String", "arg": { "Record": {} }, "state": { "Record": { "n": "Int" } }, "init": { "n": 0 },
                     "step": match_(var("input"), "kind", vec![
                         ("ret", "r", match_(var("r"), "op", vec![
                             ("count", "c", step(rec(vec![("n", op("add", vec![path("state", &["n"]), path("c", &["value"])]))]), vec![])),
@@ -389,13 +357,12 @@ fn cases() -> Vec<Case> {
         ),
         (
             "smtlib-lists",
-            "Lists read as Json, tested and read back item by item, and the text of a record, which a solver chooses.",
+            "A list read as a wider list, item by item, and the text of a record, which a solver chooses.",
             |r| {
-                let ints = json!({ "List": "Int" });
-                let as_json = json!({ "e": "let", "name": "j", "type": "Json", "be": var("xs"), "in": var("j") });
-                r.call(json!({ "op": "smtlib", "definitions": [{ "name": "wrap", "params": [{ "name": "xs", "type": ints }], "body": as_json }] }));
-                let read = is_type(var("j"), ints.clone(), "xs", var("xs"), list(vec![]));
-                r.call(json!({ "op": "smtlib", "definitions": [{ "name": "read", "params": [{ "name": "j", "type": "Json" }], "body": read, "result": ints }] }));
+                r.call(json!({ "op": "smtlib", "definitions": [{
+                    "name": "widen", "params": [{ "name": "xs", "type": { "List": "Int" } }],
+                    "body": var("xs"), "result": { "List": "Float" },
+                }] }));
                 let text = op("str", vec![var("r")]);
                 r.call(json!({ "op": "smtlib", "definitions": [{ "name": "text", "params": [{ "name": "r", "type": { "Record": { "a": "Int" } } }], "body": text }] }));
             },

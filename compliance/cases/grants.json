@@ -12,16 +12,11 @@
             "Record": {}
           },
           "init": {},
-          "result": "Json",
+          "result": "String",
           "spawns": {
             "worker": {
-              "arg": {
-                "Record": {
-                  "args": "Json",
-                  "op": "String"
-                }
-              },
-              "result": "Json"
+              "arg": "Call",
+              "result": "String"
             }
           },
           "state": {
@@ -32,37 +27,50 @@
               "msg": {
                 "bind": "input",
                 "body": {
-                  "e": "record",
-                  "fields": {
-                    "actions": {
-                      "bind": "@action",
-                      "e": "is",
-                      "else": {
+                  "cases": {
+                    "act": {
+                      "bind": "m",
+                      "body": {
+                        "e": "record",
+                        "fields": {
+                          "actions": {
+                            "e": "list",
+                            "items": [
+                              {
+                                "e": "get",
+                                "field": "value",
+                                "of": {
+                                  "e": "var",
+                                  "name": "m"
+                                }
+                              }
+                            ]
+                          },
+                          "state": {
+                            "e": "var",
+                            "name": "state"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "e": "match",
+                  "of": {
+                    "e": "var",
+                    "name": "input"
+                  },
+                  "on": "channel",
+                  "otherwise": {
+                    "e": "record",
+                    "fields": {
+                      "actions": {
                         "e": "list",
                         "items": []
                       },
-                      "of": {
-                        "e": "get",
-                        "field": "value",
-                        "of": {
-                          "e": "var",
-                          "name": "input"
-                        }
-                      },
-                      "then": {
-                        "e": "list",
-                        "items": [
-                          {
-                            "e": "var",
-                            "name": "@action"
-                          }
-                        ]
-                      },
-                      "type": "Action"
-                    },
-                    "state": {
-                      "e": "var",
-                      "name": "state"
+                      "state": {
+                        "e": "var",
+                        "name": "state"
+                      }
                     }
                   }
                 }
@@ -91,11 +99,7 @@
         "interface": {
           "channels": {
             "act": {
-              "type": {
-                "Record": {
-                  "kind": "String"
-                }
-              }
+              "type": "Action"
             }
           },
           "grant": {
@@ -451,16 +455,11 @@
                   "Record": {}
                 },
                 "init": {},
-                "result": "Json",
+                "result": "String",
                 "spawns": {
                   "worker": {
-                    "arg": {
-                      "Record": {
-                        "args": "Json",
-                        "op": "String"
-                      }
-                    },
-                    "result": "Json"
+                    "arg": "Call",
+                    "result": "String"
                   }
                 },
                 "state": {
@@ -471,37 +470,50 @@
                     "msg": {
                       "bind": "input",
                       "body": {
-                        "e": "record",
-                        "fields": {
-                          "actions": {
-                            "bind": "@action",
-                            "e": "is",
-                            "else": {
+                        "cases": {
+                          "act": {
+                            "bind": "m",
+                            "body": {
+                              "e": "record",
+                              "fields": {
+                                "actions": {
+                                  "e": "list",
+                                  "items": [
+                                    {
+                                      "e": "get",
+                                      "field": "value",
+                                      "of": {
+                                        "e": "var",
+                                        "name": "m"
+                                      }
+                                    }
+                                  ]
+                                },
+                                "state": {
+                                  "e": "var",
+                                  "name": "state"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "e": "match",
+                        "of": {
+                          "e": "var",
+                          "name": "input"
+                        },
+                        "on": "channel",
+                        "otherwise": {
+                          "e": "record",
+                          "fields": {
+                            "actions": {
                               "e": "list",
                               "items": []
                             },
-                            "of": {
-                              "e": "get",
-                              "field": "value",
-                              "of": {
-                                "e": "var",
-                                "name": "input"
-                              }
-                            },
-                            "then": {
-                              "e": "list",
-                              "items": [
-                                {
-                                  "e": "var",
-                                  "name": "@action"
-                                }
-                              ]
-                            },
-                            "type": "Action"
-                          },
-                          "state": {
-                            "e": "var",
-                            "name": "state"
+                            "state": {
+                              "e": "var",
+                              "name": "state"
+                            }
                           }
                         }
                       }
@@ -530,11 +542,7 @@
               "interface": {
                 "channels": {
                   "act": {
-                    "type": {
-                      "Record": {
-                        "kind": "String"
-                      }
-                    }
+                    "type": "Action"
                   }
                 },
                 "grant": {
@@ -907,16 +915,11 @@
                 "Record": {}
               },
               "init": {},
-              "result": "Json",
+              "result": "String",
               "spawns": {
                 "worker": {
-                  "arg": {
-                    "Record": {
-                      "args": "Json",
-                      "op": "String"
-                    }
-                  },
-                  "result": "Json"
+                  "arg": "Call",
+                  "result": "String"
                 }
               },
               "state": {
@@ -927,37 +930,50 @@
                   "msg": {
                     "bind": "input",
                     "body": {
-                      "e": "record",
-                      "fields": {
-                        "actions": {
-                          "bind": "@action",
-                          "e": "is",
-                          "else": {
+                      "cases": {
+                        "act": {
+                          "bind": "m",
+                          "body": {
+                            "e": "record",
+                            "fields": {
+                              "actions": {
+                                "e": "list",
+                                "items": [
+                                  {
+                                    "e": "get",
+                                    "field": "value",
+                                    "of": {
+                                      "e": "var",
+                                      "name": "m"
+                                    }
+                                  }
+                                ]
+                              },
+                              "state": {
+                                "e": "var",
+                                "name": "state"
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "e": "match",
+                      "of": {
+                        "e": "var",
+                        "name": "input"
+                      },
+                      "on": "channel",
+                      "otherwise": {
+                        "e": "record",
+                        "fields": {
+                          "actions": {
                             "e": "list",
                             "items": []
                           },
-                          "of": {
-                            "e": "get",
-                            "field": "value",
-                            "of": {
-                              "e": "var",
-                              "name": "input"
-                            }
-                          },
-                          "then": {
-                            "e": "list",
-                            "items": [
-                              {
-                                "e": "var",
-                                "name": "@action"
-                              }
-                            ]
-                          },
-                          "type": "Action"
-                        },
-                        "state": {
-                          "e": "var",
-                          "name": "state"
+                          "state": {
+                            "e": "var",
+                            "name": "state"
+                          }
                         }
                       }
                     }
@@ -986,11 +1002,7 @@
             "interface": {
               "channels": {
                 "act": {
-                  "type": {
-                    "Record": {
-                      "kind": "String"
-                    }
-                  }
+                  "type": "Action"
                 }
               },
               "grant": {
@@ -1366,16 +1378,11 @@
                   "Record": {}
                 },
                 "init": {},
-                "result": "Json",
+                "result": "String",
                 "spawns": {
                   "worker": {
-                    "arg": {
-                      "Record": {
-                        "args": "Json",
-                        "op": "String"
-                      }
-                    },
-                    "result": "Json"
+                    "arg": "Call",
+                    "result": "String"
                   }
                 },
                 "state": {
@@ -1386,37 +1393,50 @@
                     "msg": {
                       "bind": "input",
                       "body": {
-                        "e": "record",
-                        "fields": {
-                          "actions": {
-                            "bind": "@action",
-                            "e": "is",
-                            "else": {
+                        "cases": {
+                          "act": {
+                            "bind": "m",
+                            "body": {
+                              "e": "record",
+                              "fields": {
+                                "actions": {
+                                  "e": "list",
+                                  "items": [
+                                    {
+                                      "e": "get",
+                                      "field": "value",
+                                      "of": {
+                                        "e": "var",
+                                        "name": "m"
+                                      }
+                                    }
+                                  ]
+                                },
+                                "state": {
+                                  "e": "var",
+                                  "name": "state"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "e": "match",
+                        "of": {
+                          "e": "var",
+                          "name": "input"
+                        },
+                        "on": "channel",
+                        "otherwise": {
+                          "e": "record",
+                          "fields": {
+                            "actions": {
                               "e": "list",
                               "items": []
                             },
-                            "of": {
-                              "e": "get",
-                              "field": "value",
-                              "of": {
-                                "e": "var",
-                                "name": "input"
-                              }
-                            },
-                            "then": {
-                              "e": "list",
-                              "items": [
-                                {
-                                  "e": "var",
-                                  "name": "@action"
-                                }
-                              ]
-                            },
-                            "type": "Action"
-                          },
-                          "state": {
-                            "e": "var",
-                            "name": "state"
+                            "state": {
+                              "e": "var",
+                              "name": "state"
+                            }
                           }
                         }
                       }
@@ -1445,11 +1465,7 @@
               "interface": {
                 "channels": {
                   "act": {
-                    "type": {
-                      "Record": {
-                        "kind": "String"
-                      }
-                    }
+                    "type": "Action"
                   }
                 },
                 "grant": {
@@ -1829,16 +1845,11 @@
                 "Record": {}
               },
               "init": {},
-              "result": "Json",
+              "result": "String",
               "spawns": {
                 "worker": {
-                  "arg": {
-                    "Record": {
-                      "args": "Json",
-                      "op": "String"
-                    }
-                  },
-                  "result": "Json"
+                  "arg": "Call",
+                  "result": "String"
                 }
               },
               "state": {
@@ -1849,37 +1860,50 @@
                   "msg": {
                     "bind": "input",
                     "body": {
-                      "e": "record",
-                      "fields": {
-                        "actions": {
-                          "bind": "@action",
-                          "e": "is",
-                          "else": {
+                      "cases": {
+                        "act": {
+                          "bind": "m",
+                          "body": {
+                            "e": "record",
+                            "fields": {
+                              "actions": {
+                                "e": "list",
+                                "items": [
+                                  {
+                                    "e": "get",
+                                    "field": "value",
+                                    "of": {
+                                      "e": "var",
+                                      "name": "m"
+                                    }
+                                  }
+                                ]
+                              },
+                              "state": {
+                                "e": "var",
+                                "name": "state"
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "e": "match",
+                      "of": {
+                        "e": "var",
+                        "name": "input"
+                      },
+                      "on": "channel",
+                      "otherwise": {
+                        "e": "record",
+                        "fields": {
+                          "actions": {
                             "e": "list",
                             "items": []
                           },
-                          "of": {
-                            "e": "get",
-                            "field": "value",
-                            "of": {
-                              "e": "var",
-                              "name": "input"
-                            }
-                          },
-                          "then": {
-                            "e": "list",
-                            "items": [
-                              {
-                                "e": "var",
-                                "name": "@action"
-                              }
-                            ]
-                          },
-                          "type": "Action"
-                        },
-                        "state": {
-                          "e": "var",
-                          "name": "state"
+                          "state": {
+                            "e": "var",
+                            "name": "state"
+                          }
                         }
                       }
                     }
@@ -1908,11 +1932,7 @@
             "interface": {
               "channels": {
                 "act": {
-                  "type": {
-                    "Record": {
-                      "kind": "String"
-                    }
-                  }
+                  "type": "Action"
                 }
               },
               "grant": {
@@ -2326,16 +2346,11 @@
                   "Record": {}
                 },
                 "init": {},
-                "result": "Json",
+                "result": "String",
                 "spawns": {
                   "worker": {
-                    "arg": {
-                      "Record": {
-                        "args": "Json",
-                        "op": "String"
-                      }
-                    },
-                    "result": "Json"
+                    "arg": "Call",
+                    "result": "String"
                   }
                 },
                 "state": {
@@ -2346,37 +2361,50 @@
                     "msg": {
                       "bind": "input",
                       "body": {
-                        "e": "record",
-                        "fields": {
-                          "actions": {
-                            "bind": "@action",
-                            "e": "is",
-                            "else": {
+                        "cases": {
+                          "act": {
+                            "bind": "m",
+                            "body": {
+                              "e": "record",
+                              "fields": {
+                                "actions": {
+                                  "e": "list",
+                                  "items": [
+                                    {
+                                      "e": "get",
+                                      "field": "value",
+                                      "of": {
+                                        "e": "var",
+                                        "name": "m"
+                                      }
+                                    }
+                                  ]
+                                },
+                                "state": {
+                                  "e": "var",
+                                  "name": "state"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "e": "match",
+                        "of": {
+                          "e": "var",
+                          "name": "input"
+                        },
+                        "on": "channel",
+                        "otherwise": {
+                          "e": "record",
+                          "fields": {
+                            "actions": {
                               "e": "list",
                               "items": []
                             },
-                            "of": {
-                              "e": "get",
-                              "field": "value",
-                              "of": {
-                                "e": "var",
-                                "name": "input"
-                              }
-                            },
-                            "then": {
-                              "e": "list",
-                              "items": [
-                                {
-                                  "e": "var",
-                                  "name": "@action"
-                                }
-                              ]
-                            },
-                            "type": "Action"
-                          },
-                          "state": {
-                            "e": "var",
-                            "name": "state"
+                            "state": {
+                              "e": "var",
+                              "name": "state"
+                            }
                           }
                         }
                       }
@@ -2405,11 +2433,7 @@
               "interface": {
                 "channels": {
                   "act": {
-                    "type": {
-                      "Record": {
-                        "kind": "String"
-                      }
-                    }
+                    "type": "Action"
                   }
                 },
                 "grant": {
@@ -2773,17 +2797,13 @@
                 "args": {
                   "argv": ["npm", "publish"]
                 },
+                "kind": "call",
                 "op": "shell.approve"
               },
               "harness": {
-                "arg": {
-                  "Record": {
-                    "args": "Json",
-                    "op": "String"
-                  }
-                },
+                "arg": "Call",
                 "init": {},
-                "result": "Json",
+                "result": "String",
                 "state": {
                   "Record": {}
                 },
@@ -2835,12 +2855,14 @@
                                     "v": "halt"
                                   },
                                   "value": {
-                                    "e": "get",
-                                    "field": "value",
-                                    "of": {
-                                      "e": "var",
-                                      "name": "input"
-                                    }
+                                    "args": [
+                                      {
+                                        "e": "var",
+                                        "name": "input"
+                                      }
+                                    ],
+                                    "e": "op",
+                                    "op": "str"
                                   }
                                 }
                               }
@@ -2859,69 +2881,17 @@
                         "e": "record",
                         "fields": {
                           "actions": {
-                            "bind": "call",
-                            "e": "is",
-                            "else": {
-                              "e": "list",
-                              "items": [
-                                {
-                                  "e": "record",
-                                  "fields": {
-                                    "kind": {
-                                      "e": "lit",
-                                      "v": "halt"
-                                    },
-                                    "value": {
-                                      "e": "lit",
-                                      "v": "denied"
-                                    }
-                                  }
-                                }
-                              ]
-                            },
-                            "of": {
-                              "e": "record",
-                              "fields": {
-                                "args": {
-                                  "e": "get",
-                                  "field": "args",
-                                  "of": {
-                                    "e": "get",
-                                    "field": "value",
-                                    "of": {
-                                      "e": "var",
-                                      "name": "input"
-                                    }
-                                  }
-                                },
-                                "kind": {
-                                  "e": "lit",
-                                  "v": "call"
-                                },
-                                "op": {
-                                  "e": "get",
-                                  "field": "op",
-                                  "of": {
-                                    "e": "get",
-                                    "field": "value",
-                                    "of": {
-                                      "e": "var",
-                                      "name": "input"
-                                    }
-                                  }
+                            "e": "list",
+                            "items": [
+                              {
+                                "e": "get",
+                                "field": "value",
+                                "of": {
+                                  "e": "var",
+                                  "name": "input"
                                 }
                               }
-                            },
-                            "then": {
-                              "e": "list",
-                              "items": [
-                                {
-                                  "e": "var",
-                                  "name": "call"
-                                }
-                              ]
-                            },
-                            "type": "Action"
+                            ]
                           },
                           "state": {
                             "e": "var",
@@ -2988,16 +2958,11 @@
                 "Record": {}
               },
               "init": {},
-              "result": "Json",
+              "result": "String",
               "spawns": {
                 "worker": {
-                  "arg": {
-                    "Record": {
-                      "args": "Json",
-                      "op": "String"
-                    }
-                  },
-                  "result": "Json"
+                  "arg": "Call",
+                  "result": "String"
                 }
               },
               "state": {
@@ -3008,37 +2973,50 @@
                   "msg": {
                     "bind": "input",
                     "body": {
-                      "e": "record",
-                      "fields": {
-                        "actions": {
-                          "bind": "@action",
-                          "e": "is",
-                          "else": {
+                      "cases": {
+                        "act": {
+                          "bind": "m",
+                          "body": {
+                            "e": "record",
+                            "fields": {
+                              "actions": {
+                                "e": "list",
+                                "items": [
+                                  {
+                                    "e": "get",
+                                    "field": "value",
+                                    "of": {
+                                      "e": "var",
+                                      "name": "m"
+                                    }
+                                  }
+                                ]
+                              },
+                              "state": {
+                                "e": "var",
+                                "name": "state"
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "e": "match",
+                      "of": {
+                        "e": "var",
+                        "name": "input"
+                      },
+                      "on": "channel",
+                      "otherwise": {
+                        "e": "record",
+                        "fields": {
+                          "actions": {
                             "e": "list",
                             "items": []
                           },
-                          "of": {
-                            "e": "get",
-                            "field": "value",
-                            "of": {
-                              "e": "var",
-                              "name": "input"
-                            }
-                          },
-                          "then": {
-                            "e": "list",
-                            "items": [
-                              {
-                                "e": "var",
-                                "name": "@action"
-                              }
-                            ]
-                          },
-                          "type": "Action"
-                        },
-                        "state": {
-                          "e": "var",
-                          "name": "state"
+                          "state": {
+                            "e": "var",
+                            "name": "state"
+                          }
                         }
                       }
                     }
@@ -3067,11 +3045,7 @@
             "interface": {
               "channels": {
                 "act": {
-                  "type": {
-                    "Record": {
-                      "kind": "String"
-                    }
-                  }
+                  "type": "Action"
                 }
               },
               "grant": {
@@ -3435,17 +3409,13 @@
                     "args": {
                       "argv": ["npm", "publish"]
                     },
+                    "kind": "call",
                     "op": "shell.approve"
                   },
                   "harness": {
-                    "arg": {
-                      "Record": {
-                        "args": "Json",
-                        "op": "String"
-                      }
-                    },
+                    "arg": "Call",
                     "init": {},
-                    "result": "Json",
+                    "result": "String",
                     "state": {
                       "Record": {}
                     },
@@ -3497,12 +3467,14 @@
                                         "v": "halt"
                                       },
                                       "value": {
-                                        "e": "get",
-                                        "field": "value",
-                                        "of": {
-                                          "e": "var",
-                                          "name": "input"
-                                        }
+                                        "args": [
+                                          {
+                                            "e": "var",
+                                            "name": "input"
+                                          }
+                                        ],
+                                        "e": "op",
+                                        "op": "str"
                                       }
                                     }
                                   }
@@ -3521,69 +3493,17 @@
                             "e": "record",
                             "fields": {
                               "actions": {
-                                "bind": "call",
-                                "e": "is",
-                                "else": {
-                                  "e": "list",
-                                  "items": [
-                                    {
-                                      "e": "record",
-                                      "fields": {
-                                        "kind": {
-                                          "e": "lit",
-                                          "v": "halt"
-                                        },
-                                        "value": {
-                                          "e": "lit",
-                                          "v": "denied"
-                                        }
-                                      }
-                                    }
-                                  ]
-                                },
-                                "of": {
-                                  "e": "record",
-                                  "fields": {
-                                    "args": {
-                                      "e": "get",
-                                      "field": "args",
-                                      "of": {
-                                        "e": "get",
-                                        "field": "value",
-                                        "of": {
-                                          "e": "var",
-                                          "name": "input"
-                                        }
-                                      }
-                                    },
-                                    "kind": {
-                                      "e": "lit",
-                                      "v": "call"
-                                    },
-                                    "op": {
-                                      "e": "get",
-                                      "field": "op",
-                                      "of": {
-                                        "e": "get",
-                                        "field": "value",
-                                        "of": {
-                                          "e": "var",
-                                          "name": "input"
-                                        }
-                                      }
+                                "e": "list",
+                                "items": [
+                                  {
+                                    "e": "get",
+                                    "field": "value",
+                                    "of": {
+                                      "e": "var",
+                                      "name": "input"
                                     }
                                   }
-                                },
-                                "then": {
-                                  "e": "list",
-                                  "items": [
-                                    {
-                                      "e": "var",
-                                      "name": "call"
-                                    }
-                                  ]
-                                },
-                                "type": "Action"
+                                ]
                               },
                               "state": {
                                 "e": "var",
@@ -3647,17 +3567,13 @@
                   "args": {
                     "argv": ["npm", "publish"]
                   },
+                  "kind": "call",
                   "op": "shell.approve"
                 },
                 "harness": {
-                  "arg": {
-                    "Record": {
-                      "args": "Json",
-                      "op": "String"
-                    }
-                  },
+                  "arg": "Call",
                   "init": {},
-                  "result": "Json",
+                  "result": "String",
                   "state": {
                     "Record": {}
                   },
@@ -3709,12 +3625,14 @@
                                       "v": "halt"
                                     },
                                     "value": {
-                                      "e": "get",
-                                      "field": "value",
-                                      "of": {
-                                        "e": "var",
-                                        "name": "input"
-                                      }
+                                      "args": [
+                                        {
+                                          "e": "var",
+                                          "name": "input"
+                                        }
+                                      ],
+                                      "e": "op",
+                                      "op": "str"
                                     }
                                   }
                                 }
@@ -3733,69 +3651,17 @@
                           "e": "record",
                           "fields": {
                             "actions": {
-                              "bind": "call",
-                              "e": "is",
-                              "else": {
-                                "e": "list",
-                                "items": [
-                                  {
-                                    "e": "record",
-                                    "fields": {
-                                      "kind": {
-                                        "e": "lit",
-                                        "v": "halt"
-                                      },
-                                      "value": {
-                                        "e": "lit",
-                                        "v": "denied"
-                                      }
-                                    }
-                                  }
-                                ]
-                              },
-                              "of": {
-                                "e": "record",
-                                "fields": {
-                                  "args": {
-                                    "e": "get",
-                                    "field": "args",
-                                    "of": {
-                                      "e": "get",
-                                      "field": "value",
-                                      "of": {
-                                        "e": "var",
-                                        "name": "input"
-                                      }
-                                    }
-                                  },
-                                  "kind": {
-                                    "e": "lit",
-                                    "v": "call"
-                                  },
-                                  "op": {
-                                    "e": "get",
-                                    "field": "op",
-                                    "of": {
-                                      "e": "get",
-                                      "field": "value",
-                                      "of": {
-                                        "e": "var",
-                                        "name": "input"
-                                      }
-                                    }
+                              "e": "list",
+                              "items": [
+                                {
+                                  "e": "get",
+                                  "field": "value",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "input"
                                   }
                                 }
-                              },
-                              "then": {
-                                "e": "list",
-                                "items": [
-                                  {
-                                    "e": "var",
-                                    "name": "call"
-                                  }
-                                ]
-                              },
-                              "type": "Action"
+                              ]
                             },
                             "state": {
                               "e": "var",
@@ -3855,15 +3721,11 @@
                   "args": {
                     "argv": [[], []]
                   },
+                  "kind": [],
                   "op": []
                 },
                 "harness": {
-                  "arg": {
-                    "Record": {
-                      "args": [],
-                      "op": []
-                    }
-                  },
+                  "arg": [],
                   "init": {},
                   "result": [],
                   "state": {
@@ -3917,12 +3779,14 @@
                                       "v": []
                                     },
                                     "value": {
+                                      "args": [
+                                        {
+                                          "e": [],
+                                          "name": []
+                                        }
+                                      ],
                                       "e": [],
-                                      "field": [],
-                                      "of": {
-                                        "e": [],
-                                        "name": []
-                                      }
+                                      "op": []
                                     }
                                   }
                                 }
@@ -3941,69 +3805,17 @@
                           "e": [],
                           "fields": {
                             "actions": {
-                              "bind": [],
                               "e": [],
-                              "else": {
-                                "e": [],
-                                "items": [
-                                  {
-                                    "e": [],
-                                    "fields": {
-                                      "kind": {
-                                        "e": [],
-                                        "v": []
-                                      },
-                                      "value": {
-                                        "e": [],
-                                        "v": []
-                                      }
-                                    }
-                                  }
-                                ]
-                              },
-                              "of": {
-                                "e": [],
-                                "fields": {
-                                  "args": {
-                                    "e": [],
-                                    "field": [],
-                                    "of": {
-                                      "e": [],
-                                      "field": [],
-                                      "of": {
-                                        "e": [],
-                                        "name": []
-                                      }
-                                    }
-                                  },
-                                  "kind": {
-                                    "e": [],
-                                    "v": []
-                                  },
-                                  "op": {
-                                    "e": [],
-                                    "field": [],
-                                    "of": {
-                                      "e": [],
-                                      "field": [],
-                                      "of": {
-                                        "e": [],
-                                        "name": []
-                                      }
-                                    }
-                                  }
-                                }
-                              },
-                              "then": {
-                                "e": [],
-                                "items": [
-                                  {
+                              "items": [
+                                {
+                                  "e": [],
+                                  "field": [],
+                                  "of": {
                                     "e": [],
                                     "name": []
                                   }
-                                ]
-                              },
-                              "type": []
+                                }
+                              ]
                             },
                             "state": {
                               "e": [],
@@ -4067,6 +3879,7 @@
                   "args": {
                     "argv": ["npm", "publish"]
                   },
+                  "kind": "call",
                   "op": "shell.approve"
                 }
               },
@@ -4108,14 +3921,9 @@
                       "once": []
                     },
                     "harness": {
-                      "arg": {
-                        "Record": {
-                          "args": "Json",
-                          "op": "String"
-                        }
-                      },
+                      "arg": "Call",
                       "init": {},
-                      "result": "Json",
+                      "result": "String",
                       "state": {
                         "Record": {}
                       },
@@ -4167,12 +3975,14 @@
                                           "v": "halt"
                                         },
                                         "value": {
-                                          "e": "get",
-                                          "field": "value",
-                                          "of": {
-                                            "e": "var",
-                                            "name": "input"
-                                          }
+                                          "args": [
+                                            {
+                                              "e": "var",
+                                              "name": "input"
+                                            }
+                                          ],
+                                          "e": "op",
+                                          "op": "str"
                                         }
                                       }
                                     }
@@ -4191,69 +4001,17 @@
                               "e": "record",
                               "fields": {
                                 "actions": {
-                                  "bind": "call",
-                                  "e": "is",
-                                  "else": {
-                                    "e": "list",
-                                    "items": [
-                                      {
-                                        "e": "record",
-                                        "fields": {
-                                          "kind": {
-                                            "e": "lit",
-                                            "v": "halt"
-                                          },
-                                          "value": {
-                                            "e": "lit",
-                                            "v": "denied"
-                                          }
-                                        }
-                                      }
-                                    ]
-                                  },
-                                  "of": {
-                                    "e": "record",
-                                    "fields": {
-                                      "args": {
-                                        "e": "get",
-                                        "field": "args",
-                                        "of": {
-                                          "e": "get",
-                                          "field": "value",
-                                          "of": {
-                                            "e": "var",
-                                            "name": "input"
-                                          }
-                                        }
-                                      },
-                                      "kind": {
-                                        "e": "lit",
-                                        "v": "call"
-                                      },
-                                      "op": {
-                                        "e": "get",
-                                        "field": "op",
-                                        "of": {
-                                          "e": "get",
-                                          "field": "value",
-                                          "of": {
-                                            "e": "var",
-                                            "name": "input"
-                                          }
-                                        }
+                                  "e": "list",
+                                  "items": [
+                                    {
+                                      "e": "get",
+                                      "field": "value",
+                                      "of": {
+                                        "e": "var",
+                                        "name": "input"
                                       }
                                     }
-                                  },
-                                  "then": {
-                                    "e": "list",
-                                    "items": [
-                                      {
-                                        "e": "var",
-                                        "name": "call"
-                                      }
-                                    ]
-                                  },
-                                  "type": "Action"
+                                  ]
                                 },
                                 "state": {
                                   "e": "var",
@@ -4300,11 +4058,7 @@
                     "interface": {
                       "channels": {
                         "act": {
-                          "type": {
-                            "Record": {
-                              "kind": "String"
-                            }
-                          }
+                          "type": "Action"
                         }
                       },
                       "grant": {
@@ -4494,16 +4248,11 @@
                   "Record": {}
                 },
                 "init": {},
-                "result": "Json",
+                "result": "String",
                 "spawns": {
                   "worker": {
-                    "arg": {
-                      "Record": {
-                        "args": "Json",
-                        "op": "String"
-                      }
-                    },
-                    "result": "Json"
+                    "arg": "Call",
+                    "result": "String"
                   }
                 },
                 "state": {
@@ -4514,37 +4263,50 @@
                     "msg": {
                       "bind": "input",
                       "body": {
-                        "e": "record",
-                        "fields": {
-                          "actions": {
-                            "bind": "@action",
-                            "e": "is",
-                            "else": {
+                        "cases": {
+                          "act": {
+                            "bind": "m",
+                            "body": {
+                              "e": "record",
+                              "fields": {
+                                "actions": {
+                                  "e": "list",
+                                  "items": [
+                                    {
+                                      "e": "get",
+                                      "field": "value",
+                                      "of": {
+                                        "e": "var",
+                                        "name": "m"
+                                      }
+                                    }
+                                  ]
+                                },
+                                "state": {
+                                  "e": "var",
+                                  "name": "state"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "e": "match",
+                        "of": {
+                          "e": "var",
+                          "name": "input"
+                        },
+                        "on": "channel",
+                        "otherwise": {
+                          "e": "record",
+                          "fields": {
+                            "actions": {
                               "e": "list",
                               "items": []
                             },
-                            "of": {
-                              "e": "get",
-                              "field": "value",
-                              "of": {
-                                "e": "var",
-                                "name": "input"
-                              }
-                            },
-                            "then": {
-                              "e": "list",
-                              "items": [
-                                {
-                                  "e": "var",
-                                  "name": "@action"
-                                }
-                              ]
-                            },
-                            "type": "Action"
-                          },
-                          "state": {
-                            "e": "var",
-                            "name": "state"
+                            "state": {
+                              "e": "var",
+                              "name": "state"
+                            }
                           }
                         }
                       }
@@ -4573,11 +4335,7 @@
               "interface": {
                 "channels": {
                   "act": {
-                    "type": {
-                      "Record": {
-                        "kind": "String"
-                      }
-                    }
+                    "type": "Action"
                   }
                 },
                 "grant": {
@@ -4953,14 +4711,9 @@
                     "once": []
                   },
                   "harness": {
-                    "arg": {
-                      "Record": {
-                        "args": "Json",
-                        "op": "String"
-                      }
-                    },
+                    "arg": "Call",
                     "init": {},
-                    "result": "Json",
+                    "result": "String",
                     "state": {
                       "Record": {}
                     },
@@ -5012,12 +4765,14 @@
                                         "v": "halt"
                                       },
                                       "value": {
-                                        "e": "get",
-                                        "field": "value",
-                                        "of": {
-                                          "e": "var",
-                                          "name": "input"
-                                        }
+                                        "args": [
+                                          {
+                                            "e": "var",
+                                            "name": "input"
+                                          }
+                                        ],
+                                        "e": "op",
+                                        "op": "str"
                                       }
                                     }
                                   }
@@ -5036,69 +4791,17 @@
                             "e": "record",
                             "fields": {
                               "actions": {
-                                "bind": "call",
-                                "e": "is",
-                                "else": {
-                                  "e": "list",
-                                  "items": [
-                                    {
-                                      "e": "record",
-                                      "fields": {
-                                        "kind": {
-                                          "e": "lit",
-                                          "v": "halt"
-                                        },
-                                        "value": {
-                                          "e": "lit",
-                                          "v": "denied"
-                                        }
-                                      }
-                                    }
-                                  ]
-                                },
-                                "of": {
-                                  "e": "record",
-                                  "fields": {
-                                    "args": {
-                                      "e": "get",
-                                      "field": "args",
-                                      "of": {
-                                        "e": "get",
-                                        "field": "value",
-                                        "of": {
-                                          "e": "var",
-                                          "name": "input"
-                                        }
-                                      }
-                                    },
-                                    "kind": {
-                                      "e": "lit",
-                                      "v": "call"
-                                    },
-                                    "op": {
-                                      "e": "get",
-                                      "field": "op",
-                                      "of": {
-                                        "e": "get",
-                                        "field": "value",
-                                        "of": {
-                                          "e": "var",
-                                          "name": "input"
-                                        }
-                                      }
+                                "e": "list",
+                                "items": [
+                                  {
+                                    "e": "get",
+                                    "field": "value",
+                                    "of": {
+                                      "e": "var",
+                                      "name": "input"
                                     }
                                   }
-                                },
-                                "then": {
-                                  "e": "list",
-                                  "items": [
-                                    {
-                                      "e": "var",
-                                      "name": "call"
-                                    }
-                                  ]
-                                },
-                                "type": "Action"
+                                ]
                               },
                               "state": {
                                 "e": "var",
@@ -5145,11 +4848,7 @@
                   "interface": {
                     "channels": {
                       "act": {
-                        "type": {
-                          "Record": {
-                            "kind": "String"
-                          }
-                        }
+                        "type": "Action"
                       }
                     },
                     "grant": {
@@ -5339,16 +5038,11 @@
                 "Record": {}
               },
               "init": {},
-              "result": "Json",
+              "result": "String",
               "spawns": {
                 "worker": {
-                  "arg": {
-                    "Record": {
-                      "args": "Json",
-                      "op": "String"
-                    }
-                  },
-                  "result": "Json"
+                  "arg": "Call",
+                  "result": "String"
                 }
               },
               "state": {
@@ -5359,37 +5053,50 @@
                   "msg": {
                     "bind": "input",
                     "body": {
-                      "e": "record",
-                      "fields": {
-                        "actions": {
-                          "bind": "@action",
-                          "e": "is",
-                          "else": {
+                      "cases": {
+                        "act": {
+                          "bind": "m",
+                          "body": {
+                            "e": "record",
+                            "fields": {
+                              "actions": {
+                                "e": "list",
+                                "items": [
+                                  {
+                                    "e": "get",
+                                    "field": "value",
+                                    "of": {
+                                      "e": "var",
+                                      "name": "m"
+                                    }
+                                  }
+                                ]
+                              },
+                              "state": {
+                                "e": "var",
+                                "name": "state"
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "e": "match",
+                      "of": {
+                        "e": "var",
+                        "name": "input"
+                      },
+                      "on": "channel",
+                      "otherwise": {
+                        "e": "record",
+                        "fields": {
+                          "actions": {
                             "e": "list",
                             "items": []
                           },
-                          "of": {
-                            "e": "get",
-                            "field": "value",
-                            "of": {
-                              "e": "var",
-                              "name": "input"
-                            }
-                          },
-                          "then": {
-                            "e": "list",
-                            "items": [
-                              {
-                                "e": "var",
-                                "name": "@action"
-                              }
-                            ]
-                          },
-                          "type": "Action"
-                        },
-                        "state": {
-                          "e": "var",
-                          "name": "state"
+                          "state": {
+                            "e": "var",
+                            "name": "state"
+                          }
                         }
                       }
                     }
@@ -5418,11 +5125,7 @@
             "interface": {
               "channels": {
                 "act": {
-                  "type": {
-                    "Record": {
-                      "kind": "String"
-                    }
-                  }
+                  "type": "Action"
                 }
               },
               "grant": {
@@ -5791,7 +5494,7 @@
             {
               "action": {
                 "kind": "halt",
-                "value": "always"
+                "value": "{\"call\":0,\"kind\":\"ret\",\"op\":\"shell.approve\",\"value\":\"always\"}"
               },
               "kind": "out",
               "labels": {
@@ -5807,7 +5510,7 @@
                 "call": 1,
                 "kind": "ret",
                 "op": "spawn.worker",
-                "value": "always"
+                "value": "{\"call\":0,\"kind\":\"ret\",\"op\":\"shell.approve\",\"value\":\"always\"}"
               },
               "kind": "in",
               "origin": [],
@@ -5825,16 +5528,11 @@
                   "Record": {}
                 },
                 "init": {},
-                "result": "Json",
+                "result": "String",
                 "spawns": {
                   "worker": {
-                    "arg": {
-                      "Record": {
-                        "args": "Json",
-                        "op": "String"
-                      }
-                    },
-                    "result": "Json"
+                    "arg": "Call",
+                    "result": "String"
                   }
                 },
                 "state": {
@@ -5845,37 +5543,50 @@
                     "msg": {
                       "bind": "input",
                       "body": {
-                        "e": "record",
-                        "fields": {
-                          "actions": {
-                            "bind": "@action",
-                            "e": "is",
-                            "else": {
+                        "cases": {
+                          "act": {
+                            "bind": "m",
+                            "body": {
+                              "e": "record",
+                              "fields": {
+                                "actions": {
+                                  "e": "list",
+                                  "items": [
+                                    {
+                                      "e": "get",
+                                      "field": "value",
+                                      "of": {
+                                        "e": "var",
+                                        "name": "m"
+                                      }
+                                    }
+                                  ]
+                                },
+                                "state": {
+                                  "e": "var",
+                                  "name": "state"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "e": "match",
+                        "of": {
+                          "e": "var",
+                          "name": "input"
+                        },
+                        "on": "channel",
+                        "otherwise": {
+                          "e": "record",
+                          "fields": {
+                            "actions": {
                               "e": "list",
                               "items": []
                             },
-                            "of": {
-                              "e": "get",
-                              "field": "value",
-                              "of": {
-                                "e": "var",
-                                "name": "input"
-                              }
-                            },
-                            "then": {
-                              "e": "list",
-                              "items": [
-                                {
-                                  "e": "var",
-                                  "name": "@action"
-                                }
-                              ]
-                            },
-                            "type": "Action"
-                          },
-                          "state": {
-                            "e": "var",
-                            "name": "state"
+                            "state": {
+                              "e": "var",
+                              "name": "state"
+                            }
                           }
                         }
                       }
@@ -5904,11 +5615,7 @@
               "interface": {
                 "channels": {
                   "act": {
-                    "type": {
-                      "Record": {
-                        "kind": "String"
-                      }
-                    }
+                    "type": "Action"
                   }
                 },
                 "grant": {
@@ -6288,16 +5995,11 @@
                 "Record": {}
               },
               "init": {},
-              "result": "Json",
+              "result": "String",
               "spawns": {
                 "worker": {
-                  "arg": {
-                    "Record": {
-                      "args": "Json",
-                      "op": "String"
-                    }
-                  },
-                  "result": "Json"
+                  "arg": "Call",
+                  "result": "String"
                 }
               },
               "state": {
@@ -6308,37 +6010,50 @@
                   "msg": {
                     "bind": "input",
                     "body": {
-                      "e": "record",
-                      "fields": {
-                        "actions": {
-                          "bind": "@action",
-                          "e": "is",
-                          "else": {
+                      "cases": {
+                        "act": {
+                          "bind": "m",
+                          "body": {
+                            "e": "record",
+                            "fields": {
+                              "actions": {
+                                "e": "list",
+                                "items": [
+                                  {
+                                    "e": "get",
+                                    "field": "value",
+                                    "of": {
+                                      "e": "var",
+                                      "name": "m"
+                                    }
+                                  }
+                                ]
+                              },
+                              "state": {
+                                "e": "var",
+                                "name": "state"
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "e": "match",
+                      "of": {
+                        "e": "var",
+                        "name": "input"
+                      },
+                      "on": "channel",
+                      "otherwise": {
+                        "e": "record",
+                        "fields": {
+                          "actions": {
                             "e": "list",
                             "items": []
                           },
-                          "of": {
-                            "e": "get",
-                            "field": "value",
-                            "of": {
-                              "e": "var",
-                              "name": "input"
-                            }
-                          },
-                          "then": {
-                            "e": "list",
-                            "items": [
-                              {
-                                "e": "var",
-                                "name": "@action"
-                              }
-                            ]
-                          },
-                          "type": "Action"
-                        },
-                        "state": {
-                          "e": "var",
-                          "name": "state"
+                          "state": {
+                            "e": "var",
+                            "name": "state"
+                          }
                         }
                       }
                     }
@@ -6367,11 +6082,7 @@
             "interface": {
               "channels": {
                 "act": {
-                  "type": {
-                    "Record": {
-                      "kind": "String"
-                    }
-                  }
+                  "type": "Action"
                 }
               },
               "grant": {
@@ -6776,16 +6487,11 @@
                   "Record": {}
                 },
                 "init": {},
-                "result": "Json",
+                "result": "String",
                 "spawns": {
                   "worker": {
-                    "arg": {
-                      "Record": {
-                        "args": "Json",
-                        "op": "String"
-                      }
-                    },
-                    "result": "Json"
+                    "arg": "Call",
+                    "result": "String"
                   }
                 },
                 "state": {
@@ -6796,37 +6502,50 @@
                     "msg": {
                       "bind": "input",
                       "body": {
-                        "e": "record",
-                        "fields": {
-                          "actions": {
-                            "bind": "@action",
-                            "e": "is",
-                            "else": {
+                        "cases": {
+                          "act": {
+                            "bind": "m",
+                            "body": {
+                              "e": "record",
+                              "fields": {
+                                "actions": {
+                                  "e": "list",
+                                  "items": [
+                                    {
+                                      "e": "get",
+                                      "field": "value",
+                                      "of": {
+                                        "e": "var",
+                                        "name": "m"
+                                      }
+                                    }
+                                  ]
+                                },
+                                "state": {
+                                  "e": "var",
+                                  "name": "state"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "e": "match",
+                        "of": {
+                          "e": "var",
+                          "name": "input"
+                        },
+                        "on": "channel",
+                        "otherwise": {
+                          "e": "record",
+                          "fields": {
+                            "actions": {
                               "e": "list",
                               "items": []
                             },
-                            "of": {
-                              "e": "get",
-                              "field": "value",
-                              "of": {
-                                "e": "var",
-                                "name": "input"
-                              }
-                            },
-                            "then": {
-                              "e": "list",
-                              "items": [
-                                {
-                                  "e": "var",
-                                  "name": "@action"
-                                }
-                              ]
-                            },
-                            "type": "Action"
-                          },
-                          "state": {
-                            "e": "var",
-                            "name": "state"
+                            "state": {
+                              "e": "var",
+                              "name": "state"
+                            }
                           }
                         }
                       }
@@ -6855,11 +6574,7 @@
               "interface": {
                 "channels": {
                   "act": {
-                    "type": {
-                      "Record": {
-                        "kind": "String"
-                      }
-                    }
+                    "type": "Action"
                   }
                 },
                 "grant": {

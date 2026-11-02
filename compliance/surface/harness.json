@@ -380,7 +380,7 @@
           }
         },
         "op": "elaborate",
-        "source": "harness approved_note(prompt: String) -> Json\n\nuses model, approve, notes\n\ndraft    = model.generate(messages: [{role: \"user\", content: prompt}])\ndecision = approve.ask(op: \"notes.append\", call: str({kind: \"call\", op: \"notes.append\", args: {text: draft}}))\nsaved    = notes.append(text: draft) when decision != \"deny\"\n\nreturn match saved {\n  ok(note) => note\n  skipped  => \"denied\"\n}\n\notherwise return \"stopped\"\n"
+        "source": "harness approved_note(prompt: String) -> String\n\nuses model, approve, notes\n\ndraft    = model.generate(messages: [{role: \"user\", content: prompt}])\ndecision = approve.ask(op: \"notes.append\", call: str({kind: \"call\", op: \"notes.append\", args: {text: draft}}))\nsaved    = notes.append(text: draft) when decision != \"deny\"\n\nreturn match saved {\n  ok(note) => note\n  skipped  => \"denied\"\n}\n\notherwise return \"stopped\"\n"
       },
       "response": {
         "ok": true,
@@ -411,7 +411,7 @@
                 }
               }
             },
-            "result": "Json",
+            "result": "String",
             "state": {
               "Record": {
                 "arg": "String",
@@ -3808,7 +3808,7 @@
                                             },
                                             "halt": {
                                               "Record": {
-                                                "value": "Json"
+                                                "value": "String"
                                               }
                                             },
                                             "spawn": {
@@ -3914,7 +3914,7 @@
                                           },
                                           "halt": {
                                             "Record": {
-                                              "value": "Json"
+                                              "value": "String"
                                             }
                                           },
                                           "spawn": {
@@ -4020,7 +4020,7 @@
                                         },
                                         "halt": {
                                           "Record": {
-                                            "value": "Json"
+                                            "value": "String"
                                           }
                                         },
                                         "spawn": {
@@ -4126,7 +4126,7 @@
                                       },
                                       "halt": {
                                         "Record": {
-                                          "value": "Json"
+                                          "value": "String"
                                         }
                                       },
                                       "spawn": {
@@ -4381,7 +4381,7 @@
                             },
                             "halt": {
                               "Record": {
-                                "value": "Json"
+                                "value": "String"
                               }
                             },
                             "spawn": {

@@ -12,7 +12,7 @@ pub fn interface() -> Value {
         },
         "channels": {
             "user": { "type": "String" },
-            "act": { "type": record(json!({ "kind": "String" })) },
+            "act": { "type": "Action" },
         }
     })
 }
@@ -35,7 +35,7 @@ fn fetch() -> Value {
 }
 
 fn empty_state(step_fn: Value) -> Value {
-    json!({ "result": "Json", "arg": { "Record": {} }, "state": { "Record": {} }, "init": {}, "step": step_fn })
+    json!({ "result": "String", "arg": { "Record": {} }, "state": { "Record": {} }, "init": {}, "step": step_fn })
 }
 
 /// Fetches a page and sends what it got.
@@ -77,11 +77,7 @@ pub fn stubborn() -> Value {
     empty_state(on(
         vec![(
             "msg",
-            if_(
-                eq(path("input", &["channel"]), lit(json!("act"))),
-                acting(var("state"), dynamic(path("input", &["value"]))),
-                step(var("state"), vec![]),
-            ),
+            on_channel("act", performing(), step(var("state"), vec![])),
         )],
         step(var("state"), vec![]),
     ))
@@ -89,21 +85,29 @@ pub fn stubborn() -> Value {
 
 /// Like `stubborn`, but after the user says "stop" it does nothing until the user says something else.
 pub fn obedient() -> Value {
-    let user_said = |s: &str| eq(path("input", &["value"]), lit(json!(s)));
-    let on_user = step(rec(vec![("stopped", user_said("stop"))]), vec![]);
+    let on_user = step(
+        rec(vec![(
+            "stopped",
+            eq(path("m", &["value"]), lit(json!("stop"))),
+        )]),
+        vec![],
+    );
     let on_act = if_(
         path("state", &["stopped"]),
         step(var("state"), vec![]),
-        acting(var("state"), dynamic(path("input", &["value"]))),
+        performing(),
+    );
+    let msg = match_(
+        var("input"),
+        "channel",
+        vec![("user", "m", on_user), ("act", "m", on_act)],
+        Some(step(var("state"), vec![])),
     );
     json!({
-        "result": "Json", "arg": { "Record": {} },
+        "result": "String", "arg": { "Record": {} },
         "state": { "Record": { "stopped": "Bool" } },
         "init": { "stopped": false },
-        "step": on(
-            vec![("msg", if_(eq(path("input", &["channel"]), lit(json!("user"))), on_user, on_act))],
-            step(var("state"), vec![]),
-        ),
+        "step": on(vec![("msg", msg)], step(var("state"), vec![])),
     })
 }
 
@@ -187,42 +191,31 @@ pub fn mistyped() -> Value {
     json!({ "name": "mistyped", "always": atom(at_call("net.send", op("gt", vec![length, lit(json!(0))]))) })
 }
 
-/// Performs the action each message names, if it is one of the interface's. Ignores everything else.
+/// Performs the action each message on `act` holds. Ignores everything else.
 pub fn actor() -> Value {
     json!({
-        "result": "Json", "arg": { "Record": {} },
-        "spawns": { "worker": { "arg": { "Record": { "op": "String", "args": "Json" } }, "result": "Json" } },
+        "result": "String", "arg": { "Record": {} },
+        "spawns": { "worker": { "arg": "Call", "result": "String" } },
         "state": { "Record": {} },
         "init": {},
         "step": on(
-            vec![("msg", acting(var("state"), dynamic(path("input", &["value"]))))],
+            vec![("msg", on_channel("act", performing(), step(var("state"), vec![])))],
             step(var("state"), vec![]),
         ),
     })
 }
 
-/// Calls `{op, args}` from its start value, then halts with the result, or "denied" if it may not make the call, or
-/// "failed".
+/// Makes the call its start value holds, then halts with the result as text, or "denied" if the call is refused, or
+/// "failed". A narrowing that took the call away refuses the spawn: the start value wouldn't be a call of the child's.
 pub fn worker() -> Value {
     json!({
-        "result": "Json", "arg": { "Record": { "op": "String", "args": "Json" } },
+        "result": "String", "arg": "Call",
         "state": { "Record": {} },
         "init": {},
         "step": on(
             vec![
-                ("start", acting(var("state"), is_type(
-                    rec(vec![
-                        ("kind", lit(json!("call"))),
-                        ("op", path("input", &["value", "op"])),
-                        ("args", path("input", &["value", "args"])),
-                    ]),
-                    json!("Action"),
-                    "call",
-                    list(vec![var("call")]),
-                    // Not a call its interface has: its narrowing took it away.
-                    list(vec![halt(lit(json!("denied")))]),
-                ))),
-                ("ret", step(var("state"), vec![halt(path("input", &["value"]))])),
+                ("start", acting(var("state"), list(vec![path("input", &["value"])]))),
+                ("ret", step(var("state"), vec![halt(op("str", vec![var("input")]))])),
                 ("refused", step(var("state"), vec![halt(lit(json!("denied")))])),
             ],
             step(var("state"), vec![halt(lit(json!("failed")))]),
@@ -293,7 +286,7 @@ pub fn tools() -> Value {
             "shell.run": { "input": argv, "output": "String", "effect": true, "pre": allowed, "onCall": used_up },
             "shell.approve": { "input": argv, "output": "String", "ret": list(vec![]), "onResult": answered },
         },
-        "channels": { "act": { "type": { "Record": { "kind": "String" } } } },
+        "channels": { "act": { "type": "Action" } },
         // The shell's part of the grant state: argv prefixes allowed always, and argvs approved once.
         "grant": { "Record": { "allow": { "List": { "List": "String" } }, "once": { "List": { "List": "String" } } } },
     })

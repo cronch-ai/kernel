@@ -30,7 +30,7 @@
             "Record": {}
           },
           "init": {},
-          "result": "Json",
+          "result": "String",
           "state": {
             "Record": {}
           },
@@ -125,11 +125,7 @@
         "interface": {
           "channels": {
             "act": {
-              "type": {
-                "Record": {
-                  "kind": "String"
-                }
-              }
+              "type": "Action"
             },
             "user": {
               "type": "String"
@@ -309,7 +305,7 @@
                       "Record": {}
                     },
                     "init": {},
-                    "result": "Json",
+                    "result": "String",
                     "state": {
                       "Record": {}
                     },
@@ -404,11 +400,7 @@
                   "interface": {
                     "channels": {
                       "act": {
-                        "type": {
-                          "Record": {
-                            "kind": "String"
-                          }
-                        }
+                        "type": "Action"
                       },
                       "user": {
                         "type": "String"
@@ -477,7 +469,7 @@
                       "Record": {}
                     },
                     "init": {},
-                    "result": "Json",
+                    "result": "String",
                     "state": {
                       "Record": {}
                     },
@@ -572,11 +564,7 @@
                   "interface": {
                     "channels": {
                       "act": {
-                        "type": {
-                          "Record": {
-                            "kind": "String"
-                          }
-                        }
+                        "type": "Action"
                       },
                       "user": {
                         "type": "String"
@@ -681,7 +669,7 @@
                       "Record": {}
                     },
                     "init": {},
-                    "result": "Json",
+                    "result": "String",
                     "state": {
                       "Record": {}
                     },
@@ -776,11 +764,7 @@
                   "interface": {
                     "channels": {
                       "act": {
-                        "type": {
-                          "Record": {
-                            "kind": "String"
-                          }
-                        }
+                        "type": "Action"
                       },
                       "user": {
                         "type": "String"
@@ -871,7 +855,7 @@
                       "Record": {}
                     },
                     "init": {},
-                    "result": "Json",
+                    "result": "String",
                     "state": {
                       "Record": {}
                     },
@@ -966,11 +950,7 @@
                   "interface": {
                     "channels": {
                       "act": {
-                        "type": {
-                          "Record": {
-                            "kind": "String"
-                          }
-                        }
+                        "type": "Action"
                       },
                       "user": {
                         "type": "String"
@@ -1055,7 +1035,7 @@
                       "Record": {}
                     },
                     "init": {},
-                    "result": "Json",
+                    "result": "String",
                     "state": {
                       "Record": {}
                     },
@@ -1150,11 +1130,7 @@
                   "interface": {
                     "channels": {
                       "act": {
-                        "type": {
-                          "Record": {
-                            "kind": "String"
-                          }
-                        }
+                        "type": "Action"
                       },
                       "user": {
                         "type": "String"
@@ -1246,7 +1222,7 @@
             "Record": {}
           },
           "init": {},
-          "result": "Json",
+          "result": "String",
           "state": {
             "Record": {}
           },
@@ -1341,11 +1317,7 @@
         "interface": {
           "channels": {
             "act": {
-              "type": {
-                "Record": {
-                  "kind": "String"
-                }
-              }
+              "type": "Action"
             },
             "user": {
               "type": "String"
@@ -1426,7 +1398,7 @@
                       "Record": {}
                     },
                     "init": {},
-                    "result": "Json",
+                    "result": "String",
                     "state": {
                       "Record": {}
                     },
@@ -1521,11 +1493,7 @@
                   "interface": {
                     "channels": {
                       "act": {
-                        "type": {
-                          "Record": {
-                            "kind": "String"
-                          }
-                        }
+                        "type": "Action"
                       },
                       "user": {
                         "type": "String"
@@ -1594,7 +1562,7 @@
                       "Record": {}
                     },
                     "init": {},
-                    "result": "Json",
+                    "result": "String",
                     "state": {
                       "Record": {}
                     },
@@ -1689,11 +1657,7 @@
                   "interface": {
                     "channels": {
                       "act": {
-                        "type": {
-                          "Record": {
-                            "kind": "String"
-                          }
-                        }
+                        "type": "Action"
                       },
                       "user": {
                         "type": "String"
@@ -1798,7 +1762,7 @@
                       "Record": {}
                     },
                     "init": {},
-                    "result": "Json",
+                    "result": "String",
                     "state": {
                       "Record": {}
                     },
@@ -1893,11 +1857,7 @@
                   "interface": {
                     "channels": {
                       "act": {
-                        "type": {
-                          "Record": {
-                            "kind": "String"
-                          }
-                        }
+                        "type": "Action"
                       },
                       "user": {
                         "type": "String"
@@ -1988,7 +1948,7 @@
                       "Record": {}
                     },
                     "init": {},
-                    "result": "Json",
+                    "result": "String",
                     "state": {
                       "Record": {}
                     },
@@ -2083,11 +2043,7 @@
                   "interface": {
                     "channels": {
                       "act": {
-                        "type": {
-                          "Record": {
-                            "kind": "String"
-                          }
-                        }
+                        "type": "Action"
                       },
                       "user": {
                         "type": "String"
@@ -2172,7 +2128,7 @@
                       "Record": {}
                     },
                     "init": {},
-                    "result": "Json",
+                    "result": "String",
                     "state": {
                       "Record": {}
                     },
@@ -2267,11 +2223,7 @@
                   "interface": {
                     "channels": {
                       "act": {
-                        "type": {
-                          "Record": {
-                            "kind": "String"
-                          }
-                        }
+                        "type": "Action"
                       },
                       "user": {
                         "type": "String"
@@ -2461,7 +2413,7 @@
           "evidence": {
             "assumptions": [
               {
-                "interface": "sha256:274ffd31ce52b0d63dd92c006422108acff2f175382d0f5d46aa5dfaba1beb21",
+                "interface": "sha256:6994ba4df23feee465b7e8302f0a09073ad8bdc4e480075f900529d5741b9568",
                 "kind": "contracts"
               },
               {
@@ -2477,8 +2429,8 @@
               }
             ],
             "grant": "sha256:f192c92f3aeac8e9398fb4e40a7802990f13a78467067fd77e22ea4f4c634dff",
-            "harness": "sha256:8f3398ec28fae51350ab0f8a1ce9d772820ba867e494fe5fbae4f130eafd2ed6",
-            "interface": "sha256:274ffd31ce52b0d63dd92c006422108acff2f175382d0f5d46aa5dfaba1beb21",
+            "harness": "sha256:e805598bacb8275bb998f9e0f3cd7d676a4dc0f0401cfa2d8602e53837a1fc0a",
+            "interface": "sha256:6994ba4df23feee465b7e8302f0a09073ad8bdc4e480075f900529d5741b9568",
             "method": {
               "alphabet": [
                 {
@@ -2516,7 +2468,7 @@
                           "Record": {}
                         },
                         "init": {},
-                        "result": "Json",
+                        "result": "String",
                         "state": {
                           "Record": {}
                         },
@@ -2611,11 +2563,7 @@
                       "interface": {
                         "channels": {
                           "act": {
-                            "type": {
-                              "Record": {
-                                "kind": "String"
-                              }
-                            }
+                            "type": "Action"
                           },
                           "user": {
                             "type": "String"
@@ -2684,7 +2632,7 @@
                           "Record": {}
                         },
                         "init": {},
-                        "result": "Json",
+                        "result": "String",
                         "state": {
                           "Record": {}
                         },
@@ -2779,11 +2727,7 @@
                       "interface": {
                         "channels": {
                           "act": {
-                            "type": {
-                              "Record": {
-                                "kind": "String"
-                              }
-                            }
+                            "type": "Action"
                           },
                           "user": {
                             "type": "String"
@@ -2888,7 +2832,7 @@
                           "Record": {}
                         },
                         "init": {},
-                        "result": "Json",
+                        "result": "String",
                         "state": {
                           "Record": {}
                         },
@@ -2983,11 +2927,7 @@
                       "interface": {
                         "channels": {
                           "act": {
-                            "type": {
-                              "Record": {
-                                "kind": "String"
-                              }
-                            }
+                            "type": "Action"
                           },
                           "user": {
                             "type": "String"
@@ -3078,7 +3018,7 @@
                           "Record": {}
                         },
                         "init": {},
-                        "result": "Json",
+                        "result": "String",
                         "state": {
                           "Record": {}
                         },
@@ -3173,11 +3113,7 @@
                       "interface": {
                         "channels": {
                           "act": {
-                            "type": {
-                              "Record": {
-                                "kind": "String"
-                              }
-                            }
+                            "type": "Action"
                           },
                           "user": {
                             "type": "String"
@@ -3262,7 +3198,7 @@
                           "Record": {}
                         },
                         "init": {},
-                        "result": "Json",
+                        "result": "String",
                         "state": {
                           "Record": {}
                         },
@@ -3357,11 +3293,7 @@
                       "interface": {
                         "channels": {
                           "act": {
-                            "type": {
-                              "Record": {
-                                "kind": "String"
-                              }
-                            }
+                            "type": "Action"
                           },
                           "user": {
                             "type": "String"
@@ -3429,7 +3361,7 @@
             "property": "sha256:044e72fbb412811697057948cb8e00415bcff097b46254a1a8d0e35d21e4d958",
             "verdict": "holds"
           },
-          "key": "sha256:045240763b8b5a0e874f7d5c694e99004670a997cf865103d701a8585eb383f6",
+          "key": "sha256:8cc268dd47f3424cb40c0d62706230b158814630d83bd5c61f5229d0f76deab4",
           "kind": "evidence"
         }
       }
@@ -3443,7 +3375,7 @@
           "init": {
             "n": 0
           },
-          "result": "Json",
+          "result": "String",
           "state": {
             "Record": {
               "n": "Int"
@@ -3651,7 +3583,7 @@
           "init": {
             "n": 0
           },
-          "result": "Json",
+          "result": "String",
           "state": {
             "Record": {
               "n": "Int"

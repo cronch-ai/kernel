@@ -1,8 +1,7 @@
 //! Static checking of expressions: what type an expression has, given the types of its variables, and what is wrong
 //! with it if it has none.
 //!
-//! Checking is structural. Every type conforms to `Json`, and a `Json` value is read only after `is` has tested it.
-//! Lists and the branches of an `if` take the join of their parts' types, so a list of records of different shapes
+//! Checking is structural. Lists and the branches of an `if` take the join of their parts' types, so a list of records of different shapes
 //! has the fields they share. A field of a variant is read only when every case has it; otherwise the value is
 //! matched first.
 //!
@@ -15,7 +14,7 @@
 
 use crate::ir::{Expr, Type};
 use crate::ops::{self, Op, OpTypeError};
-use crate::types::{conforms, join, of_value, record_view};
+use crate::types::{conforms, inhabits, join, of_value, record_view};
 use serde::Serialize;
 use serde_json::Value;
 use std::collections::BTreeMap;
@@ -67,6 +66,10 @@ pub enum Problem {
     NotAList {
         at: Path,
         got: Type,
+    },
+    /// `null`, or an empty list where nothing says what it holds: a literal with no type of its own.
+    Untyped {
+        at: Path,
     },
     /// A `match` on something that isn't a variant tagged by its `on` field.
     NotAVariant {
@@ -140,6 +143,12 @@ impl Checker {
         let Some(want) = expected else {
             return self.infer(expr, at);
         };
+        // Checked against a type, a literal has it if it inhabits it.
+        if let Expr::Lit { v } = expr
+            && inhabits(v, want)
+        {
+            return Some(want.clone());
+        }
         match (expr, want) {
             // Variant introduction: the case the tag names, with the other fields checked against it.
             (Expr::Record { fields }, Type::Variant { tag, cases }) => {
@@ -160,6 +169,11 @@ impl Checker {
                 let mut types = BTreeMap::new();
                 let mut ok = true;
                 for (name, e) in fields {
+                    // A literal in a field the type doesn't have needs no type: it is only carried, as a spawn action
+                    // carries its child's term.
+                    if matches!(e, Expr::Lit { .. }) && !wanted.contains_key(name) {
+                        continue;
+                    }
                     let field_at = child(at, &format!("fields/{name}"));
                     match self.typed(e, &field_at, wanted.get(name)) {
                         Some(t) => {
@@ -197,14 +211,7 @@ impl Checker {
                 let added = self.check(&args[1], item, &child(at, "args/1"));
                 return (list.is_some() && added.is_some()).then(|| want.clone());
             }
-            (
-                Expr::Let { .. }
-                | Expr::If { .. }
-                | Expr::Is { .. }
-                | Expr::Match { .. }
-                | Expr::Fold { .. },
-                _,
-            ) => {
+            (Expr::Let { .. } | Expr::If { .. } | Expr::Match { .. } | Expr::Fold { .. }, _) => {
                 return self.synth(expr, at, Some(want));
             }
             _ => {}
@@ -252,7 +259,10 @@ impl Checker {
     /// The expression's type, inferred, or, for the forms that pass it on, checked against `expected`.
     fn synth(&mut self, expr: &Expr, at: &str, expected: Option<&Type>) -> Option<Type> {
         match expr {
-            Expr::Lit { v } => Some(of_value(v)),
+            Expr::Lit { v } => match of_value(v) {
+                Some(t) => Some(t),
+                None => self.problem(Problem::Untyped { at: at.to_string() }),
+            },
             Expr::Var { name } => match self.scope.iter().rev().find(|(n, _)| n == name) {
                 Some((_, t)) => t.clone(),
                 None => self.problem(Problem::UnknownVariable {
@@ -321,21 +331,6 @@ impl Checker {
                 let e = self.typed(otherwise, &child(at, "else"), expected);
                 self.branches(t, e, at, expected)
             }
-            // Any value may be tested, whatever its type; `bind` has the type it was tested against.
-            Expr::Is {
-                of,
-                ty,
-                bind,
-                then,
-                otherwise,
-            } => {
-                self.infer(of, &child(at, "of"));
-                self.scope.push((bind.clone(), Some(ty.clone())));
-                let t = self.typed(then, &child(at, "then"), expected);
-                self.scope.pop();
-                let e = self.typed(otherwise, &child(at, "else"), expected);
-                self.branches(t, e, at, expected)
-            }
             Expr::Record { fields } => {
                 let mut types = BTreeMap::new();
                 let mut ok = true;
@@ -349,6 +344,9 @@ impl Checker {
                 }
                 ok.then_some(Type::Record(types))
             }
+            Expr::List { items } if items.is_empty() => {
+                self.problem(Problem::Untyped { at: at.to_string() })
+            }
             Expr::List { items } => {
                 let types: Vec<Option<Type>> = items
                     .iter()
@@ -356,7 +354,7 @@ impl Checker {
                     .map(|(i, e)| self.infer(e, &child(at, &format!("items/{i}"))))
                     .collect();
                 let types: Vec<Type> = types.into_iter().collect::<Option<_>>()?;
-                let mut element = types.first().cloned().unwrap_or(Type::Json);
+                let mut element = types.first()?.clone();
                 for (i, t) in types.iter().enumerate().skip(1) {
                     match join(&element, t) {
                         Some(j) => element = j,

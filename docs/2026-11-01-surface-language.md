@@ -56,12 +56,12 @@ Everything the kernel proves is about the elaborated `Expr`, which is the term t
 `approved-note`, which asks the model for a note, asks the owner to approve appending it, and appends it only if approved:
 
 ```
-harness approved_note(prompt: String) -> Json
+harness approved_note(prompt: String) -> String
 
 uses model, approve, notes
 
 draft    = model.generate(messages: [{role: "user", content: prompt}])
-decision = approve.ask(action: "notes.append", args: {text: draft})
+decision = approve.ask(op: "notes.append", call: str({kind: "call", op: "notes.append", args: {text: draft}}))
 saved    = notes.append(text: draft) when decision != "deny"
 
 return match saved {
@@ -94,8 +94,8 @@ property no_effect_without_approval:
   - `match node { ok(v) => ..., failed(e) => ..., refused => ..., skipped => ... }` reads its outcome instead. It must cover `ok`, and `skipped` if the node can be skipped, or have a `_` arm.
   - A call node that fails or is refused ends the run through `otherwise`, unless every read of it is a `match` with arms for both, or a `_`. A node nothing reads ends the run too, since nothing handles its failure.
 - **`return expr`**, once per harness, is `halt(expr)`, emitted once every call, and everything `expr` reads, has settled. `return` may not read, as a value, a node that can be skipped (one with a guard, or that reads such a node). It must `match` it.
-- **`otherwise return expr`** is what a failure or refusal read as a value halts with. Without it, the run halts with `{"failed": name}`, so a harness whose result type doesn't admit that, and that has a failure it doesn't handle, must have an `otherwise`: the kernel checks every halt against the result type. `expr` can't read nodes.
-- **Types:** `String`, `Int`, `Float`, `Bool`, `Json`, `Action`, `List[T]`, records as `{field: T}`, and named record and variant types declared with `type`. A `|` of tagged records is a variant. The names are the kernel's. A `Json` value is read with `if e is T as x then a else b`: `a` with `x` holding `e` at `T` if it has that type, `b` if not. `Action` is an action the harness may take against the interface it runs against, so `if pick is Action as a then …` tests a model's chosen tool call against whatever that interface allows.
+- **`otherwise return expr`** is what a failure or refusal read as a value halts with. Without it, the run halts with `{"failed": name}`, so a harness whose result type doesn't admit that, and that has a failure it doesn't handle, must have an `otherwise`, which is most of them: the kernel checks every halt against the result type. `expr` can't read nodes.
+- **Types:** `String`, `Int`, `Float`, `Bool`, `Call`, `Returned`, `List[T]`, records as `{field: T}`, and named record and variant types declared with `type`. A `|` of tagged records is a variant. The names are the kernel's. `Call` and `Returned` are decided by the interface the harness runs against: see [Typed boundaries](2026-11-02-typed-boundaries.md). A variant is read with `match`.
 - **Expressions** are the pure fragment, mapped one-to-one onto `Expr`:
   - literals, names, field access (`r.text`), records (`{text: s}`), lists;
   - the operators in `ops.rs`, with infix spelling where there is one (`a + b`, `a == b`, `x in xs`), and calls otherwise (`len(xs)`, `prefix(p, s)`, `str(x)`);

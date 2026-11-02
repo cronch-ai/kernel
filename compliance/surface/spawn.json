@@ -2641,7 +2641,7 @@
           }
         },
         "op": "elaborate",
-        "source": "harness parent(xs: List[Int]) -> Json\nuses m = \"math\"\nuses doubler = harness \"registered:doubler\"\ndoubled = for x in xs: m.double(n: x)\ntotal = fold doubled from 0 with (sum, d) => sum + d\nagain = spawn doubler(total) only m.double\nreturn again\n"
+        "source": "harness parent(xs: List[Int]) -> Int\nuses m = \"math\"\nuses doubler = harness \"registered:doubler\"\ndoubled = for x in xs: m.double(n: x)\ntotal = fold doubled from 0 with (sum, d) => sum + d\nagain = spawn doubler(total) only m.double\nreturn again\notherwise return -1\n"
       },
       "response": {
         "ok": true,
@@ -2669,7 +2669,7 @@
                 }
               }
             },
-            "result": "Json",
+            "result": "Int",
             "spawns": {
               "doubler": {
                 "arg": "Int",
@@ -7130,7 +7130,7 @@
                                         },
                                         "halt": {
                                           "Record": {
-                                            "value": "Json"
+                                            "value": "Int"
                                           }
                                         },
                                         "spawn": {
@@ -7209,7 +7209,7 @@
                                       },
                                       "halt": {
                                         "Record": {
-                                          "value": "Json"
+                                          "value": "Int"
                                         }
                                       },
                                       "spawn": {
@@ -7288,7 +7288,7 @@
                                     },
                                     "halt": {
                                       "Record": {
-                                        "value": "Json"
+                                        "value": "Int"
                                       }
                                     },
                                     "spawn": {
@@ -7358,10 +7358,26 @@
                                     "v": "halt"
                                   },
                                   "value": {
-                                    "e": "lit",
-                                    "v": {
-                                      "failed": "again"
-                                    }
+                                    "be": {
+                                      "e": "get",
+                                      "field": "arg",
+                                      "of": {
+                                        "e": "var",
+                                        "name": "@state"
+                                      }
+                                    },
+                                    "e": "let",
+                                    "in": {
+                                      "args": [
+                                        {
+                                          "e": "lit",
+                                          "v": 1
+                                        }
+                                      ],
+                                      "e": "op",
+                                      "op": "neg"
+                                    },
+                                    "name": "xs"
                                   }
                                 }
                               }
@@ -7397,10 +7413,26 @@
                                   "v": "halt"
                                 },
                                 "value": {
-                                  "e": "lit",
-                                  "v": {
-                                    "failed": "doubled"
-                                  }
+                                  "be": {
+                                    "e": "get",
+                                    "field": "arg",
+                                    "of": {
+                                      "e": "var",
+                                      "name": "@state"
+                                    }
+                                  },
+                                  "e": "let",
+                                  "in": {
+                                    "args": [
+                                      {
+                                        "e": "lit",
+                                        "v": 1
+                                      }
+                                    ],
+                                    "e": "op",
+                                    "op": "neg"
+                                  },
+                                  "name": "xs"
                                 }
                               }
                             }
@@ -7447,7 +7479,7 @@
                             },
                             "halt": {
                               "Record": {
-                                "value": "Json"
+                                "value": "Int"
                               }
                             },
                             "spawn": {

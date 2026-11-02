@@ -12,7 +12,7 @@
 //! run's own steps: at any other event, an atom that reads a slot is false.
 
 use crate::What;
-use crate::elaborate::{Bound, Cx, Read, eq, get, if_, let_, lit, var};
+use crate::elaborate::{Bound, Cx, Read, eq, get, if_, let_, lit, op, var};
 use crate::lex::Span;
 use crate::syntax::{Binary, Expr, ExprKind, Name, Unary};
 use kernel::harness::{Harness, Interface};
@@ -83,7 +83,8 @@ fn at_root_step(body: K) -> K {
         cases,
         otherwise: Some(Box::new(lit(json!(false)))),
     };
-    guarded(vec![eq(ev(&["origin"]), lit(json!([])))], step)
+    let at_root = eq(op("len", vec![ev(&["origin"])]), lit(json!(0)));
+    guarded(vec![at_root], step)
 }
 
 /// The root run's state, inside `at_root_step`.
@@ -128,12 +129,6 @@ pub(crate) fn mentions(k: &K, name: &str) -> bool {
         K::Record { fields } => fields.values().any(|f| mentions(f, name)),
         K::List { items } => items.iter().any(|i| mentions(i, name)),
         K::Get { of, .. } | K::Label { of } => mentions(of, name),
-        K::Is {
-            of,
-            then,
-            otherwise,
-            ..
-        } => mentions(of, name) || mentions(then, name) || mentions(otherwise, name),
         K::Match {
             of,
             cases,

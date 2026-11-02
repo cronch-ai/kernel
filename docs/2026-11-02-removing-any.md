@@ -1,5 +1,7 @@
 # Removing `Any`
 
+A3 of this plan is superseded by [Typed boundaries](2026-11-02-typed-boundaries.md), which deletes `Json` and `is`.
+
 Plan for taking `Any` out of the kernel's types, agreed on 2026-11-02 while building the [surface language](2026-11-01-surface-language.md).
 
 `Any` is the kernel's gradual type: it conforms both ways, so whatever has it passes the checker and is checked, if at all, when a value arrives. That was the right start: it let the interpreter, contracts and properties be written before every type was known. It now costs more than it saves:

@@ -7,10 +7,9 @@
 //! The generated state is `{arg, next, nodes}`: the start value, the identifier the interpreter will give the next
 //! call, and one slot per call node. A harness that carries values has `carry` too, a record of them. A slot is a record `{kind, call, value, error}` whose `kind` (`waiting`,
 //! `running`, `ok`, `failed`, `refused` or `skipped`) says which of the other fields mean anything. It is a record
-//! rather than a variant because the kernel has no expression that builds a value at a variant type. `value` is
-//! carried from slot to slot, never rebuilt from a literal, so it keeps the operation's output type throughout.
-//! `error` is the kind of the failure's error (`cancelled`, `child` or `world`), as text: what the world and a failed
-//! child say is `Json`, which a harness reads only by testing it, and the kind is what a step can act on.
+//! so that every read of a slot needn't be a `match`. `value` is carried from slot to slot, never rebuilt from a
+//! literal, so it keeps the operation's output type throughout. `error` is the kind of the failure's error (`cancelled`,
+//! `child` or `world`), the part of it a step can act on.
 //!
 //! The generated step does three things, in order:
 //!
@@ -298,7 +297,8 @@ fn default_value(ty: &Type) -> Value {
         Type::Float => json!(0.0),
         Type::String => json!(""),
         Type::Bool => json!(false),
-        Type::Json | Type::Action | Type::Call => Value::Null,
+        // No value starts as one of these: `initial` says so.
+        Type::Action | Type::Call => Value::Null,
         Type::Returned => json!({ "op": "@none" }),
         Type::List(_) => json!([]),
         Type::Record(fields) => Value::Object(
@@ -416,10 +416,8 @@ impl<'a> Cx<'a> {
         let file = self.file;
         let mut declared: BTreeMap<String, &TypeExpr> = BTreeMap::new();
         for (name, ty) in &file.types {
-            let builtin = [
-                "String", "Int", "Float", "Bool", "Json", "Action", "Call", "List",
-            ]
-            .contains(&name.text.as_str());
+            let builtin = ["String", "Int", "Float", "Bool", "Call", "Returned", "List"]
+                .contains(&name.text.as_str());
             if builtin || declared.insert(name.text.clone(), ty).is_some() {
                 self.report(
                     name.span,
@@ -465,9 +463,8 @@ impl<'a> Cx<'a> {
             "Int" => return Type::Int,
             "Float" => return Type::Float,
             "Bool" => return Type::Bool,
-            "Json" => return Type::Json,
-            "Action" => return Type::Action,
             "Call" => return Type::Call,
+            "Returned" => return Type::Returned,
             _ => {}
         }
         if let Some(t) = resolved.get(name) {
@@ -480,7 +477,7 @@ impl<'a> Cx<'a> {
                     name: name.to_string(),
                 },
             );
-            return Type::Json;
+            return Type::String;
         };
         if visiting.iter().any(|v| v == name) {
             self.report(
@@ -489,7 +486,7 @@ impl<'a> Cx<'a> {
                     name: name.to_string(),
                 },
             );
-            return Type::Json;
+            return Type::String;
         }
         visiting.push(name.to_string());
         let t = self.resolve_type(te, declared, resolved, visiting);
@@ -751,19 +748,6 @@ impl<'a> Cx<'a> {
                 self.walk(t, locals, reads);
                 self.walk(o, locals, reads);
             }
-            ExprKind::Is {
-                of,
-                bind,
-                then,
-                otherwise,
-                ..
-            } => {
-                self.walk(of, locals, reads);
-                locals.push(bind.text.clone());
-                self.walk(then, locals, reads);
-                locals.pop();
-                self.walk(otherwise, locals, reads);
-            }
             ExprKind::Match(scrutinee, arms) => {
                 match self.outcome_of(scrutinee, locals) {
                     Some(i) => {
@@ -969,26 +953,6 @@ impl<'a> Cx<'a> {
                 self.lower(t, locals),
                 self.lower(o, locals),
             ),
-            ExprKind::Is {
-                of,
-                ty,
-                bind,
-                then,
-                otherwise,
-            } => {
-                let of = self.lower(of, locals);
-                let ty = self.type_in_expr(ty);
-                locals.push(bind.text.clone());
-                let then = self.lower(then, locals);
-                locals.pop();
-                K::Is {
-                    of: Box::new(of),
-                    ty,
-                    bind: bind.text.clone(),
-                    then: Box::new(then),
-                    otherwise: Box::new(self.lower(otherwise, locals)),
-                }
-            }
             ExprKind::Match(scrutinee, arms) => match self.outcome_of(scrutinee, locals) {
                 Some(i) => self.lower_outcome(e.span, i, arms, locals),
                 None => self.lower_match(e.span, scrutinee, arms, locals),
@@ -2650,8 +2614,11 @@ pub fn elaborate(
         let Some(call) = cx.calls.get(&i) else {
             let e = cx.lower(&node.value, &mut Vec::new());
             let t = cx.type_of(&e, node.value.span, &scope);
-            // An ill-typed node was reported; what reads it is checked as reading `Json`.
-            scope.push((node.name.text.clone(), t.unwrap_or(Type::Json)));
+            // An ill-typed node was reported, and what reads it can't be checked.
+            let Some(t) = t else {
+                return Err(cx.problems);
+            };
+            scope.push((node.name.text.clone(), t));
             lowered.pures.insert(i, e);
             continue;
         };
@@ -2665,10 +2632,14 @@ pub fn elaborate(
                 let o = cx.lower(over, &mut Vec::new());
                 let item_type = match cx.type_of(&o, over.span, &scope) {
                     Some(Type::List(t)) => *t,
-                    None => Type::Json,
+                    None => return Err(cx.problems),
                     Some(got) => {
-                        cx.expect(Some(got), &Type::List(Box::new(Type::Json)), over.span);
-                        Type::Json
+                        let problem = Box::new(kernel::check::Problem::NotAList {
+                            at: String::new(),
+                            got,
+                        });
+                        cx.report(over.span, What::Type { problem });
+                        return Err(cx.problems);
                     }
                 };
                 let ExprKind::Call(_, args) = &call.kind else {
@@ -2724,8 +2695,7 @@ pub fn elaborate(
     }
     if let Some(r) = file.returns.first() {
         let e = cx.lower(&r.value, &mut Vec::new());
-        let t = cx.type_of(&e, r.value.span, &scope);
-        cx.expect(t, &result, r.value.span);
+        cx.checked(&e, &result.resolved(&resolved), r.value.span, &scope);
         lowered.ret = e;
         if let Some(w) = &r.when {
             let e = cx.lower(w, &mut Vec::new());
@@ -2744,8 +2714,7 @@ pub fn elaborate(
     }
     if let Some(o) = file.otherwise.first() {
         let e = cx.lower(o, &mut Vec::new());
-        let t = cx.type_of(&e, o.span, &fixed);
-        cx.expect(t, &result, o.span);
+        cx.checked(&e, &result.resolved(&resolved), o.span, &fixed);
         lowered.otherwise = Some(e);
     }
     if !cx.problems.is_empty() {

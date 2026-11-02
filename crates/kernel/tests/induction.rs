@@ -96,7 +96,7 @@ fn counter(update: Value) -> Value {
         Some(step(var("state"), vec![])),
     );
     json!({
-        "result": "Json", "arg": { "Record": {} },
+        "result": "String", "arg": { "Record": {} },
         "state": { "Record": { "n": "Int" } },
         "init": { "n": 0 },
         "step": match_(
@@ -171,7 +171,7 @@ fn consecution_is_a_query_whose_counterexamples_the_kernel_checks() {
 fn projection_keeps_only_the_next_state() {
     // `if` and `match` both survive projection; the actions, which may fail to evaluate, are dropped.
     let failing_actions = json!({
-        "result": "Json", "arg": { "Record": {} },
+        "result": "String", "arg": { "Record": {} },
         "state": { "Record": { "n": "Int" } },
         "init": { "n": 0 },
         "step": rec(vec![

@@ -1,5 +1,7 @@
 # Agentic loops
 
+The types here follow [Typed boundaries](2026-11-02-typed-boundaries.md), which replaced `Json` after this plan: the decisions and examples below say what the language does now.
+
 Plan for open question 1 of [the surface language](2026-11-01-surface-language.md), "iteration across steps", agreed on 2026-11-02. The [design session](2026-11-01-harness-design-session.md) set the goal that harnesses be "expressive enough to describe systems like Claude Code". A graph runs each node at most once, so until now the language could only describe one turn of such a system.
 
 ## What an agentic loop is
@@ -13,7 +15,7 @@ ReAct, Claude Code, and most agents built on tool calling share one shape:
 Two things in that shape were missing:
 
 - **Iteration.** A run takes as many steps as the model wants, each one deciding from what the last one did.
-- **Acting on a choice.** The action is a value the model produced, not a call written in the harness. Since A3d, a step can test a value against `Action`, but no node could perform one.
+- **Acting on a choice.** The action is a value the model produced, not a call written in the harness.
 
 Everything else is already in the kernel:
 - the conversation is state;
@@ -50,13 +52,13 @@ A run is still a sequence of steps, each total and finite, driven by inputs the 
    - `c`, `e` and every `next` read nodes as `return` does, and under the same rules: a node that can be skipped is read through `match`, and a failure read as a value ends the run through `otherwise`.
 5. **A round that starts and settles in the same step stalls.** The next round starts in the step that ended the last one, so its first calls go out at once. If it settles in that step anyway, with nothing to wait for, no input could ever start the round after it. The run then halts through `otherwise`, or with `{"failed": "round"}` without one, so a looping harness whose result type doesn't admit that must declare `otherwise`.
    - The alternative was to run rounds until one waits. That makes `δ` partial: a round that never waits would loop inside a single step.
-6. **`x = perform e`** is a call node whose action is the value of `e`, of any type.
-   - When the round reaches it, `e` is tested against `Action`, the action type of the interface the harness runs against. If it is a `call`, it is issued like any other call and checked against its operation's precondition. If not, the slot is `skipped`.
+6. **`x = perform e`** is a call node whose action is the value of `e`: a `Call`, or a variant over `kind` whose `call` case is one.
+   - In a variant, the `call` case is issued like any other call, and checked against its operation's precondition. Any other case skips the slot.
    - Only calls are performed. A model can't choose to halt, cancel or spawn: those stay the harness's.
-   - Under a narrowed interface (a subagent), `Action` is the narrowed action type, so a choice of a dropped operation isn't an `Action` and is skipped. The term is the same under every narrowing.
-   - The slot's value is `Json`, since which operation answers is known only at run time. The harness reads it as it reads any `Json`, with `is`.
+   - Under a narrowed interface (a subagent), `Call` is narrowed too, so a model's result naming a dropped operation is withheld on delivery. The term is the same under every narrowing.
+   - The slot's value is `Returned`: the result input as it arrived, whichever operation gave it. A harness writes it into a conversation with `str`.
    - A performed call settles at its first result. A performed stream's later items and its end find no slot running their call, and change nothing.
-   - **Skipped rather than refused**, because refusal is the interpreter's verdict on a precondition. A value that isn't an action never reaches the interpreter. A harness tells the model which happened through `match`:
+   - **Skipped rather than refused**, because refusal is the interpreter's verdict on a precondition. A harness tells the model which happened through `match`:
 
      ```
      seen = match result {
@@ -87,7 +89,7 @@ decl = ...
 
 ## ReAct
 
-The model is a capability whose `choose` gives `answer {text: String} | call {op: String, args: Json}`. The `call` case is shaped like an action, so `perform` can test it directly.
+The model is a capability whose `choose` gives `answer {text: String} | call Call`, typed by whatever the interface it is called in allows, so `perform` can take its answer directly.
 
 ```
 harness react(task: String) -> String
@@ -141,7 +143,7 @@ stop   = receive said from session.user when said == "stop"
 reply  = brain.choose(messages: history) until stop
 choice = reply
 wants  = match choice { call(c) => c.op, answer(a) => "" }
-asked  = approve.ask(action: wants, args: match choice { call(c) => c.args, answer(a) => {} }) when wants != "" until stop
+asked  = approve.ask(op: wants, call: str(choice)) when wants != "" until stop
 result = perform choice when (match asked { ok(a) => a != "deny", _ => false }) until stop
 
 answer = match choice { answer(a) => a.text, call(c) => "" }
@@ -167,12 +169,12 @@ property approved_since_chosen:
 - Approval is asked for every chosen call. A harness that asks only for some operations names them (`when wants in ["fs.write", "shell.run"]`). The preconditions still refuse what the grant doesn't allow, whatever the harness asks.
 - `approved_since_chosen` holds for every run of `agent`, and is refuted for the same harness without the guard on `result`, under a grant that already allows the operation. That is the same structure as P1 in the design session, now stated across rounds.
 - P4 from the design session ("an interrupt stops effects until the next prompt") holds because `stop` cancels every call still waiting or running in the round, and `heard` ends the turn once the round settles. An interrupt that comes while the model is thinking fails `reply`, and ends the turn through `otherwise`.
-- `approve.ask`'s argument is a `match` written in place, where it is checked against `Json`. As a node of its own, its two arms (`Json` and `{}`) would have no type in common. The language has no `null`.
+- Approvals are recorded as the call's text, so a precondition compares `str` of the call it is asked to make. A capability reads the name it is installed under as `op`, so this holds under any prefix.
 
 **The session loop** carries the conversation across turns and spawns the agent for each one:
 
 ```
-harness session(first: String) -> Json
+harness session(first: String) -> String
 
 uses agent = harness "harness:sha256-…", session
 
@@ -195,8 +197,7 @@ return turn when heard == "/exit"
 - **Properties** span rounds, since past-time LTL reads the whole trace. They are monitored online, and searched up to a depth.
 - **Exhaustive search** doesn't finish for a loop. Every call takes a fresh identifier, and carried values grow (`history`).
 - **Induction** is the route for every depth. With one slot per node and a fixed set of carried values, the state of a loop has a fixed shape, so an invariant names it in a few words (`invariant bounded: turns <= 50`). An obligation reads the carried values as it reads slots.
-  - A step that performs chosen actions tests them against `Action`, which the kernel resolves against the interface before encoding, so the obligation is about that interface's actions.
-  - A performed call's result is read as `Json`, whichever operation gave it. Lists are read as `Json` item by item, and `str` of a value other than a string, a boolean or an integer is text a solver chooses (see [After loops](2026-11-02-after-loops.md)), so the agent loop's obligations are exported. A solver's `unsat` is still no verdict, so they are searched for counterexamples, not proved.
+  - A performed call and its result are typed against the interface before encoding, so `Json` is nowhere in the query. `str` of a structured value is text a solver chooses (see [After loops](2026-11-02-after-loops.md)). A solver's `unsat` is still no verdict, so obligations are searched for counterexamples, not proved.
 - **Termination** is a liveness property, which no proof here claims. A bound is a carried counter, a stop condition that reads it, and an invariant that the counter never passes it.
 
 ## Pieces

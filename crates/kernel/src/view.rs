@@ -187,7 +187,7 @@ fn exact(harness: &Harness, interface: &Interface) -> Type {
                     ("op".to_string(), Type::String),
                 ];
                 let (ty, _) = infer(f, scope);
-                fields.push(("footprint", ty.unwrap_or(Type::Json)));
+                fields.extend(ty.map(|t| ("footprint", t)));
             }
             (name.clone(), record(fields))
         })
@@ -388,7 +388,6 @@ fn union(a: &Type, b: &Type) -> Option<Type> {
 /// The labels of a value of `ty`, shaped like it: each scalar replaced by its sources.
 fn labels_of(ty: &Type) -> Type {
     match ty {
-        Type::Json => Type::Json,
         Type::List(t) => list(labels_of(t)),
         Type::Record(fields) => Type::Record(
             fields

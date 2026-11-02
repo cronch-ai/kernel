@@ -166,7 +166,7 @@
               "kind": "waiting"
             }
           },
-          "result": "Json",
+          "result": "String",
           "state": {
             "Record": {
               "slot": {
@@ -268,7 +268,7 @@
               "kind": "waiting"
             }
           },
-          "result": "Json",
+          "result": "String",
           "state": {
             "Record": {
               "slot": {

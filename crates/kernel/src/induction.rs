@@ -12,7 +12,7 @@
 //!
 //! The query is over `δ`'s next state only: other parts of the step are projected away, which can only add steps (one
 //! whose actions would fail to evaluate), so the obligation is at least as strong as consecution. Every input is in
-//! it: what the interpreter makes up, a spawned child's result and a failure's error, is `Json`, which has a sort.
+//! it: every value is typed, and every type has a sort.
 
 use crate::check::{Problem, infer};
 use crate::harness::{Harness, Interface, input_type, resolved_state, resolved_step};
@@ -34,19 +34,6 @@ pub fn project(expr: &Expr, field: &str) -> Expr {
             otherwise,
         } => Expr::If {
             cond: cond.clone(),
-            then: Box::new(project(then, field)),
-            otherwise: Box::new(project(otherwise, field)),
-        },
-        Expr::Is {
-            of,
-            ty,
-            bind,
-            then,
-            otherwise,
-        } => Expr::Is {
-            of: of.clone(),
-            ty: ty.clone(),
-            bind: bind.clone(),
             then: Box::new(project(then, field)),
             otherwise: Box::new(project(otherwise, field)),
         },
@@ -129,19 +116,6 @@ fn each_use(expr: &Expr, name: &str, visit: &mut impl FnMut(&Expr) -> bool) {
         Expr::Record { fields } => fields.values().for_each(go),
         Expr::List { items } => items.iter().for_each(go),
         Expr::Get { of, .. } | Expr::Label { of } => go(of),
-        Expr::Is {
-            of,
-            bind,
-            then,
-            otherwise,
-            ..
-        } => {
-            go(of);
-            if bind != name {
-                go(then);
-            }
-            go(otherwise);
-        }
         Expr::Match {
             of,
             cases,
@@ -249,23 +223,6 @@ fn unwrap_field(body: &Expr, name: &str, field: &str) -> Expr {
             field: f.clone(),
         },
         Expr::Label { of } => Expr::Label { of: again(of) },
-        Expr::Is {
-            of,
-            ty,
-            bind,
-            then,
-            otherwise,
-        } => Expr::Is {
-            of: again(of),
-            ty: ty.clone(),
-            bind: bind.clone(),
-            then: if bind == name {
-                then.clone()
-            } else {
-                again(then)
-            },
-            otherwise: again(otherwise),
-        },
         Expr::Match {
             of,
             on,

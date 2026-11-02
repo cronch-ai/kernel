@@ -7,17 +7,14 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::BTreeMap;
 
-/// A structural type over JSON values. `Int` conforms to `Float`, a record with more fields conforms to one with fewer,
-/// and every type conforms to `Json`, which is read only after `is` has tested it.
+/// A structural type over JSON values. `Int` conforms to `Float`, and a record with more fields conforms to one with
+/// fewer. There is no type of any value: what no contract has typed is text.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub enum Type {
     Int,
     Float,
     String,
     Bool,
-    /// Any JSON value: null, a boolean, a number, a string, a list of them or a record of them. Every value is one, so
-    /// every type conforms to it, and it conforms to nothing else: what it holds is read only by testing it with `is`.
-    Json,
     /// An action the harness may take against the interface it runs against: its interface's action type, resolved
     /// where the step is checked, run or read in SMT-LIB. So one term tests a choice made at run time (a model's tool
     /// call) against whatever its interface allows, and a narrowed child against what its narrowing leaves.
@@ -109,17 +106,6 @@ pub enum Expr {
         cases: BTreeMap<String, Case>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         otherwise: Option<Box<Expr>>,
-    },
-    /// Whether `of` has type `type`: if it does, `then`, with `bind` holding it at that type; if not, `else`. How a
-    /// `Json` value is read, such as a tool call a model chose, checked against the operations it may name.
-    Is {
-        of: Box<Expr>,
-        #[serde(rename = "type")]
-        ty: Type,
-        bind: String,
-        then: Box<Expr>,
-        #[serde(rename = "else")]
-        otherwise: Box<Expr>,
     },
     /// `acc` starts as `init` and becomes `body` once per item of `over`, in order, with `item` bound to that item.
     /// The only iteration there is: it runs once per item of a list it is given, so evaluation always terminates.
@@ -226,19 +212,6 @@ impl Expr {
                 field: field.clone(),
             },
             Expr::Label { of } => Expr::Label { of: again(of) },
-            Expr::Is {
-                of,
-                ty,
-                bind,
-                then,
-                otherwise,
-            } => Expr::Is {
-                of: again(of),
-                ty: ty.resolved(with),
-                bind: bind.clone(),
-                then: again(then),
-                otherwise: again(otherwise),
-            },
             Expr::Match {
                 of,
                 on,
