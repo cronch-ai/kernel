@@ -165,7 +165,7 @@ impl Default for Interface {
 /// different types, which can't be both.
 fn merge_grants(a: &Type, b: &Type) -> Result<Type, String> {
     match (a, b) {
-        (Type::Any | Type::Json, t) | (t, Type::Any | Type::Json) => Ok(t.clone()),
+        (Type::Json, t) | (t, Type::Json) => Ok(t.clone()),
         (Type::Record(x), Type::Record(y)) => {
             let mut out = x.clone();
             for (field, t) in y {
@@ -470,6 +470,13 @@ pub fn check_interface(interface: &Interface) -> Vec<HarnessProblem> {
     problems
 }
 
+/// The step as it runs against this interface: `Action` in its types is the interface's action type.
+pub fn resolved_step(harness: &Harness, interface: &Interface) -> Expr {
+    harness
+        .step
+        .resolved(&action_type(&harness.result, interface))
+}
+
 /// What `δ` must give: the next state and the actions, each of type `action`.
 pub fn step_type(state: &Type, action: &Type) -> Type {
     Type::Record(BTreeMap::from([
@@ -632,7 +639,8 @@ pub fn check_harness(harness: &Harness, interface: &Interface) -> Vec<HarnessPro
     ];
     // The step is checked against its type, so the state it builds can hold variants.
     let action = action_type(&harness.result, interface);
-    let (_, found) = check(&harness.step, &step_type(&harness.state, &action), scope);
+    let step = harness.step.resolved(&action);
+    let (_, found) = check(&step, &step_type(&harness.state, &action), scope);
     for problem in found {
         problems.push(match problem {
             // The step as a whole has the wrong type.

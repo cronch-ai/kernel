@@ -50,6 +50,9 @@ export async function instantiate(source) {
     checkHarness: (harness, iface) =>
       call({ op: "checkHarness", harness, interface: iface }).problems,
     inputType: (harness, iface) => call({ op: "inputType", harness, interface: iface }).type,
+    actionType: (iface, result) =>
+      call({ op: "actionType", interface: iface, ...(result === undefined ? {} : { result }) })
+        .type,
     checkInterface: (iface) => call({ op: "checkInterface", interface: iface }).problems,
     install: (capabilities) => call({ op: "install", capabilities }),
     narrow: (iface, narrowings) => call({ op: "narrow", interface: iface, narrowings }),

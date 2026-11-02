@@ -31,7 +31,7 @@ fn platform_interface() -> Value {
 }
 
 const APPROVED_NOTE: &str = r#"
-harness approved_note(prompt: String) -> Any
+harness approved_note(prompt: String) -> Json
 
 uses model, approve, notes
 
@@ -243,7 +243,7 @@ fn a_failure_ends_the_run_unless_a_match_handles_it() {
     let interface = math_interface();
     // `{"failed": node}` is what a run halts with when nothing says otherwise, so the result type must admit it.
     let unhandled = r#"
-harness h(n: Int) -> Any
+harness h(n: Int) -> Json
 uses m = "math"
 a = m.double(n: n)
 return a
@@ -322,7 +322,7 @@ fn kinds(problems: &[Value]) -> Vec<&str> {
 
 #[test]
 fn problems_are_reported_where_they_are() {
-    let header = "harness h(n: Int) -> Any\nuses m = \"math\"\n";
+    let header = "harness h(n: Int) -> Json\nuses m = \"math\"\n";
     let at = |source: &str| problems(&format!("{header}{source}"), math());
 
     let p = at("a = m.double(n: n\nreturn a\n");

@@ -56,7 +56,7 @@ Everything the kernel proves is about the elaborated `Expr`, which is the term t
 `approved-note`, which asks the model for a note, asks the owner to approve appending it, and appends it only if approved:
 
 ```
-harness approved_note(prompt: String) -> Any
+harness approved_note(prompt: String) -> Json
 
 uses model, approve, notes
 
@@ -95,7 +95,7 @@ property no_effect_without_approval:
   - A call node that fails or is refused ends the run through `otherwise`, unless every read of it is a `match` with arms for both, or a `_`. A node nothing reads ends the run too, since nothing handles its failure.
 - **`return expr`**, once per harness, is `halt(expr)`, emitted once every call, and everything `expr` reads, has settled. `return` may not read, as a value, a node that can be skipped (one with a guard, or that reads such a node). It must `match` it.
 - **`otherwise return expr`** is what a failure or refusal read as a value halts with. Without it, the run halts with `{"failed": name}`, so a harness whose result type doesn't admit that, and that has a failure it doesn't handle, must have an `otherwise`: the kernel checks every halt against the result type. `expr` can't read nodes.
-- **Types:** `String`, `Int`, `Float`, `Bool`, `Json`, `Any`, `List[T]`, records as `{field: T}`, and named record and variant types declared with `type`. A `|` of tagged records is a variant. The names are the kernel's. A `Json` value is read with `if e is T as x then a else b`: `a` with `x` holding `e` at `T` if it has that type, `b` if not.
+- **Types:** `String`, `Int`, `Float`, `Bool`, `Json`, `Action`, `List[T]`, records as `{field: T}`, and named record and variant types declared with `type`. A `|` of tagged records is a variant. The names are the kernel's. A `Json` value is read with `if e is T as x then a else b`: `a` with `x` holding `e` at `T` if it has that type, `b` if not. `Action` is an action the harness may take against the interface it runs against, so `if pick is Action as a then …` tests a model's chosen tool call against whatever that interface allows.
 - **Expressions** are the pure fragment, mapped one-to-one onto `Expr`:
   - literals, names, field access (`r.text`), records (`{text: s}`), lists;
   - the operators in `ops.rs`, with infix spelling where there is one (`a + b`, `a == b`, `x in xs`), and calls otherwise (`len(xs)`, `prefix(p, s)`, `str(x)`);
@@ -121,7 +121,7 @@ property no_effect_without_approval:
   - It settles when every call has, and fails if any call failed or was refused; `match` reads that outcome like any other. An empty list settles at once.
   - The calls get consecutive identifiers, so the slot keeps the first, and `items`, each call's kind. The number of calls is bounded by the list, not the graph.
   - Only operations with one result fan out, and a fan-out can't be cancelled with `until`.
-  - The kernel has no typed empty list, so the slot's lists are rebuilt as lists of `Any` when a result arrives. The source's own expressions still see the node at `List[T]`.
+  - The slot's lists are rebuilt by folds annotated with their types, so they stay `List[T]` throughout.
 - **Spawning:** `summary = spawn summarizer(draft) only model.generate without fs.write` is a call node filled by a child run, with the kernel's spawn semantics. The harness declares each child it spawns, by the name its header binds, with the child's argument and result types, so the node's value has the child's result type.
   - `only` and `without` are the kernel's `only` and `drop` narrowings, so the child can never do what the parent couldn't.
   - The target is bound in the header: `uses summarizer = harness "harness:sha256-…"` names a registered harness, so the body never carries a key. A `spawn` action carries the child's whole term, so `elaborate` takes the terms of the harnesses the header names, as it takes the contracts of capabilities, and returns the bindings as `harnesses`.
@@ -143,8 +143,7 @@ property no_effect_without_approval:
 - **Node helpers** read the slots in the state each event carries: `ok(saved)`, `failed(saved)`, `refused(saved)`, `skipped(saved)`, `running(saved)` and `waiting(saved)`. A node's name in an atom is its slot, so `saved.value` and `saved.kind` read it. This is what decision 6 allows. Slots are read only at the root run's own steps, so an atom that reads one is false at every other event.
 - **Guards are explicit.** An atom that fails to evaluate is false as a whole. So each helper is an atom of its own, with its field reads behind `if`s, and one helper's missing field can't falsify another. That is gap 5 of the design session.
 - **`invariant name: expr`** over node slots, and the parameter, becomes an expression over the generated state, for an invariant certificate or an induction obligation. With one slot per node, the invariants worth stating are short, such as "`saved` never runs unless `decision` returned something other than `deny`".
-  - An obligation needs a state with no `Any` in it. That is why a slot's `error` holds only the kind of the failure, as text, and why the generated step names only the inputs the harness can use.
-  - A harness that spawns still has an `Any` in its state, the child's result, so it gets no obligation until the kernel types spawn results. See [Removing `Any`](2026-11-02-removing-any.md).
+  - A slot's `error` holds only the kind of the failure, as text, and the generated step names only the inputs the harness can use.
 
 ### Source maps (S3)
 
@@ -154,7 +153,7 @@ property no_effect_without_approval:
 
 ## Elaboration
 
-- **Input:** the source, the contract of each capability its header names, and the term of each harness it names, by identifier. Installed under the header's names, they type each call node, so the generated state is typed, and proofs must exclude `Any`.
+- **Input:** the source, the contract of each capability its header names, and the term of each harness it names, by identifier. Installed under the header's names, they type each call node, so the generated state is typed, and so is every obligation.
 - **Output:** `{harness, uses, harnesses, properties, invariants, sourceMap}`, or a list of problems, each with a span. `uses` is the header's capability bindings, `[{name, capability}]`: what to install, and under which prefix. `harnesses` is its harness bindings, `[{name, harness}]`.
 - **The generated state** is a record:
   - `arg`, the start value;

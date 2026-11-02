@@ -38,7 +38,7 @@ fn interface() -> Value {
 }
 
 const TURN: &str = r#"
-harness turn(prompt: String) -> Any
+harness turn(prompt: String) -> Json
 
 uses model, fs, session
 
@@ -226,7 +226,7 @@ fn p4_holds_up_to_a_depth_and_fails_without_until() {
 
 #[test]
 fn receives_and_untils_are_checked() {
-    let header = "harness h(n: Int) -> Any\nuses model, fs, session\n";
+    let header = "harness h(n: Int) -> Json\nuses model, fs, session\n";
     let problems = |body: &str| {
         let out = call(
             json!({ "op": "elaborate", "source": format!("{header}{body}"), "capabilities": capabilities() }),

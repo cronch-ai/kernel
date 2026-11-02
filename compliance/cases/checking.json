@@ -12,93 +12,84 @@
             "Record": {}
           },
           "step": {
-            "cond": {
-              "args": [
-                {
-                  "e": "get",
-                  "field": "kind",
-                  "of": {
-                    "e": "var",
-                    "name": "input"
+            "cases": {
+              "start": {
+                "bind": "input",
+                "body": {
+                  "e": "record",
+                  "fields": {
+                    "actions": {
+                      "e": "list",
+                      "items": [
+                        {
+                          "e": "record",
+                          "fields": {
+                            "args": {
+                              "e": "record",
+                              "fields": {
+                                "body": {
+                                  "e": "lit",
+                                  "v": "hello"
+                                },
+                                "url": {
+                                  "e": "lit",
+                                  "v": "https://example.com"
+                                }
+                              }
+                            },
+                            "kind": {
+                              "e": "lit",
+                              "v": "call"
+                            },
+                            "op": {
+                              "e": "lit",
+                              "v": "net.send"
+                            }
+                          }
+                        },
+                        {
+                          "e": "record",
+                          "fields": {
+                            "args": {
+                              "e": "record",
+                              "fields": {
+                                "url": {
+                                  "e": "lit",
+                                  "v": "https://example.com/page"
+                                }
+                              }
+                            },
+                            "kind": {
+                              "e": "lit",
+                              "v": "call"
+                            },
+                            "op": {
+                              "e": "lit",
+                              "v": "net.fetch"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    "state": {
+                      "e": "var",
+                      "name": "state"
+                    }
                   }
-                },
-                {
-                  "e": "lit",
-                  "v": "start"
                 }
-              ],
-              "e": "op",
-              "op": "eq"
+              }
             },
-            "e": "if",
-            "else": {
+            "e": "match",
+            "of": {
+              "e": "var",
+              "name": "input"
+            },
+            "otherwise": {
               "e": "record",
               "fields": {
                 "actions": {
                   "e": "list",
                   "items": []
-                },
-                "state": {
-                  "e": "var",
-                  "name": "state"
-                }
-              }
-            },
-            "then": {
-              "e": "record",
-              "fields": {
-                "actions": {
-                  "e": "list",
-                  "items": [
-                    {
-                      "e": "record",
-                      "fields": {
-                        "args": {
-                          "e": "record",
-                          "fields": {
-                            "body": {
-                              "e": "lit",
-                              "v": "hello"
-                            },
-                            "url": {
-                              "e": "lit",
-                              "v": "https://example.com"
-                            }
-                          }
-                        },
-                        "kind": {
-                          "e": "lit",
-                          "v": "call"
-                        },
-                        "op": {
-                          "e": "lit",
-                          "v": "net.send"
-                        }
-                      }
-                    },
-                    {
-                      "e": "record",
-                      "fields": {
-                        "args": {
-                          "e": "record",
-                          "fields": {
-                            "url": {
-                              "e": "lit",
-                              "v": "https://example.com/page"
-                            }
-                          }
-                        },
-                        "kind": {
-                          "e": "lit",
-                          "v": "call"
-                        },
-                        "op": {
-                          "e": "lit",
-                          "v": "net.fetch"
-                        }
-                      }
-                    }
-                  ]
                 },
                 "state": {
                   "e": "var",
@@ -188,93 +179,84 @@
             "Record": {}
           },
           "step": {
-            "cond": {
-              "args": [
-                {
-                  "e": "get",
-                  "field": "kind",
-                  "of": {
-                    "e": "var",
-                    "name": "input"
+            "cases": {
+              "start": {
+                "bind": "input",
+                "body": {
+                  "e": "record",
+                  "fields": {
+                    "actions": {
+                      "e": "list",
+                      "items": [
+                        {
+                          "e": "record",
+                          "fields": {
+                            "args": {
+                              "e": "record",
+                              "fields": {
+                                "body": {
+                                  "e": "lit",
+                                  "v": "hello"
+                                },
+                                "url": {
+                                  "e": "lit",
+                                  "v": "https://example.com"
+                                }
+                              }
+                            },
+                            "kind": {
+                              "e": "lit",
+                              "v": "call"
+                            },
+                            "op": {
+                              "e": "lit",
+                              "v": "net.send"
+                            }
+                          }
+                        },
+                        {
+                          "e": "record",
+                          "fields": {
+                            "args": {
+                              "e": "record",
+                              "fields": {
+                                "url": {
+                                  "e": "lit",
+                                  "v": "https://example.com/page"
+                                }
+                              }
+                            },
+                            "kind": {
+                              "e": "lit",
+                              "v": "call"
+                            },
+                            "op": {
+                              "e": "lit",
+                              "v": "net.fetch"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    "state": {
+                      "e": "var",
+                      "name": "state"
+                    }
                   }
-                },
-                {
-                  "e": "lit",
-                  "v": "start"
                 }
-              ],
-              "e": "op",
-              "op": "eq"
+              }
             },
-            "e": "if",
-            "else": {
+            "e": "match",
+            "of": {
+              "e": "var",
+              "name": "input"
+            },
+            "otherwise": {
               "e": "record",
               "fields": {
                 "actions": {
                   "e": "list",
                   "items": []
-                },
-                "state": {
-                  "e": "var",
-                  "name": "state"
-                }
-              }
-            },
-            "then": {
-              "e": "record",
-              "fields": {
-                "actions": {
-                  "e": "list",
-                  "items": [
-                    {
-                      "e": "record",
-                      "fields": {
-                        "args": {
-                          "e": "record",
-                          "fields": {
-                            "body": {
-                              "e": "lit",
-                              "v": "hello"
-                            },
-                            "url": {
-                              "e": "lit",
-                              "v": "https://example.com"
-                            }
-                          }
-                        },
-                        "kind": {
-                          "e": "lit",
-                          "v": "call"
-                        },
-                        "op": {
-                          "e": "lit",
-                          "v": "net.send"
-                        }
-                      }
-                    },
-                    {
-                      "e": "record",
-                      "fields": {
-                        "args": {
-                          "e": "record",
-                          "fields": {
-                            "url": {
-                              "e": "lit",
-                              "v": "https://example.com/page"
-                            }
-                          }
-                        },
-                        "kind": {
-                          "e": "lit",
-                          "v": "call"
-                        },
-                        "op": {
-                          "e": "lit",
-                          "v": "net.fetch"
-                        }
-                      }
-                    }
-                  ]
                 },
                 "state": {
                   "e": "var",
@@ -396,26 +378,129 @@
             }
           },
           "step": {
-            "cond": {
-              "args": [
-                {
-                  "e": "get",
-                  "field": "kind",
-                  "of": {
-                    "e": "var",
-                    "name": "input"
+            "cases": {
+              "msg": {
+                "bind": "input",
+                "body": {
+                  "cond": {
+                    "args": [
+                      {
+                        "e": "get",
+                        "field": "channel",
+                        "of": {
+                          "e": "var",
+                          "name": "input"
+                        }
+                      },
+                      {
+                        "e": "lit",
+                        "v": "user"
+                      }
+                    ],
+                    "e": "op",
+                    "op": "eq"
+                  },
+                  "e": "if",
+                  "else": {
+                    "cond": {
+                      "e": "get",
+                      "field": "stopped",
+                      "of": {
+                        "e": "var",
+                        "name": "state"
+                      }
+                    },
+                    "e": "if",
+                    "else": {
+                      "e": "record",
+                      "fields": {
+                        "actions": {
+                          "bind": "@action",
+                          "e": "is",
+                          "else": {
+                            "e": "list",
+                            "items": []
+                          },
+                          "of": {
+                            "e": "get",
+                            "field": "value",
+                            "of": {
+                              "e": "var",
+                              "name": "input"
+                            }
+                          },
+                          "then": {
+                            "e": "list",
+                            "items": [
+                              {
+                                "e": "var",
+                                "name": "@action"
+                              }
+                            ]
+                          },
+                          "type": "Action"
+                        },
+                        "state": {
+                          "e": "var",
+                          "name": "state"
+                        }
+                      }
+                    },
+                    "then": {
+                      "e": "record",
+                      "fields": {
+                        "actions": {
+                          "e": "list",
+                          "items": []
+                        },
+                        "state": {
+                          "e": "var",
+                          "name": "state"
+                        }
+                      }
+                    }
+                  },
+                  "then": {
+                    "e": "record",
+                    "fields": {
+                      "actions": {
+                        "e": "list",
+                        "items": []
+                      },
+                      "state": {
+                        "e": "record",
+                        "fields": {
+                          "stopped": {
+                            "args": [
+                              {
+                                "e": "get",
+                                "field": "value",
+                                "of": {
+                                  "e": "var",
+                                  "name": "input"
+                                }
+                              },
+                              {
+                                "e": "lit",
+                                "v": "stop"
+                              }
+                            ],
+                            "e": "op",
+                            "op": "eq"
+                          }
+                        }
+                      }
+                    }
                   }
-                },
-                {
-                  "e": "lit",
-                  "v": "msg"
                 }
-              ],
-              "e": "op",
-              "op": "eq"
+              }
             },
-            "e": "if",
-            "else": {
+            "e": "match",
+            "of": {
+              "e": "var",
+              "name": "input"
+            },
+            "otherwise": {
               "e": "record",
               "fields": {
                 "actions": {
@@ -425,114 +510,6 @@
                 "state": {
                   "e": "var",
                   "name": "state"
-                }
-              }
-            },
-            "then": {
-              "cond": {
-                "args": [
-                  {
-                    "e": "get",
-                    "field": "channel",
-                    "of": {
-                      "e": "var",
-                      "name": "input"
-                    }
-                  },
-                  {
-                    "e": "lit",
-                    "v": "user"
-                  }
-                ],
-                "e": "op",
-                "op": "eq"
-              },
-              "e": "if",
-              "else": {
-                "cond": {
-                  "e": "get",
-                  "field": "stopped",
-                  "of": {
-                    "e": "var",
-                    "name": "state"
-                  }
-                },
-                "e": "if",
-                "else": {
-                  "e": "record",
-                  "fields": {
-                    "actions": {
-                      "e": "list",
-                      "items": [
-                        {
-                          "be": {
-                            "e": "get",
-                            "field": "value",
-                            "of": {
-                              "e": "var",
-                              "name": "input"
-                            }
-                          },
-                          "e": "let",
-                          "in": {
-                            "e": "var",
-                            "name": "@action"
-                          },
-                          "name": "@action",
-                          "type": "Any"
-                        }
-                      ]
-                    },
-                    "state": {
-                      "e": "var",
-                      "name": "state"
-                    }
-                  }
-                },
-                "then": {
-                  "e": "record",
-                  "fields": {
-                    "actions": {
-                      "e": "list",
-                      "items": []
-                    },
-                    "state": {
-                      "e": "var",
-                      "name": "state"
-                    }
-                  }
-                }
-              },
-              "then": {
-                "e": "record",
-                "fields": {
-                  "actions": {
-                    "e": "list",
-                    "items": []
-                  },
-                  "state": {
-                    "e": "record",
-                    "fields": {
-                      "stopped": {
-                        "args": [
-                          {
-                            "e": "get",
-                            "field": "value",
-                            "of": {
-                              "e": "var",
-                              "name": "input"
-                            }
-                          },
-                          {
-                            "e": "lit",
-                            "v": "stop"
-                          }
-                        ],
-                        "e": "op",
-                        "op": "eq"
-                      }
-                    }
-                  }
                 }
               }
             }
@@ -599,7 +576,7 @@
             "Record": {
               "action": {
                 "Record": {
-                  "arg": "Any",
+                  "arg": "Json",
                   "args": {
                     "Record": {
                       "body": "String",
@@ -608,21 +585,21 @@
                     }
                   },
                   "call": "Int",
-                  "harness": "Any",
+                  "harness": "Json",
                   "kind": "String",
                   "name": "String",
-                  "narrow": "Any",
+                  "narrow": "Json",
                   "op": "String",
-                  "value": "Any"
+                  "value": "Json"
                 }
               },
               "effect": "Bool",
               "error": {
                 "Record": {
-                  "action": "Any",
-                  "error": "Any",
-                  "expected": "Any",
-                  "got": "Any",
+                  "action": "Json",
+                  "error": "Json",
+                  "expected": "Json",
+                  "got": "Json",
                   "kind": "String"
                 }
               },
@@ -630,13 +607,13 @@
                 "Record": {
                   "call": "Int",
                   "channel": "String",
-                  "error": "Any",
+                  "error": "Json",
                   "kind": "String",
                   "label": {
                     "List": "String"
                   },
                   "op": "String",
-                  "value": "Any"
+                  "value": "Json"
                 }
               },
               "kind": "String",
@@ -645,7 +622,7 @@
               },
               "labels": {
                 "Record": {
-                  "arg": "Any",
+                  "arg": "Json",
                   "args": {
                     "Record": {
                       "body": {
@@ -662,18 +639,18 @@
                   "call": {
                     "List": "String"
                   },
-                  "harness": "Any",
+                  "harness": "Json",
                   "kind": {
                     "List": "String"
                   },
                   "name": {
                     "List": "String"
                   },
-                  "narrow": "Any",
+                  "narrow": "Json",
                   "op": {
                     "List": "String"
                   },
-                  "value": "Any"
+                  "value": "Json"
                 }
               },
               "origin": {
@@ -683,8 +660,8 @@
                 "Record": {
                   "call": "Int",
                   "channel": "String",
-                  "expected": "Any",
-                  "got": "Any",
+                  "expected": "Json",
+                  "got": "Json",
                   "kind": "String"
                 }
               },
@@ -713,26 +690,129 @@
             }
           },
           "step": {
-            "cond": {
-              "args": [
-                {
-                  "e": "get",
-                  "field": "kind",
-                  "of": {
-                    "e": "var",
-                    "name": "input"
+            "cases": {
+              "msg": {
+                "bind": "input",
+                "body": {
+                  "cond": {
+                    "args": [
+                      {
+                        "e": "get",
+                        "field": "channel",
+                        "of": {
+                          "e": "var",
+                          "name": "input"
+                        }
+                      },
+                      {
+                        "e": "lit",
+                        "v": "user"
+                      }
+                    ],
+                    "e": "op",
+                    "op": "eq"
+                  },
+                  "e": "if",
+                  "else": {
+                    "cond": {
+                      "e": "get",
+                      "field": "stopped",
+                      "of": {
+                        "e": "var",
+                        "name": "state"
+                      }
+                    },
+                    "e": "if",
+                    "else": {
+                      "e": "record",
+                      "fields": {
+                        "actions": {
+                          "bind": "@action",
+                          "e": "is",
+                          "else": {
+                            "e": "list",
+                            "items": []
+                          },
+                          "of": {
+                            "e": "get",
+                            "field": "value",
+                            "of": {
+                              "e": "var",
+                              "name": "input"
+                            }
+                          },
+                          "then": {
+                            "e": "list",
+                            "items": [
+                              {
+                                "e": "var",
+                                "name": "@action"
+                              }
+                            ]
+                          },
+                          "type": "Action"
+                        },
+                        "state": {
+                          "e": "var",
+                          "name": "state"
+                        }
+                      }
+                    },
+                    "then": {
+                      "e": "record",
+                      "fields": {
+                        "actions": {
+                          "e": "list",
+                          "items": []
+                        },
+                        "state": {
+                          "e": "var",
+                          "name": "state"
+                        }
+                      }
+                    }
+                  },
+                  "then": {
+                    "e": "record",
+                    "fields": {
+                      "actions": {
+                        "e": "list",
+                        "items": []
+                      },
+                      "state": {
+                        "e": "record",
+                        "fields": {
+                          "stopped": {
+                            "args": [
+                              {
+                                "e": "get",
+                                "field": "value",
+                                "of": {
+                                  "e": "var",
+                                  "name": "input"
+                                }
+                              },
+                              {
+                                "e": "lit",
+                                "v": "stop"
+                              }
+                            ],
+                            "e": "op",
+                            "op": "eq"
+                          }
+                        }
+                      }
+                    }
                   }
-                },
-                {
-                  "e": "lit",
-                  "v": "msg"
                 }
-              ],
-              "e": "op",
-              "op": "eq"
+              }
             },
-            "e": "if",
-            "else": {
+            "e": "match",
+            "of": {
+              "e": "var",
+              "name": "input"
+            },
+            "otherwise": {
               "e": "record",
               "fields": {
                 "actions": {
@@ -742,114 +822,6 @@
                 "state": {
                   "e": "var",
                   "name": "state"
-                }
-              }
-            },
-            "then": {
-              "cond": {
-                "args": [
-                  {
-                    "e": "get",
-                    "field": "channel",
-                    "of": {
-                      "e": "var",
-                      "name": "input"
-                    }
-                  },
-                  {
-                    "e": "lit",
-                    "v": "user"
-                  }
-                ],
-                "e": "op",
-                "op": "eq"
-              },
-              "e": "if",
-              "else": {
-                "cond": {
-                  "e": "get",
-                  "field": "stopped",
-                  "of": {
-                    "e": "var",
-                    "name": "state"
-                  }
-                },
-                "e": "if",
-                "else": {
-                  "e": "record",
-                  "fields": {
-                    "actions": {
-                      "e": "list",
-                      "items": [
-                        {
-                          "be": {
-                            "e": "get",
-                            "field": "value",
-                            "of": {
-                              "e": "var",
-                              "name": "input"
-                            }
-                          },
-                          "e": "let",
-                          "in": {
-                            "e": "var",
-                            "name": "@action"
-                          },
-                          "name": "@action",
-                          "type": "Any"
-                        }
-                      ]
-                    },
-                    "state": {
-                      "e": "var",
-                      "name": "state"
-                    }
-                  }
-                },
-                "then": {
-                  "e": "record",
-                  "fields": {
-                    "actions": {
-                      "e": "list",
-                      "items": []
-                    },
-                    "state": {
-                      "e": "var",
-                      "name": "state"
-                    }
-                  }
-                }
-              },
-              "then": {
-                "e": "record",
-                "fields": {
-                  "actions": {
-                    "e": "list",
-                    "items": []
-                  },
-                  "state": {
-                    "e": "record",
-                    "fields": {
-                      "stopped": {
-                        "args": [
-                          {
-                            "e": "get",
-                            "field": "value",
-                            "of": {
-                              "e": "var",
-                              "name": "input"
-                            }
-                          },
-                          {
-                            "e": "lit",
-                            "v": "stop"
-                          }
-                        ],
-                        "e": "op",
-                        "op": "eq"
-                      }
-                    }
-                  }
                 }
               }
             }
@@ -1219,26 +1191,129 @@
             }
           },
           "step": {
-            "cond": {
-              "args": [
-                {
-                  "e": "get",
-                  "field": "kind",
-                  "of": {
-                    "e": "var",
-                    "name": "input"
+            "cases": {
+              "msg": {
+                "bind": "input",
+                "body": {
+                  "cond": {
+                    "args": [
+                      {
+                        "e": "get",
+                        "field": "channel",
+                        "of": {
+                          "e": "var",
+                          "name": "input"
+                        }
+                      },
+                      {
+                        "e": "lit",
+                        "v": "user"
+                      }
+                    ],
+                    "e": "op",
+                    "op": "eq"
+                  },
+                  "e": "if",
+                  "else": {
+                    "cond": {
+                      "e": "get",
+                      "field": "stopped",
+                      "of": {
+                        "e": "var",
+                        "name": "state"
+                      }
+                    },
+                    "e": "if",
+                    "else": {
+                      "e": "record",
+                      "fields": {
+                        "actions": {
+                          "bind": "@action",
+                          "e": "is",
+                          "else": {
+                            "e": "list",
+                            "items": []
+                          },
+                          "of": {
+                            "e": "get",
+                            "field": "value",
+                            "of": {
+                              "e": "var",
+                              "name": "input"
+                            }
+                          },
+                          "then": {
+                            "e": "list",
+                            "items": [
+                              {
+                                "e": "var",
+                                "name": "@action"
+                              }
+                            ]
+                          },
+                          "type": "Action"
+                        },
+                        "state": {
+                          "e": "var",
+                          "name": "state"
+                        }
+                      }
+                    },
+                    "then": {
+                      "e": "record",
+                      "fields": {
+                        "actions": {
+                          "e": "list",
+                          "items": []
+                        },
+                        "state": {
+                          "e": "var",
+                          "name": "state"
+                        }
+                      }
+                    }
+                  },
+                  "then": {
+                    "e": "record",
+                    "fields": {
+                      "actions": {
+                        "e": "list",
+                        "items": []
+                      },
+                      "state": {
+                        "e": "record",
+                        "fields": {
+                          "stopped": {
+                            "args": [
+                              {
+                                "e": "get",
+                                "field": "value",
+                                "of": {
+                                  "e": "var",
+                                  "name": "input"
+                                }
+                              },
+                              {
+                                "e": "lit",
+                                "v": "stop"
+                              }
+                            ],
+                            "e": "op",
+                            "op": "eq"
+                          }
+                        }
+                      }
+                    }
                   }
-                },
-                {
-                  "e": "lit",
-                  "v": "msg"
                 }
-              ],
-              "e": "op",
-              "op": "eq"
+              }
             },
-            "e": "if",
-            "else": {
+            "e": "match",
+            "of": {
+              "e": "var",
+              "name": "input"
+            },
+            "otherwise": {
               "e": "record",
               "fields": {
                 "actions": {
@@ -1248,114 +1323,6 @@
                 "state": {
                   "e": "var",
                   "name": "state"
-                }
-              }
-            },
-            "then": {
-              "cond": {
-                "args": [
-                  {
-                    "e": "get",
-                    "field": "channel",
-                    "of": {
-                      "e": "var",
-                      "name": "input"
-                    }
-                  },
-                  {
-                    "e": "lit",
-                    "v": "user"
-                  }
-                ],
-                "e": "op",
-                "op": "eq"
-              },
-              "e": "if",
-              "else": {
-                "cond": {
-                  "e": "get",
-                  "field": "stopped",
-                  "of": {
-                    "e": "var",
-                    "name": "state"
-                  }
-                },
-                "e": "if",
-                "else": {
-                  "e": "record",
-                  "fields": {
-                    "actions": {
-                      "e": "list",
-                      "items": [
-                        {
-                          "be": {
-                            "e": "get",
-                            "field": "value",
-                            "of": {
-                              "e": "var",
-                              "name": "input"
-                            }
-                          },
-                          "e": "let",
-                          "in": {
-                            "e": "var",
-                            "name": "@action"
-                          },
-                          "name": "@action",
-                          "type": "Any"
-                        }
-                      ]
-                    },
-                    "state": {
-                      "e": "var",
-                      "name": "state"
-                    }
-                  }
-                },
-                "then": {
-                  "e": "record",
-                  "fields": {
-                    "actions": {
-                      "e": "list",
-                      "items": []
-                    },
-                    "state": {
-                      "e": "var",
-                      "name": "state"
-                    }
-                  }
-                }
-              },
-              "then": {
-                "e": "record",
-                "fields": {
-                  "actions": {
-                    "e": "list",
-                    "items": []
-                  },
-                  "state": {
-                    "e": "record",
-                    "fields": {
-                      "stopped": {
-                        "args": [
-                          {
-                            "e": "get",
-                            "field": "value",
-                            "of": {
-                              "e": "var",
-                              "name": "input"
-                            }
-                          },
-                          {
-                            "e": "lit",
-                            "v": "stop"
-                          }
-                        ],
-                        "e": "op",
-                        "op": "eq"
-                      }
-                    }
-                  }
                 }
               }
             }
@@ -1717,7 +1684,7 @@
                   "Record": {
                     "action": {
                       "Record": {
-                        "arg": "Any",
+                        "arg": "Json",
                         "args": {
                           "Record": {
                             "body": "String",
@@ -1726,21 +1693,21 @@
                           }
                         },
                         "call": "Int",
-                        "harness": "Any",
+                        "harness": "Json",
                         "kind": "String",
                         "name": "String",
-                        "narrow": "Any",
+                        "narrow": "Json",
                         "op": "String",
-                        "value": "Any"
+                        "value": "Json"
                       }
                     },
                     "effect": "Bool",
                     "error": {
                       "Record": {
-                        "action": "Any",
-                        "error": "Any",
-                        "expected": "Any",
-                        "got": "Any",
+                        "action": "Json",
+                        "error": "Json",
+                        "expected": "Json",
+                        "got": "Json",
                         "kind": "String"
                       }
                     },
@@ -1748,13 +1715,13 @@
                       "Record": {
                         "call": "Int",
                         "channel": "String",
-                        "error": "Any",
+                        "error": "Json",
                         "kind": "String",
                         "label": {
                           "List": "String"
                         },
                         "op": "String",
-                        "value": "Any"
+                        "value": "Json"
                       }
                     },
                     "kind": "String",
@@ -1763,7 +1730,7 @@
                     },
                     "labels": {
                       "Record": {
-                        "arg": "Any",
+                        "arg": "Json",
                         "args": {
                           "Record": {
                             "body": {
@@ -1780,18 +1747,18 @@
                         "call": {
                           "List": "String"
                         },
-                        "harness": "Any",
+                        "harness": "Json",
                         "kind": {
                           "List": "String"
                         },
                         "name": {
                           "List": "String"
                         },
-                        "narrow": "Any",
+                        "narrow": "Json",
                         "op": {
                           "List": "String"
                         },
-                        "value": "Any"
+                        "value": "Json"
                       }
                     },
                     "origin": {
@@ -1801,8 +1768,8 @@
                       "Record": {
                         "call": "Int",
                         "channel": "String",
-                        "expected": "Any",
-                        "got": "Any",
+                        "expected": "Json",
+                        "got": "Json",
                         "kind": "String"
                       }
                     },
@@ -1834,26 +1801,129 @@
             }
           },
           "step": {
-            "cond": {
-              "args": [
-                {
-                  "e": "get",
-                  "field": "kind",
-                  "of": {
-                    "e": "var",
-                    "name": "input"
+            "cases": {
+              "msg": {
+                "bind": "input",
+                "body": {
+                  "cond": {
+                    "args": [
+                      {
+                        "e": "get",
+                        "field": "channel",
+                        "of": {
+                          "e": "var",
+                          "name": "input"
+                        }
+                      },
+                      {
+                        "e": "lit",
+                        "v": "user"
+                      }
+                    ],
+                    "e": "op",
+                    "op": "eq"
+                  },
+                  "e": "if",
+                  "else": {
+                    "cond": {
+                      "e": "get",
+                      "field": "stopped",
+                      "of": {
+                        "e": "var",
+                        "name": "state"
+                      }
+                    },
+                    "e": "if",
+                    "else": {
+                      "e": "record",
+                      "fields": {
+                        "actions": {
+                          "bind": "@action",
+                          "e": "is",
+                          "else": {
+                            "e": "list",
+                            "items": []
+                          },
+                          "of": {
+                            "e": "get",
+                            "field": "value",
+                            "of": {
+                              "e": "var",
+                              "name": "input"
+                            }
+                          },
+                          "then": {
+                            "e": "list",
+                            "items": [
+                              {
+                                "e": "var",
+                                "name": "@action"
+                              }
+                            ]
+                          },
+                          "type": "Action"
+                        },
+                        "state": {
+                          "e": "var",
+                          "name": "state"
+                        }
+                      }
+                    },
+                    "then": {
+                      "e": "record",
+                      "fields": {
+                        "actions": {
+                          "e": "list",
+                          "items": []
+                        },
+                        "state": {
+                          "e": "var",
+                          "name": "state"
+                        }
+                      }
+                    }
+                  },
+                  "then": {
+                    "e": "record",
+                    "fields": {
+                      "actions": {
+                        "e": "list",
+                        "items": []
+                      },
+                      "state": {
+                        "e": "record",
+                        "fields": {
+                          "stopped": {
+                            "args": [
+                              {
+                                "e": "get",
+                                "field": "value",
+                                "of": {
+                                  "e": "var",
+                                  "name": "input"
+                                }
+                              },
+                              {
+                                "e": "lit",
+                                "v": "stop"
+                              }
+                            ],
+                            "e": "op",
+                            "op": "eq"
+                          }
+                        }
+                      }
+                    }
                   }
-                },
-                {
-                  "e": "lit",
-                  "v": "msg"
                 }
-              ],
-              "e": "op",
-              "op": "eq"
+              }
             },
-            "e": "if",
-            "else": {
+            "e": "match",
+            "of": {
+              "e": "var",
+              "name": "input"
+            },
+            "otherwise": {
               "e": "record",
               "fields": {
                 "actions": {
@@ -1863,114 +1933,6 @@
                 "state": {
                   "e": "var",
                   "name": "state"
-                }
-              }
-            },
-            "then": {
-              "cond": {
-                "args": [
-                  {
-                    "e": "get",
-                    "field": "channel",
-                    "of": {
-                      "e": "var",
-                      "name": "input"
-                    }
-                  },
-                  {
-                    "e": "lit",
-                    "v": "user"
-                  }
-                ],
-                "e": "op",
-                "op": "eq"
-              },
-              "e": "if",
-              "else": {
-                "cond": {
-                  "e": "get",
-                  "field": "stopped",
-                  "of": {
-                    "e": "var",
-                    "name": "state"
-                  }
-                },
-                "e": "if",
-                "else": {
-                  "e": "record",
-                  "fields": {
-                    "actions": {
-                      "e": "list",
-                      "items": [
-                        {
-                          "be": {
-                            "e": "get",
-                            "field": "value",
-                            "of": {
-                              "e": "var",
-                              "name": "input"
-                            }
-                          },
-                          "e": "let",
-                          "in": {
-                            "e": "var",
-                            "name": "@action"
-                          },
-                          "name": "@action",
-                          "type": "Any"
-                        }
-                      ]
-                    },
-                    "state": {
-                      "e": "var",
-                      "name": "state"
-                    }
-                  }
-                },
-                "then": {
-                  "e": "record",
-                  "fields": {
-                    "actions": {
-                      "e": "list",
-                      "items": []
-                    },
-                    "state": {
-                      "e": "var",
-                      "name": "state"
-                    }
-                  }
-                }
-              },
-              "then": {
-                "e": "record",
-                "fields": {
-                  "actions": {
-                    "e": "list",
-                    "items": []
-                  },
-                  "state": {
-                    "e": "record",
-                    "fields": {
-                      "stopped": {
-                        "args": [
-                          {
-                            "e": "get",
-                            "field": "value",
-                            "of": {
-                              "e": "var",
-                              "name": "input"
-                            }
-                          },
-                          {
-                            "e": "lit",
-                            "v": "stop"
-                          }
-                        ],
-                        "e": "op",
-                        "op": "eq"
-                      }
-                    }
-                  }
                 }
               }
             }

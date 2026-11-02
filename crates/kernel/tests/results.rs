@@ -97,9 +97,9 @@ fn a_child_without_the_declared_signature_is_refused() {
 
     // An argument outside the signature is refused too: the child would accept it, the parent didn't declare it.
     let mut loose = increment();
-    loose["arg"] = json!("Any");
+    loose["arg"] = json!("Json");
     let mut p = parent(loose);
-    p["arg"] = json!("Any");
+    p["arg"] = json!("Json");
     assert_eq!(
         outcome(p, json!("four")),
         json!({ "kind": "halted", "value": -1 })
@@ -114,13 +114,26 @@ fn a_halt_outside_the_result_type_fails_the_run() {
     let refused = call(json!({ "op": "init", "harness": liar, "interface": {} }));
     assert_eq!(refused["error"]["kind"], "harness");
 
-    // A value only the run knows is checked when it halts.
+    // So is a value the harness hasn't tested: Json is not an Int until `is` says so.
     let mut echo = increment();
-    echo["arg"] = json!("Any");
+    echo["arg"] = json!("Json");
     echo["step"]["cases"]["start"]["body"] = step(var("state"), vec![halt(path("s", &["value"]))]);
-    let ended = outcome(echo, json!("five"));
-    assert_eq!(ended["kind"], "failed");
-    assert_eq!(ended["error"]["kind"], "result");
+    let refused = call(json!({ "op": "init", "harness": echo, "interface": {} }));
+    assert_eq!(refused["error"]["kind"], "harness");
+
+    // A halt built from data is an `Action` only with a value of the result type, so the test refuses the rest.
+    let mut chosen = increment();
+    chosen["arg"] = json!("Json");
+    let halts = rec(vec![
+        ("kind", lit(json!("halt"))),
+        ("value", path("s", &["value"])),
+    ]);
+    chosen["step"]["cases"]["start"]["body"] = acting(var("state"), dynamic(halts));
+    assert_eq!(
+        outcome(chosen.clone(), json!(5)),
+        json!({ "kind": "halted", "value": 5 })
+    );
+    assert_eq!(outcome(chosen, json!("five")), Value::Null);
 
     // Without a result type, any value will do, as before.
     let mut untyped = increment();

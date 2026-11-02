@@ -47,7 +47,7 @@
           }
         },
         "op": "elaborate",
-        "source": "harness turn(prompt: String) -> Any\nuses model, fs, session\nstop   = receive said from session.user when said == \"stop\"\nchunks = model.generate(messages: [{role: \"user\", content: prompt}]) until stop\nreply  = fold chunks from \"\" with (text, chunk) => concat(text, chunk)\nsaved  = fs.write(path: \"/workspace/reply.md\", text: reply) until stop\nreturn saved\notherwise return \"interrupted\"\n"
+        "source": "harness turn(prompt: String) -> Json\nuses model, fs, session\nstop   = receive said from session.user when said == \"stop\"\nchunks = model.generate(messages: [{role: \"user\", content: prompt}]) until stop\nreply  = fold chunks from \"\" with (text, chunk) => concat(text, chunk)\nsaved  = fs.write(path: \"/workspace/reply.md\", text: reply) until stop\nreturn saved\notherwise return \"interrupted\"\n"
       },
       "response": {
         "ok": true,
@@ -78,7 +78,6 @@
                 }
               }
             },
-            "result": "Any",
             "state": {
               "Record": {
                 "arg": "String",
@@ -3513,7 +3512,7 @@
                                               },
                                               "halt": {
                                                 "Record": {
-                                                  "value": "Any"
+                                                  "value": "Json"
                                                 }
                                               },
                                               "spawn": {
@@ -3610,7 +3609,7 @@
                                             },
                                             "halt": {
                                               "Record": {
-                                                "value": "Any"
+                                                "value": "Json"
                                               }
                                             },
                                             "spawn": {
@@ -3707,7 +3706,7 @@
                                           },
                                           "halt": {
                                             "Record": {
-                                              "value": "Any"
+                                              "value": "Json"
                                             }
                                           },
                                           "spawn": {
@@ -3804,7 +3803,7 @@
                                         },
                                         "halt": {
                                           "Record": {
-                                            "value": "Any"
+                                            "value": "Json"
                                           }
                                         },
                                         "spawn": {
@@ -4001,7 +4000,7 @@
                                 },
                                 "halt": {
                                   "Record": {
-                                    "value": "Any"
+                                    "value": "Json"
                                   }
                                 },
                                 "spawn": {
@@ -4098,7 +4097,7 @@
                               },
                               "halt": {
                                 "Record": {
-                                  "value": "Any"
+                                  "value": "Json"
                                 }
                               },
                               "spawn": {
@@ -4195,7 +4194,7 @@
                             },
                             "halt": {
                               "Record": {
-                                "value": "Any"
+                                "value": "Json"
                               }
                             },
                             "spawn": {

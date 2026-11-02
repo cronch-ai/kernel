@@ -11,7 +11,7 @@ pub struct Name {
 
 #[derive(Clone, Debug)]
 pub enum TypeExpr {
-    /// `String`, `Int`, `Float`, `Bool`, `Any`, or a type declared with `type`.
+    /// `String`, `Int`, `Float`, `Bool`, `Json`, `Action`, or a type declared with `type`.
     Named(Name),
     List(Box<TypeExpr>, Span),
     Record(Vec<(Name, TypeExpr)>, Span),

@@ -170,7 +170,7 @@
         "List": {
           "Record": {
             "action": "String",
-            "args": "Any"
+            "args": "Json"
           }
         }
       }

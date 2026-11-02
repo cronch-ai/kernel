@@ -11,12 +11,11 @@
 //! with no certificate the kernel can check.
 //!
 //! The query is over `δ`'s next state only: other parts of the step are projected away, which can only add steps (one
-//! whose actions would fail to evaluate), so the obligation is at least as strong as consecution. Inputs whose type
-//! has no sort (one holding `Any`, such as a harness's start value declared `Any`) are left out, and the query says
-//! which. What the interpreter makes up, a spawned child's result and a failure's error, is `Json`, which has one.
+//! whose actions would fail to evaluate), so the obligation is at least as strong as consecution. Every input is in
+//! it: what the interpreter makes up, a spawned child's result and a failure's error, is `Json`, which has a sort.
 
 use crate::check::{Problem, infer};
-use crate::harness::{Harness, Interface, input_type};
+use crate::harness::{Harness, Interface, input_type, resolved_step};
 use crate::ir::{Case, Expr, Type};
 use crate::labeled::{self, LValue};
 use crate::smtlib::{self, Floats, Refusal};
@@ -316,36 +315,26 @@ fn unwrap_field(body: &Expr, name: &str, field: &str) -> Expr {
     }
 }
 
-/// The type without the parts that have no sort: a variant's cases that hold `Any` are dropped, and named in
-/// `excluded`. `None` if what remains still holds `Any` outside a variant.
-fn prune(ty: &Type, at: &str, excluded: &mut Vec<String>) -> Option<Type> {
+/// The type without the variant cases that have no values (a variant with no cases, such as the `end` of an
+/// interface without streams), which SMT-LIB can't declare.
+fn inhabited(ty: &Type) -> Type {
     match ty {
-        Type::Any => None,
-        Type::List(t) => prune(t, at, excluded).map(|t| Type::List(Box::new(t))),
-        Type::Record(fields) => fields
-            .iter()
-            .map(|(n, t)| prune(t, at, excluded).map(|t| (n.clone(), t)))
-            .collect::<Option<_>>()
-            .map(Type::Record),
-        Type::Variant { tag, cases } => {
-            let mut kept = std::collections::BTreeMap::new();
-            for (name, t) in cases {
-                let path = format!("{at}{name}");
-                match prune(t, &format!("{path}."), excluded) {
-                    // A case that is itself a variant with no cases has no values: nothing is left out.
-                    Some(Type::Variant { cases, .. }) if cases.is_empty() => {}
-                    Some(t) => {
-                        kept.insert(name.clone(), t);
-                    }
-                    None => excluded.push(path),
-                }
-            }
-            Some(Type::Variant {
-                tag: tag.clone(),
-                cases: kept,
-            })
-        }
-        scalar => Some(scalar.clone()),
+        Type::List(t) => Type::List(Box::new(inhabited(t))),
+        Type::Record(fields) => Type::Record(
+            fields
+                .iter()
+                .map(|(n, t)| (n.clone(), inhabited(t)))
+                .collect(),
+        ),
+        Type::Variant { tag, cases } => Type::Variant {
+            tag: tag.clone(),
+            cases: cases
+                .iter()
+                .map(|(n, t)| (n.clone(), inhabited(t)))
+                .filter(|(_, t)| !matches!(t, Type::Variant { cases, .. } if cases.is_empty()))
+                .collect(),
+        },
+        scalar => scalar.clone(),
     }
 }
 
@@ -356,8 +345,6 @@ pub struct Obligation {
     pub initiation: bool,
     /// Consecution as an SMT-LIB query: `sat` exactly where there is a counterexample to induction.
     pub text: String,
-    /// The input cases the query leaves out, as paths of case names (`ret.spawn`).
-    pub excluded: Vec<String>,
     /// The types to read a model's state and input at (`readValues`), which are the query's own.
     pub reads: [Type; 2],
 }
@@ -367,8 +354,6 @@ pub struct Obligation {
 pub enum ObligationError {
     /// The invariant isn't a condition on the state.
     Invariant { problems: Vec<Problem> },
-    /// The state type has no sort.
-    State,
     /// Part of the query has no faithful reading.
     Refused { refusal: Refusal },
 }
@@ -409,17 +394,14 @@ pub fn obligation(
     if !problems.is_empty() {
         return Err(ObligationError::Invariant { problems });
     }
-    let mut excluded = Vec::new();
-    let input =
-        prune(&input_type(harness, interface), "", &mut excluded).ok_or(ObligationError::State)?;
-    let state = prune(&harness.state, "", &mut Vec::new()).ok_or(ObligationError::State)?;
-    let next = project(&harness.step, "state");
-    let text = smtlib::induction(&state, &input, invariant, &next, &excluded, floats)
+    let input = inhabited(&input_type(harness, interface));
+    let state = inhabited(&harness.state);
+    let next = project(&resolved_step(harness, interface), "state");
+    let text = smtlib::induction(&state, &input, invariant, &next, floats)
         .map_err(|refusal| ObligationError::Refused { refusal })?;
     Ok(Obligation {
         initiation: holds(invariant, &harness.init),
         text,
-        excluded,
         reads: [state, input],
     })
 }
@@ -475,7 +457,7 @@ pub fn check_step(
         ("state".to_string(), LValue::trusted(state)),
         ("input".to_string(), LValue::trusted(input)),
     ];
-    let next = labeled::eval(&harness.step, scope)
+    let next = labeled::eval(&resolved_step(harness, interface), scope)
         .ok()
         .and_then(|r| r.field("state"))
         .map(|s| s.value())

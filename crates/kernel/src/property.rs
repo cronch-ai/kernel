@@ -84,7 +84,7 @@ pub struct PropertyProblem {
 }
 
 /// Problems with a property's atoms and quantifier bounds, in runs of this harness against this interface: `event`
-/// has the type `view::event_type` gives, and what a quantifier binds is `Any`.
+/// has the type `view::event_type` gives, and what a quantifier binds is `Json`.
 pub fn check_property(
     property: &Property,
     harness: &Harness,
@@ -106,7 +106,7 @@ fn check_formula(
     let child = |s: &str| format!("{at}/{s}");
     let mut expr = |e: &Expr, at: String, bound: &Vec<String>, want: Option<Type>| {
         let scope = std::iter::once(("event".to_string(), event.clone()))
-            .chain(bound.iter().map(|n| (n.clone(), Type::Any)))
+            .chain(bound.iter().map(|n| (n.clone(), Type::Json)))
             .collect();
         let (_, problems) = match &want {
             Some(expected) => check(e, expected, scope),

@@ -1,9 +1,10 @@
 //! Static checking of expressions: what type an expression has, given the types of its variables, and what is wrong
 //! with it if it has none.
 //!
-//! Checking is structural and gradual: `Any` conforms both ways, so shapes the interpreter checks when they arrive
-//! pass here. Lists and the branches of an `if` take the join of their parts' types, so a list of records of different
-//! shapes has the fields they share.
+//! Checking is structural. Every type conforms to `Json`, and a `Json` value is read only after `is` has tested it.
+//! Lists and the branches of an `if` take the join of their parts' types, so a list of records of different shapes
+//! has the fields they share. A field of a variant is read only when every case has it; otherwise the value is
+//! matched first.
 //!
 //! Checking is also bidirectional. Where a type is expected (a harness's state, a contract's condition, an annotated
 //! `let` or `fold`), an expression is checked against it rather than inferred and compared afterwards. That is what
@@ -57,6 +58,12 @@ pub enum Problem {
         field: String,
         of: Type,
     },
+    /// A field only some of a variant's cases have: the value is matched first, and the field read in those cases.
+    NotEveryCase {
+        at: Path,
+        field: String,
+        of: Type,
+    },
     NotAList {
         at: Path,
         got: Type,
@@ -81,7 +88,7 @@ pub enum Problem {
 /// The type of an expression with these variables in scope, and what is wrong with it.
 pub fn infer(expr: &Expr, scope: Vec<(String, Type)>) -> (Option<Type>, Vec<Problem>) {
     let mut checker = Checker {
-        scope,
+        scope: known(scope),
         problems: Vec::new(),
     };
     let ty = checker.infer(expr, "");
@@ -95,16 +102,21 @@ pub fn check(
     scope: Vec<(String, Type)>,
 ) -> (Option<Type>, Vec<Problem>) {
     let mut checker = Checker {
-        scope,
+        scope: known(scope),
         problems: Vec::new(),
     };
     let ty = checker.check(expr, expected, "");
     (ty, checker.problems)
 }
 
+fn known(scope: Vec<(String, Type)>) -> Vec<(String, Option<Type>)> {
+    scope.into_iter().map(|(n, t)| (n, Some(t))).collect()
+}
+
 struct Checker {
-    /// Variables in scope, innermost last.
-    scope: Vec<(String, Type)>,
+    /// Variables in scope, innermost last. A variable bound to something ill-typed has no type: what reads it is
+    /// ill-typed too, without another problem being reported.
+    scope: Vec<(String, Option<Type>)>,
     problems: Vec<Problem>,
 }
 
@@ -125,7 +137,7 @@ impl Checker {
     }
 
     fn typed(&mut self, expr: &Expr, at: &str, expected: Option<&Type>) -> Option<Type> {
-        let Some(want) = expected.filter(|t| **t != Type::Any) else {
+        let Some(want) = expected else {
             return self.infer(expr, at);
         };
         match (expr, want) {
@@ -236,7 +248,7 @@ impl Checker {
         match expr {
             Expr::Lit { v } => Some(of_value(v)),
             Expr::Var { name } => match self.scope.iter().rev().find(|(n, _)| n == name) {
-                Some((_, t)) => Some(t.clone()),
+                Some((_, t)) => t.clone(),
                 None => self.problem(Problem::UnknownVariable {
                     at: at.to_string(),
                     name: name.clone(),
@@ -273,7 +285,7 @@ impl Checker {
                     }
                     None => self.infer(be, &child(at, "be")),
                 };
-                self.scope.push((name.clone(), bound.unwrap_or(Type::Any)));
+                self.scope.push((name.clone(), bound));
                 let t = self.typed(body, &child(at, "in"), expected);
                 self.scope.pop();
                 t
@@ -306,7 +318,7 @@ impl Checker {
                 otherwise,
             } => {
                 self.infer(of, &child(at, "of"));
-                self.scope.push((bind.clone(), ty.clone()));
+                self.scope.push((bind.clone(), Some(ty.clone())));
                 let t = self.typed(then, &child(at, "then"), expected);
                 self.scope.pop();
                 let e = self.typed(otherwise, &child(at, "else"), expected);
@@ -332,7 +344,7 @@ impl Checker {
                     .map(|(i, e)| self.infer(e, &child(at, &format!("items/{i}"))))
                     .collect();
                 let types: Vec<Type> = types.into_iter().collect::<Option<_>>()?;
-                let mut element = types.first().cloned().unwrap_or(Type::Any);
+                let mut element = types.first().cloned().unwrap_or(Type::Json);
                 for (i, t) in types.iter().enumerate().skip(1) {
                     match join(&element, t) {
                         Some(j) => element = j,
@@ -348,11 +360,16 @@ impl Checker {
                 Some(Type::List(Box::new(element)))
             }
             Expr::Get { of, field } => match self.infer(of, &child(at, "of"))? {
-                Type::Any => Some(Type::Any),
-                // A field every case has is typed; one only some cases have is read gradually, and checked when it is.
+                // A field every case has is typed; one only some cases have is read after matching.
                 variant @ Type::Variant { .. } => match record_view(&variant) {
-                    Type::Record(fields) => Some(fields.get(field).cloned().unwrap_or(Type::Any)),
-                    _ => Some(Type::Any),
+                    Type::Record(fields) if fields.contains_key(field) => {
+                        Some(fields[field].clone())
+                    }
+                    _ => self.problem(Problem::NotEveryCase {
+                        at: at.to_string(),
+                        field: field.clone(),
+                        of: variant,
+                    }),
                 },
                 Type::Record(fields) => match fields.get(field) {
                     Some(t) => Some(t.clone()),
@@ -379,9 +396,9 @@ impl Checker {
             } => {
                 let of_at = child(at, "of");
                 let of_ty = self.infer(of, &of_at);
-                // Each case's binding type: the variant's case, or `Any` if what is matched is unchecked.
+                // Each case's binding type: the variant's case, or none if what is matched is ill-typed.
                 let declared: Option<BTreeMap<String, Type>> = match &of_ty {
-                    None | Some(Type::Any) => None,
+                    None => None,
                     Some(Type::Variant {
                         tag,
                         cases: declared,
@@ -412,12 +429,6 @@ impl Checker {
                             missing,
                         });
                     }
-                } else if otherwise.is_none() && of_ty.is_some() {
-                    // Matching an unchecked value: only a default covers what it might be.
-                    self.problem(Problem::NotExhaustive {
-                        at: at.to_string(),
-                        missing: vec![],
-                    });
                 }
                 let mut result: Option<Option<Type>> = None;
                 let mut merge = |this: &mut Self, t: Option<Type>, body_at: String| {
@@ -435,10 +446,7 @@ impl Checker {
                     });
                 };
                 for (name, case) in cases {
-                    let bound = declared
-                        .as_ref()
-                        .and_then(|d| d.get(name).cloned())
-                        .unwrap_or(Type::Any);
+                    let bound = declared.as_ref().and_then(|d| d.get(name).cloned());
                     self.scope.push((case.bind.clone(), bound));
                     let body_at = child(at, &format!("cases/{name}/body"));
                     let t = self.typed(&case.body, &body_at, expected);
@@ -466,7 +474,6 @@ impl Checker {
                 let over_at = child(at, "over");
                 let item_ty = match self.infer(over, &over_at) {
                     Some(Type::List(t)) => Some(*t),
-                    Some(Type::Any) => Some(Type::Any),
                     Some(got) => self.problem(Problem::NotAList { at: over_at, got }),
                     None => None,
                 };
@@ -476,10 +483,8 @@ impl Checker {
                     Some(t) => self.check(init, t, &child(at, "init")).map(|_| t.clone()),
                     None => self.infer(init, &child(at, "init")),
                 };
-                self.scope
-                    .push((acc.clone(), acc_ty.clone().unwrap_or(Type::Any)));
-                self.scope
-                    .push((item.clone(), item_ty.unwrap_or(Type::Any)));
+                self.scope.push((acc.clone(), acc_ty.clone()));
+                self.scope.push((item.clone(), item_ty));
                 let body_ty = match &declared {
                     Some(t) => self.check(body, t, &child(at, "body")),
                     None => self.infer(body, &child(at, "body")),

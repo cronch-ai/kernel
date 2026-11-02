@@ -4,8 +4,8 @@ use crate::cbor::{self, DecodeError};
 use crate::check::{check, infer};
 use crate::evidence::{Alphabet, Evidence, Method, Subject, certificate, prove, verify};
 use crate::harness::{
-    Harness, Installation, Interface, Narrowing, check_harness, check_interface, input_type,
-    install, narrow,
+    Harness, Installation, Interface, Narrowing, action_type, check_harness, check_interface,
+    input_type, install, narrow,
 };
 use crate::induction::{check_step, obligation};
 use crate::ir::{Expr, Type};
@@ -42,6 +42,13 @@ pub enum Request {
     /// Problems with a harness against an interface.
     CheckHarness {
         harness: Harness,
+        interface: Interface,
+    },
+    /// The type of an action a harness's step may give against an interface, halting with a value of `result`:
+    /// what an action chosen at run time is tested against with `is`.
+    ActionType {
+        #[serde(default = "json_type")]
+        result: Type,
         interface: Interface,
     },
     /// The type of what a harness's step receives against an interface.
@@ -158,6 +165,10 @@ pub enum RequestError {
     Malformed { detail: String },
 }
 
+fn json_type() -> Type {
+    Type::Json
+}
+
 fn certificate_limit() -> usize {
     10_000
 }
@@ -195,6 +206,9 @@ fn respond(request: Request) -> Value {
         }
         Request::CheckHarness { harness, interface } => {
             json!({ "problems": check_harness(&harness, &interface) })
+        }
+        Request::ActionType { result, interface } => {
+            json!({ "type": action_type(&result, &interface) })
         }
         Request::InputType { harness, interface } => {
             json!({ "type": input_type(&harness, &interface) })
@@ -289,7 +303,7 @@ fn respond(request: Request) -> Value {
             floats,
         } => match obligation(&harness, &interface, &invariant, floats) {
             Ok(o) => {
-                json!({ "kind": "obligation", "initiation": o.initiation, "text": o.text, "excluded": o.excluded, "reads": o.reads })
+                json!({ "kind": "obligation", "initiation": o.initiation, "text": o.text, "reads": o.reads })
             }
             Err(error) => json!({ "kind": "refused", "error": error }),
         },

@@ -4,7 +4,7 @@
       "input": {
         "Record": {
           "action": "String",
-          "args": "Any"
+          "args": "Json"
         }
       },
       "output": "String",
@@ -141,7 +141,7 @@
         "List": {
           "Record": {
             "action": "String",
-            "args": "Any"
+            "args": "Json"
           }
         }
       }

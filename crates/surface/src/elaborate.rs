@@ -10,8 +10,7 @@
 //! rather than a variant because the kernel has no expression that builds a value at a variant type. `value` is
 //! carried from slot to slot, never rebuilt from a literal, so it keeps the operation's output type throughout.
 //! `error` is the kind of the failure's error (`cancelled`, `child` or `world`), as text: what the world and a failed
-//! child say is `Any`, and a state that held it would have no SMT sort, so no induction obligation could be written for
-//! it.
+//! child say is `Json`, which a harness reads only by testing it, and the kind is what a step can act on.
 //!
 //! The generated step does three things, in order:
 //!
@@ -279,7 +278,7 @@ fn default_value(ty: &Type) -> Value {
         Type::Float => json!(0.0),
         Type::String => json!(""),
         Type::Bool => json!(false),
-        Type::Any | Type::Json => Value::Null,
+        Type::Json | Type::Action => Value::Null,
         Type::List(_) => json!([]),
         Type::Record(fields) => Value::Object(
             fields
@@ -323,9 +322,8 @@ fn initial_slot(call: &Call) -> Value {
     slot
 }
 
-/// `list` with its item at `index` replaced by `value`. The result is typed by the fold's empty start, so it is a
-/// list of `Any`: the kernel has no typed empty list.
-fn replaced(items: K, index: K, value: K) -> K {
+/// `list`, of items of type `item`, with its item at `index` replaced by `value`.
+fn replaced(items: K, index: K, value: K, item: &Type) -> K {
     let acc = || var("@b");
     let body = rec(vec![
         ("i", op("add", vec![get(acc(), "i"), lit(json!(1))])),
@@ -346,20 +344,24 @@ fn replaced(items: K, index: K, value: K) -> K {
         acc: "@b".to_string(),
         item: "@y".to_string(),
         body: Box::new(body),
-        ty: None,
+        ty: Some(Type::Record(BTreeMap::from([
+            ("i".to_string(), Type::Int),
+            ("out".to_string(), Type::List(Box::new(item.clone()))),
+        ]))),
     };
     get(fold, "out")
 }
 
-/// `body` folded over `over` from `init`, with the accumulator as `@a` and each item as `item`.
-fn fold_into(over: K, init: K, item: &str, body: K) -> K {
+/// `body` folded over `over` from `init`, with the accumulator as `@a`, of type `ty` if given, and each item as
+/// `item`.
+fn fold_into(over: K, init: K, item: &str, body: K, ty: Option<Type>) -> K {
     K::Fold {
         over: Box::new(over),
         init: Box::new(init),
         acc: "@a".to_string(),
         item: item.to_string(),
         body: Box::new(body),
-        ty: None,
+        ty,
     }
 }
 
@@ -381,7 +383,7 @@ impl<'a> Cx<'a> {
         let file = self.file;
         let mut declared: BTreeMap<String, &TypeExpr> = BTreeMap::new();
         for (name, ty) in &file.types {
-            let builtin = ["String", "Int", "Float", "Bool", "Any", "Json", "List"]
+            let builtin = ["String", "Int", "Float", "Bool", "Json", "Action", "List"]
                 .contains(&name.text.as_str());
             if builtin || declared.insert(name.text.clone(), ty).is_some() {
                 self.report(
@@ -428,8 +430,8 @@ impl<'a> Cx<'a> {
             "Int" => return Type::Int,
             "Float" => return Type::Float,
             "Bool" => return Type::Bool,
-            "Any" => return Type::Any,
             "Json" => return Type::Json,
+            "Action" => return Type::Action,
             _ => {}
         }
         if let Some(t) = resolved.get(name) {
@@ -442,7 +444,7 @@ impl<'a> Cx<'a> {
                     name: name.to_string(),
                 },
             );
-            return Type::Any;
+            return Type::Json;
         };
         if visiting.iter().any(|v| v == name) {
             self.report(
@@ -451,7 +453,7 @@ impl<'a> Cx<'a> {
                     name: name.to_string(),
                 },
             );
-            return Type::Any;
+            return Type::Json;
         }
         visiting.push(name.to_string());
         let t = self.resolve_type(te, declared, resolved, visiting);
@@ -1183,6 +1185,32 @@ impl<'a> Cx<'a> {
         ty
     }
 
+    /// `lowered` checked against `expected`, as the kernel checks it, so an empty list or a variant's case takes the
+    /// type it is wanted at. A mismatch of the whole is reported as one.
+    pub(crate) fn checked(
+        &mut self,
+        lowered: &K,
+        expected: &Type,
+        span: Span,
+        scope: &[(String, Type)],
+    ) {
+        let (_, problems) = kernel::check::check(lowered, expected, scope.to_vec());
+        for p in problems {
+            let what = match p {
+                kernel::check::Problem::Mismatch { at, expected, got } if at.is_empty() => {
+                    What::Mismatch {
+                        expected: Box::new(expected),
+                        got: Box::new(got),
+                    }
+                }
+                p => What::Type {
+                    problem: Box::new(p),
+                },
+            };
+            self.report(span, what);
+        }
+    }
+
     pub(crate) fn expect(&mut self, got: Option<Type>, expected: &Type, span: Span) {
         if let Some(got) = got
             && !conforms(&got, expected)
@@ -1377,12 +1405,14 @@ impl Cx<'_> {
                     list(vec![]),
                     "@x",
                     op("append", vec![var("@a"), lit(item_default)]),
+                    Some(c.value.clone()),
                 );
                 let kinds = fold_into(
                     items(),
                     list(vec![]),
                     "@x",
                     op("append", vec![var("@a"), lit(json!("running"))]),
+                    Some(Type::List(Box::new(Type::String))),
                 );
                 let slot = rec(vec![
                     (
@@ -1409,6 +1439,7 @@ impl Cx<'_> {
                     actions,
                     &item,
                     op("append", vec![var("@a"), action]),
+                    None,
                 );
                 let_(
                     "@items",
@@ -1635,7 +1666,18 @@ impl Cx<'_> {
             Input::Refused | Input::End => "refused",
         };
         let values = match input {
-            Input::Ret => replaced(get(slot(), "value"), var("@i"), get(var("@in"), "value")),
+            Input::Ret => {
+                let item = match &self.calls[&n].value {
+                    Type::List(t) => (**t).clone(),
+                    other => other.clone(),
+                };
+                replaced(
+                    get(slot(), "value"),
+                    var("@i"),
+                    get(var("@in"), "value"),
+                    &item,
+                )
+            }
             _ => get(slot(), "value"),
         };
         let error = match input {
@@ -1664,7 +1706,12 @@ impl Cx<'_> {
             index,
             let_(
                 "@kinds",
-                replaced(get(slot(), "items"), var("@i"), lit(json!(kind))),
+                replaced(
+                    get(slot(), "items"),
+                    var("@i"),
+                    lit(json!(kind)),
+                    &Type::String,
+                ),
                 self.with_slot("@r", get(var("@r"), "next"), n, updated),
             ),
         )
@@ -1908,7 +1955,7 @@ pub fn elaborate(
                 Call {
                     kind: Slotted::Receive,
                     target: channel.text.clone(),
-                    input: Type::Any,
+                    input: Type::Record(BTreeMap::new()),
                     value: c.ty.clone(),
                     binder: binder.as_ref().map(|b| b.text.clone()),
                     child: None,
@@ -2238,7 +2285,8 @@ pub fn elaborate(
         let Some(call) = cx.calls.get(&i) else {
             let e = cx.lower(&node.value, &mut Vec::new());
             let t = cx.type_of(&e, node.value.span, &scope);
-            scope.push((node.name.text.clone(), t.unwrap_or(Type::Any)));
+            // An ill-typed node was reported; what reads it is checked as reading `Json`.
+            scope.push((node.name.text.clone(), t.unwrap_or(Type::Json)));
             lowered.pures.insert(i, e);
             continue;
         };
@@ -2252,10 +2300,10 @@ pub fn elaborate(
                 let o = cx.lower(over, &mut Vec::new());
                 let item_type = match cx.type_of(&o, over.span, &scope) {
                     Some(Type::List(t)) => *t,
-                    Some(Type::Any) | None => Type::Any,
+                    None => Type::Json,
                     Some(got) => {
-                        cx.expect(Some(got), &Type::List(Box::new(Type::Any)), over.span);
-                        Type::Any
+                        cx.expect(Some(got), &Type::List(Box::new(Type::Json)), over.span);
+                        Type::Json
                     }
                 };
                 let ExprKind::Call(_, args) = &call.kind else {
@@ -2448,10 +2496,19 @@ fn lower_args(
     for a in args {
         let Some(name) = &a.name else { continue };
         let e = cx.lower(&a.value, &mut locals.to_vec());
-        let t = cx.type_of(&e, a.value.span, scope);
+        let declared = match input {
+            Type::Record(declared) => Some(declared),
+            _ => None,
+        };
+        match declared.map(|d| d.get(&name.text)) {
+            Some(Some(expected)) => cx.checked(&e, expected, a.value.span, scope),
+            _ => {
+                cx.type_of(&e, a.value.span, scope);
+            }
+        }
         if let Type::Record(declared) = input {
             match declared.get(&name.text) {
-                Some(expected) => cx.expect(t, expected, a.value.span),
+                Some(_) => {}
                 None => cx.report(
                     name.span,
                     What::Argument {

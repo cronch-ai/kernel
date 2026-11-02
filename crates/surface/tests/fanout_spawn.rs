@@ -68,7 +68,7 @@ fn failed(call: u64) -> Value {
 }
 
 const DOUBLE_ALL: &str = r#"
-harness double_all(xs: List[Int]) -> Any
+harness double_all(xs: List[Int]) -> Json
 uses m = "math"
 doubled = for x in xs: m.double(n: x + 1)
 return doubled
@@ -137,7 +137,7 @@ otherwise return -1
 fn a_spawned_harness_runs_as_a_child_and_its_value_comes_back() {
     let child = elaborated(CHILD, json!({}))["harness"].clone();
     let parent = r#"
-harness parent(n: Int) -> Any
+harness parent(n: Int) -> Json
 uses m = "math"
 uses doubler = harness "registered:doubler"
 r = spawn doubler(n + 1) only m.double
@@ -175,7 +175,7 @@ fn spawns_and_fan_outs_are_checked() {
         out["problems"].as_array().unwrap().clone()
     };
     let header =
-        "harness h(n: Int) -> Any\nuses m = \"math\"\nuses doubler = harness \"doubler\"\n";
+        "harness h(n: Int) -> Json\nuses m = \"math\"\nuses doubler = harness \"doubler\"\n";
 
     // The child calls `m.double`, which a narrowing to `m.square` takes away.
     let p = problems(&format!(
@@ -190,7 +190,7 @@ fn spawns_and_fan_outs_are_checked() {
     assert_eq!(p[0]["kind"], "mismatch");
     let p = problems(&format!("{header}r = spawn m(n)\nreturn r\n"));
     assert_eq!(p[0]["kind"], "notAHarness");
-    let p = problems("harness h(n: Int) -> Any\nuses ghost = harness \"nowhere\"\nreturn 1\n");
+    let p = problems("harness h(n: Int) -> Json\nuses ghost = harness \"nowhere\"\nreturn 1\n");
     assert_eq!(p[0]["kind"], "unknownHarness");
 
     let p = problems(&format!(

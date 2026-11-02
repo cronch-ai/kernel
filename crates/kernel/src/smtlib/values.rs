@@ -395,7 +395,7 @@ impl<'s> Reader<'s> {
         }
         let wrong = || Self::mismatch(ty, s);
         match ty {
-            Type::Any => Err(wrong()),
+            Type::Action => Err(wrong()),
             Type::Json => self.json(s, scope, depth),
             Type::Bool => match s {
                 Sexp::Atom(a) if a == "true" => Ok(Value::Bool(true)),
@@ -657,6 +657,9 @@ mod tests {
             read("((x 1)", &[&Type::Int]),
             Err(Unreadable::Syntax { .. })
         ));
-        assert!(matches!(one("1", Type::Any), Err(Unreadable::Value { .. })));
+        assert!(matches!(
+            one("1", Type::String),
+            Err(Unreadable::Value { .. })
+        ));
     }
 }
