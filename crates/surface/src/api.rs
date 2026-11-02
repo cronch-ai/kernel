@@ -3,7 +3,7 @@
 
 use crate::elaborate::elaborate;
 use kernel::cbor;
-use kernel::harness::Interface;
+use kernel::harness::{Harness, Interface};
 use serde::Deserialize;
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
@@ -11,11 +11,14 @@ use std::collections::BTreeMap;
 #[derive(Deserialize)]
 #[serde(tag = "op", rename_all = "camelCase")]
 enum Request {
-    /// A source elaborated against the contracts of the capabilities it may use, by identifier.
+    /// A source elaborated against the contracts of the capabilities it may use, and the terms of the harnesses it
+    /// may spawn, each by identifier.
     Elaborate {
         source: String,
         #[serde(default)]
         capabilities: BTreeMap<String, Interface>,
+        #[serde(default)]
+        harnesses: BTreeMap<String, Harness>,
     },
 }
 
@@ -24,8 +27,11 @@ fn respond(request: Request) -> Value {
         Request::Elaborate {
             source,
             capabilities,
-        } => match elaborate(&source, &capabilities) {
-            Ok(e) => json!({ "kind": "elaborated", "harness": e.harness, "uses": e.uses }),
+            harnesses,
+        } => match elaborate(&source, &capabilities, &harnesses) {
+            Ok(e) => json!({
+                "kind": "elaborated", "harness": e.harness, "uses": e.uses, "harnesses": e.harnesses,
+            }),
             Err(problems) => json!({ "kind": "problems", "problems": problems }),
         },
     }

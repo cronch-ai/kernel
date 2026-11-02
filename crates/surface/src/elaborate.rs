@@ -23,7 +23,9 @@ use crate::parse::parse;
 use crate::syntax::{self, Binary, ExprKind, File, Pattern, TypeExpr, Unary};
 use crate::{Problem, What};
 use kernel::check::infer;
-use kernel::harness::{Harness, Installation, Interface, Mode, check_harness, install};
+use kernel::harness::{
+    Harness, Installation, Interface, Mode, Narrowing, check_harness, install, narrow,
+};
 use kernel::ir::{Case, Expr as K, Type};
 use kernel::types::conforms;
 use serde::Serialize;
@@ -37,10 +39,18 @@ pub struct Binding {
     pub capability: String,
 }
 
+/// A registered harness the harness spawns, by the name it uses for it.
+#[derive(Serialize, Clone, Debug, PartialEq)]
+pub struct HarnessBinding {
+    pub name: String,
+    pub harness: String,
+}
+
 #[derive(Serialize, Clone, Debug)]
 pub struct Elaborated {
     pub harness: Harness,
     pub uses: Vec<Binding>,
+    pub harnesses: Vec<HarnessBinding>,
 }
 
 /// Functions an expression may call, each an operator of the kernel's but `label`.
@@ -54,6 +64,8 @@ enum Bound {
     Param,
     Node(usize),
     Capability,
+    /// A registered harness, to spawn.
+    Harness,
 }
 
 /// How an expression reads a node: as its value, or through a `match` on its outcome.
@@ -98,6 +110,10 @@ enum Slotted {
     Stream,
     /// A message on a channel.
     Receive,
+    /// One call per item of a list, issued together.
+    FanOut,
+    /// A child run.
+    Spawn,
 }
 
 /// An input about a call.
@@ -117,14 +133,18 @@ struct Call {
     input: Type,
     /// What the slot's `value` holds: the operation's output, a stream's items as a list, or the message.
     value: Type,
-    /// What a receive names its message, for its filter.
+    /// What a receive names its message, for its filter, or a fan-out its item, for its arguments.
     binder: Option<String>,
+    /// A spawn's child and narrowings, as its action carries them.
+    child: Option<(Harness, Vec<Narrowing>)>,
     /// The node whose return cancels this call.
     until: Option<usize>,
 }
 
 struct Cx<'a> {
     file: &'a File,
+    /// The harnesses the header binds, by name.
+    children: BTreeMap<String, Harness>,
     problems: Vec<Problem>,
     names: BTreeMap<String, Bound>,
     /// The call nodes, by node index.
@@ -248,13 +268,65 @@ fn default_value(ty: &Type) -> Value {
     }
 }
 
-fn slot_type(value: &Type) -> Type {
-    Type::Record(BTreeMap::from([
+fn slot_type(call: &Call) -> Type {
+    let mut fields = BTreeMap::from([
         ("kind".to_string(), Type::String),
         ("call".to_string(), Type::Int),
-        ("value".to_string(), value.clone()),
+        ("value".to_string(), call.value.clone()),
         ("error".to_string(), Type::Any),
-    ]))
+    ]);
+    // A fan-out's calls have consecutive identifiers from `call`; `items` holds each one's kind.
+    if call.kind == Slotted::FanOut {
+        fields.insert("items".to_string(), Type::List(Box::new(Type::String)));
+    }
+    Type::Record(fields)
+}
+
+fn initial_slot(call: &Call) -> Value {
+    let mut slot =
+        json!({ "kind": "waiting", "call": 0, "value": default_value(&call.value), "error": null });
+    if call.kind == Slotted::FanOut {
+        slot["items"] = json!([]);
+    }
+    slot
+}
+
+/// `list` with its item at `index` replaced by `value`. The result is typed by the fold's empty start, so it is a
+/// list of `Any`: the kernel has no typed empty list.
+fn replaced(items: K, index: K, value: K) -> K {
+    let acc = || var("@b");
+    let body = rec(vec![
+        ("i", op("add", vec![get(acc(), "i"), lit(json!(1))])),
+        (
+            "out",
+            op(
+                "append",
+                vec![
+                    get(acc(), "out"),
+                    if_(eq(get(acc(), "i"), index), value, var("@y")),
+                ],
+            ),
+        ),
+    ]);
+    let fold = K::Fold {
+        over: Box::new(items),
+        init: Box::new(rec(vec![("i", lit(json!(0))), ("out", list(vec![]))])),
+        acc: "@b".to_string(),
+        item: "@y".to_string(),
+        body: Box::new(body),
+    };
+    get(fold, "out")
+}
+
+/// `body` folded over `over` from `init`, with the accumulator as `@a` and each item as `item`.
+fn fold_into(over: K, init: K, item: &str, body: K) -> K {
+    K::Fold {
+        over: Box::new(over),
+        init: Box::new(init),
+        acc: "@a".to_string(),
+        item: item.to_string(),
+        body: Box::new(body),
+    }
 }
 
 impl<'a> Cx<'a> {
@@ -398,7 +470,12 @@ impl<'a> Cx<'a> {
     }
 
     /// The interface the `uses` bindings install, and the bindings.
-    fn install(&mut self, capabilities: &BTreeMap<String, Interface>) -> (Interface, Vec<Binding>) {
+    fn install(
+        &mut self,
+        capabilities: &BTreeMap<String, Interface>,
+        harnesses: &BTreeMap<String, Harness>,
+        spawned: &mut Vec<HarnessBinding>,
+    ) -> (Interface, Vec<Binding>) {
         let mut installations = Vec::new();
         let mut bindings = Vec::new();
         for u in &self.file.uses.clone() {
@@ -406,6 +483,28 @@ impl<'a> Cx<'a> {
                 Some((id, span)) => (id.clone(), *span),
                 None => (u.name.text.clone(), u.name.span),
             };
+            if u.harness {
+                if !self.bind(&u.name, Bound::Harness) {
+                    continue;
+                }
+                match harnesses.get(&id) {
+                    Some(h) => {
+                        self.children.insert(u.name.text.clone(), h.clone());
+                        spawned.push(HarnessBinding {
+                            name: u.name.text.clone(),
+                            harness: id,
+                        });
+                    }
+                    None => self.report(
+                        span,
+                        What::UnknownHarness {
+                            name: u.name.text.clone(),
+                            harness: id,
+                        },
+                    ),
+                }
+                continue;
+            }
             if !self.bind(&u.name, Bound::Capability) {
                 continue;
             }
@@ -493,7 +592,7 @@ impl<'a> Cx<'a> {
                 }
                 match self.names.get(n) {
                     None => self.report(e.span, What::UnknownName { name: n.clone() }),
-                    Some(Bound::Capability) => {
+                    Some(Bound::Capability | Bound::Harness) => {
                         self.report(e.span, What::NotAValue { name: n.clone() })
                     }
                     Some(Bound::Param) => {}
@@ -578,12 +677,14 @@ impl<'a> Cx<'a> {
                     }
                 }
             }
-            ExprKind::Receive { .. } => self.report(
-                e.span,
-                What::NestedCall {
-                    op: "receive".to_string(),
-                },
-            ),
+            ExprKind::Receive { .. } | ExprKind::ForEach { .. } | ExprKind::Spawn { .. } => {
+                let op = match &e.kind {
+                    ExprKind::Receive { .. } => "receive",
+                    ExprKind::ForEach { .. } => "for",
+                    _ => "spawn",
+                };
+                self.report(e.span, What::NestedCall { op: op.to_string() })
+            }
             ExprKind::Fold {
                 over,
                 init,
@@ -749,8 +850,10 @@ impl<'a> Cx<'a> {
                 Some(i) => self.lower_outcome(e.span, i, arms, locals),
                 None => self.lower_match(e.span, scrutinee, arms, locals),
             },
-            // Reported by `walk`: a receive is only ever a node.
-            ExprKind::Receive { .. } => lit(Value::Null),
+            // Reported by `walk`: these are only ever nodes.
+            ExprKind::Receive { .. } | ExprKind::ForEach { .. } | ExprKind::Spawn { .. } => {
+                lit(Value::Null)
+            }
             ExprKind::Fold {
                 over,
                 init,
@@ -994,6 +1097,8 @@ struct Lowered {
     /// Each call node's arguments, as a record.
     args: BTreeMap<usize, K>,
     guards: BTreeMap<usize, K>,
+    /// Each fan-out's list.
+    overs: BTreeMap<usize, K>,
     /// Each receive's filter, over its message and the parameter.
     filters: BTreeMap<usize, K>,
     pures: BTreeMap<usize, K>,
@@ -1049,7 +1154,7 @@ impl Cx<'_> {
         value: Option<K>,
         error: K,
     ) -> K {
-        rec(vec![
+        let mut fields = vec![
             ("kind", lit(json!(kind))),
             ("call", call),
             (
@@ -1057,7 +1162,11 @@ impl Cx<'_> {
                 value.unwrap_or(get(self.slot(state, node), "value")),
             ),
             ("error", error),
-        ])
+        ];
+        if self.calls[&node].kind == Slotted::FanOut {
+            fields.push(("items", get(self.slot(state, node), "items")));
+        }
+        rec(fields)
     }
 
     /// `body`, with the parameter, every call node `needs` reads as a value, and every pure node it reads bound.
@@ -1085,11 +1194,118 @@ impl Cx<'_> {
             .collect()
     }
 
+    /// The accumulator `@acc` once node `n` starts, from the state in `@state`, with the next identifier `next`.
+    fn started(&self, n: usize, lowered: &Lowered, next: K, call: K) -> K {
+        let c = &self.calls[&n];
+        let actions = get(var("@acc"), "actions");
+        let issued = |count: K, slot: K, actions: K| {
+            step(
+                self.with_slot("@state", op("add", vec![next.clone(), count]), n, slot),
+                actions,
+            )
+        };
+        let running = || self.moved("@state", n, "running", next.clone(), None, lit(Value::Null));
+        let one = || lit(json!(1));
+        match c.kind {
+            // A receive starts listening; there is nothing to ask the world.
+            Slotted::Receive => step(
+                self.with_slot(
+                    "@state",
+                    next.clone(),
+                    n,
+                    self.moved("@state", n, "running", call, None, lit(Value::Null)),
+                ),
+                actions,
+            ),
+            Slotted::Single | Slotted::Stream => {
+                let action = rec(vec![
+                    ("kind", lit(json!("call"))),
+                    ("op", lit(json!(c.target))),
+                    ("args", lowered.args[&n].clone()),
+                ]);
+                issued(one(), running(), op("append", vec![actions, action]))
+            }
+            Slotted::Spawn => {
+                let (child, narrowings) = c
+                    .child
+                    .clone()
+                    .unwrap_or_else(|| unreachable!("a spawn node always has its child"));
+                let action = rec(vec![
+                    ("kind", lit(json!("spawn"))),
+                    ("harness", lit(json!(child))),
+                    ("narrow", lit(json!(narrowings))),
+                    ("arg", lowered.args[&n].clone()),
+                ]);
+                issued(one(), running(), op("append", vec![actions, action]))
+            }
+            // One call per item, with consecutive identifiers from `next`. An empty list has nothing to wait for.
+            Slotted::FanOut => {
+                let items = || var("@items");
+                let count = op("len", vec![items()]);
+                let item_default = match &c.value {
+                    Type::List(t) => default_value(t),
+                    _ => Value::Null,
+                };
+                let defaults = fold_into(
+                    items(),
+                    list(vec![]),
+                    "@x",
+                    op("append", vec![var("@a"), lit(item_default)]),
+                );
+                let kinds = fold_into(
+                    items(),
+                    list(vec![]),
+                    "@x",
+                    op("append", vec![var("@a"), lit(json!("running"))]),
+                );
+                let slot = rec(vec![
+                    (
+                        "kind",
+                        if_(
+                            eq(count.clone(), lit(json!(0))),
+                            lit(json!("ok")),
+                            lit(json!("running")),
+                        ),
+                    ),
+                    ("call", next.clone()),
+                    ("value", defaults),
+                    ("error", lit(Value::Null)),
+                    ("items", kinds),
+                ]);
+                let item = c.binder.clone().unwrap_or_default();
+                let action = rec(vec![
+                    ("kind", lit(json!("call"))),
+                    ("op", lit(json!(c.target))),
+                    ("args", lowered.args[&n].clone()),
+                ]);
+                let calls = fold_into(
+                    items(),
+                    actions,
+                    &item,
+                    op("append", vec![var("@a"), action]),
+                );
+                let_(
+                    "@items",
+                    lowered.overs[&n].clone(),
+                    issued(count, slot, calls),
+                )
+            }
+        }
+    }
+
     /// One pass over the slotted nodes, from the state in `@state` and the actions in `@pre`, then a halt once every
     /// call, and everything `return` reads, has settled. A receive nothing reads doesn't keep the run going.
     fn schedule(&self, plan: &Plan, lowered: &Lowered) -> K {
         let mut must_settle: BTreeSet<usize> = self
-            .slotted(plan, &[Slotted::Single, Slotted::Stream])
+            .slotted(
+                plan,
+                &[
+                    Slotted::Single,
+                    Slotted::Stream,
+                    Slotted::FanOut,
+                    Slotted::Spawn,
+                ],
+            )
             .into_iter()
             .collect();
         must_settle.extend(plan.return_needs.calls());
@@ -1113,7 +1329,16 @@ impl Cx<'_> {
         };
         let mut out = enter(finish);
         for n in self
-            .slotted(plan, &[Slotted::Single, Slotted::Stream, Slotted::Receive])
+            .slotted(
+                plan,
+                &[
+                    Slotted::Single,
+                    Slotted::Stream,
+                    Slotted::Receive,
+                    Slotted::FanOut,
+                    Slotted::Spawn,
+                ],
+            )
             .into_iter()
             .rev()
         {
@@ -1129,38 +1354,7 @@ impl Cx<'_> {
                 ),
                 get(var("@acc"), "actions"),
             );
-            let started = if self.calls[&n].kind == Slotted::Receive {
-                // A receive starts listening; there is nothing to ask the world.
-                step(
-                    self.with_slot(
-                        "@state",
-                        next,
-                        n,
-                        self.moved("@state", n, "running", call, None, lit(Value::Null)),
-                    ),
-                    get(var("@acc"), "actions"),
-                )
-            } else {
-                step(
-                    self.with_slot(
-                        "@state",
-                        op("add", vec![next.clone(), lit(json!(1))]),
-                        n,
-                        self.moved("@state", n, "running", next, None, lit(Value::Null)),
-                    ),
-                    op(
-                        "append",
-                        vec![
-                            get(var("@acc"), "actions"),
-                            rec(vec![
-                                ("kind", lit(json!("call"))),
-                                ("op", lit(json!(self.calls[&n].target))),
-                                ("args", lowered.args[&n].clone()),
-                            ]),
-                        ],
-                    ),
-                )
-            };
+            let started = self.started(n, lowered, next, call);
             let guarded = match lowered.guards.get(&n) {
                 Some(g) => if_(g.clone(), started, skip.clone()),
                 None => started,
@@ -1262,12 +1456,27 @@ impl Cx<'_> {
     fn record(&self, nodes: &[usize], input: Input) -> K {
         let call = get(var("@in"), "call");
         let hit = |n| {
-            all(vec![
-                eq(get(self.slot("@r", n), "kind"), lit(json!("running"))),
-                eq(get(self.slot("@r", n), "call"), call.clone()),
-            ])
+            let slot = || self.slot("@r", n);
+            let running = eq(get(slot(), "kind"), lit(json!("running")));
+            if self.calls[&n].kind == Slotted::FanOut {
+                let first = get(slot(), "call");
+                let after = op(
+                    "add",
+                    vec![first.clone(), op("len", vec![get(slot(), "items")])],
+                );
+                all(vec![
+                    running,
+                    op("ge", vec![call.clone(), first]),
+                    op("lt", vec![call.clone(), after]),
+                ])
+            } else {
+                all(vec![running, eq(get(slot(), "call"), call.clone())])
+            }
         };
         let then = |n| {
+            if self.calls[&n].kind == Slotted::FanOut {
+                return self.record_item(n, input);
+            }
             let slot = get(self.slot("@r", n), "value");
             let item = get(var("@in"), "value");
             let (kind, value) = match (input, self.calls[&n].kind) {
@@ -1286,6 +1495,52 @@ impl Cx<'_> {
             self.with_slot("@r", get(var("@r"), "next"), n, settled)
         };
         self.each(nodes, hit, then)
+    }
+
+    /// The state in `@r` after an input for one of a fan-out's calls: its item settles, and once none is running,
+    /// so does the fan-out, failing if any item did not return.
+    fn record_item(&self, n: usize, input: Input) -> K {
+        let slot = || self.slot("@r", n);
+        let index = op("sub", vec![get(var("@in"), "call"), get(slot(), "call")]);
+        let kind = match input {
+            Input::Ret => "ok",
+            Input::Failed => "failed",
+            Input::Refused | Input::End => "refused",
+        };
+        let values = match input {
+            Input::Ret => replaced(get(slot(), "value"), var("@i"), get(var("@in"), "value")),
+            _ => get(slot(), "value"),
+        };
+        let error = match input {
+            Input::Failed => get(var("@in"), "error"),
+            _ => get(slot(), "error"),
+        };
+        let has = |k: &str| op("contains", vec![var("@kinds"), lit(json!(k))]);
+        let settled = if_(
+            has("running"),
+            lit(json!("running")),
+            if_(
+                any(vec![has("failed"), has("refused")]),
+                lit(json!("failed")),
+                lit(json!("ok")),
+            ),
+        );
+        let updated = rec(vec![
+            ("kind", settled),
+            ("call", get(slot(), "call")),
+            ("value", values),
+            ("error", error),
+            ("items", var("@kinds")),
+        ]);
+        let_(
+            "@i",
+            index,
+            let_(
+                "@kinds",
+                replaced(get(slot(), "items"), var("@i"), lit(json!(kind))),
+                self.with_slot("@r", get(var("@r"), "next"), n, updated),
+            ),
+        )
     }
 
     /// The state after a message on a channel: every receive listening there whose filter it passes returns it.
@@ -1333,7 +1588,15 @@ impl Cx<'_> {
     }
 
     fn generate(&self, plan: &Plan, lowered: &Lowered) -> Harness {
-        let ops = self.slotted(plan, &[Slotted::Single, Slotted::Stream]);
+        let ops = self.slotted(
+            plan,
+            &[
+                Slotted::Single,
+                Slotted::Stream,
+                Slotted::FanOut,
+                Slotted::Spawn,
+            ],
+        );
         let streams = self.slotted(plan, &[Slotted::Stream]);
         let receives = self.slotted(plan, &[Slotted::Receive]);
         let grouped = |nodes: &[usize]| {
@@ -1403,7 +1666,7 @@ impl Cx<'_> {
         let slots = self
             .calls
             .iter()
-            .map(|(&i, c)| (self.node_name(i).to_string(), slot_type(&c.value)))
+            .map(|(&i, c)| (self.node_name(i).to_string(), slot_type(c)))
             .collect();
         let state = Type::Record(BTreeMap::from([
             ("arg".to_string(), plan.arg.clone()),
@@ -1413,10 +1676,7 @@ impl Cx<'_> {
         let waiting: serde_json::Map<String, Value> = self
             .calls
             .iter()
-            .map(|(&i, c)| {
-                let slot = json!({ "kind": "waiting", "call": 0, "value": default_value(&c.value), "error": null });
-                (self.node_name(i).to_string(), slot)
-            })
+            .map(|(&i, c)| (self.node_name(i).to_string(), initial_slot(c)))
             .collect();
         Harness {
             arg: plan.arg.clone(),
@@ -1436,14 +1696,17 @@ fn enter(body: K) -> K {
     )
 }
 
-/// Elaborate a source against the contracts of the capabilities it may use, by identifier.
+/// Elaborate a source against the contracts of the capabilities it may use, and the terms of the harnesses it may
+/// spawn, each by identifier.
 pub fn elaborate(
     source: &str,
     capabilities: &BTreeMap<String, Interface>,
+    harnesses: &BTreeMap<String, Harness>,
 ) -> Result<Elaborated, Vec<Problem>> {
     let file = parse(lex(source).map_err(|p| vec![p])?).map_err(|p| vec![p])?;
     let mut cx = Cx {
         file: &file,
+        children: BTreeMap::new(),
         problems: Vec::new(),
         names: BTreeMap::new(),
         calls: BTreeMap::new(),
@@ -1451,7 +1714,8 @@ pub fn elaborate(
         fresh: 0,
     };
     let (arg, result) = cx.types();
-    let (interface, uses) = cx.install(capabilities);
+    let mut spawned = Vec::new();
+    let (interface, uses) = cx.install(capabilities, harnesses, &mut spawned);
     cx.bind(&file.param, Bound::Param);
     for (i, node) in file.nodes.iter().enumerate() {
         cx.bind(&node.name, Bound::Node(i));
@@ -1506,77 +1770,137 @@ pub fn elaborate(
                     input: Type::Any,
                     value: c.ty.clone(),
                     binder: binder.as_ref().map(|b| b.text.clone()),
+                    child: None,
                     until: None,
                 },
             );
             continue;
         }
-        let ExprKind::Call(callee, args) = &node.value.kind else {
-            if let Some(w) = &node.when {
-                cx.report(
-                    w.span,
-                    What::GuardOnValue {
-                        node: node.name.text.clone(),
-                    },
-                );
+        let call = match &node.value.kind {
+            ExprKind::ForEach { item, call, .. } => {
+                let ExprKind::Call(callee, args) = &call.kind else {
+                    cx.report(
+                        call.span,
+                        What::Argument {
+                            expected: "a call of an operation after `:`".to_string(),
+                        },
+                    );
+                    continue;
+                };
+                let Some(mut c) = classify_call(&mut cx, &interface, callee, args) else {
+                    continue;
+                };
+                if c.kind != Slotted::Single {
+                    cx.report(
+                        callee.span,
+                        What::Argument {
+                            expected: "an operation with one result to fan out over".to_string(),
+                        },
+                    );
+                    continue;
+                }
+                c.kind = Slotted::FanOut;
+                c.value = Type::List(Box::new(c.value));
+                c.binder = Some(item.text.clone());
+                c
             }
-            continue;
-        };
-        let Some(name) = cx.operation(callee, &[]) else {
-            if let Some(w) = &node.when {
-                cx.report(
-                    w.span,
-                    What::GuardOnValue {
-                        node: node.name.text.clone(),
-                    },
-                );
+            ExprKind::Spawn {
+                harness,
+                only,
+                without,
+                ..
+            } => {
+                let Some(child) = cx.children.get(&harness.text).cloned() else {
+                    if cx.names.get(&harness.text) != Some(&Bound::Harness) {
+                        cx.report(
+                            harness.span,
+                            What::NotAHarness {
+                                name: harness.text.clone(),
+                            },
+                        );
+                    }
+                    continue;
+                };
+                let mut narrowings = Vec::new();
+                if let Some(only) = only {
+                    narrowings.push(Narrowing::Only {
+                        ops: only.iter().map(|o| o.text.clone()).collect(),
+                    });
+                }
+                for w in without {
+                    narrowings.push(Narrowing::Drop { op: w.text.clone() });
+                }
+                let narrowed = match narrow(&interface, &narrowings) {
+                    Ok(n) => n,
+                    Err(e) => {
+                        let op = match e {
+                            kernel::harness::NarrowError::NoSuchOperation { op } => op,
+                            kernel::harness::NarrowError::NoSuchChannel { channel } => channel,
+                        };
+                        let at = only
+                            .iter()
+                            .flatten()
+                            .chain(without)
+                            .find(|n| n.text == op)
+                            .map_or(node.value.span, |n| n.span);
+                        cx.report(at, What::UnknownOperation { op });
+                        continue;
+                    }
+                };
+                let problems = check_harness(&child, Some(&narrowed));
+                if !problems.is_empty() {
+                    cx.report(
+                        harness.span,
+                        What::Child {
+                            name: harness.text.clone(),
+                            problems,
+                        },
+                    );
+                    continue;
+                }
+                Call {
+                    kind: Slotted::Spawn,
+                    target: "spawn".to_string(),
+                    input: child.arg.clone(),
+                    value: Type::Any,
+                    binder: None,
+                    child: Some((child, narrowings)),
+                    until: None,
+                }
             }
-            continue;
-        };
-        let Some(operation) = interface.operations.get(&name) else {
-            cx.report(callee.span, What::UnknownOperation { op: name });
-            continue;
-        };
-        let mut seen = BTreeSet::new();
-        for a in args {
-            match &a.name {
-                None => cx.report(
-                    a.value.span,
-                    What::Argument {
-                        expected: format!("named arguments to `{name}`, as `field: value`"),
-                    },
-                ),
-                Some(n) if !seen.insert(n.text.clone()) => cx.report(
-                    n.span,
-                    What::Duplicate {
-                        name: n.text.clone(),
-                    },
-                ),
-                Some(_) => {}
+            ExprKind::Call(callee, args) if cx.operation(callee, &[]).is_some() => {
+                match classify_call(&mut cx, &interface, callee, args) {
+                    Some(c) => c,
+                    None => continue,
+                }
             }
-        }
-        let (kind, value) = match operation.mode {
-            Mode::Single => (Slotted::Single, operation.output.clone()),
-            Mode::Stream => (
-                Slotted::Stream,
-                Type::List(Box::new(operation.output.clone())),
-            ),
+            _ => {
+                if let Some(w) = &node.when {
+                    cx.report(
+                        w.span,
+                        What::GuardOnValue {
+                            node: node.name.text.clone(),
+                        },
+                    );
+                }
+                continue;
+            }
         };
-        cx.calls.insert(
-            i,
-            Call {
-                kind,
-                target: name,
-                input: operation.input.clone(),
-                value,
-                binder: None,
-                until: None,
-            },
-        );
+        cx.calls.insert(i, call);
     }
     for (i, node) in file.nodes.iter().enumerate() {
         let Some(u) = &node.until else { continue };
-        if cx.calls.get(&i).is_none_or(|c| c.kind == Slotted::Receive) {
+        if cx
+            .calls
+            .get(&i)
+            .is_none_or(|c| matches!(c.kind, Slotted::Receive | Slotted::FanOut))
+        {
+            cx.report(
+                u.span,
+                What::Until {
+                    name: u.text.clone(),
+                },
+            );
             continue;
         }
         match cx.names.get(&u.text) {
@@ -1620,6 +1944,16 @@ pub fn elaborate(
             (ExprKind::Call(_, args), true) => {
                 args.iter().flat_map(|a| cx.reads(&a.value)).collect()
             }
+            (ExprKind::ForEach { item, over, call }, true) => {
+                let mut reads = cx.reads(over);
+                if let ExprKind::Call(_, args) = &call.kind {
+                    for a in args {
+                        cx.walk(&a.value, &mut vec![item.text.clone()], &mut reads);
+                    }
+                }
+                reads
+            }
+            (ExprKind::Spawn { arg, .. }, true) => cx.reads(arg),
             _ => cx.reads(&node.value),
         };
         if let Some(w) = &node.when {
@@ -1711,7 +2045,7 @@ pub fn elaborate(
     let nodes_type = Type::Record(
         cx.calls
             .iter()
-            .map(|(&i, c)| (cx.node_name(i).to_string(), slot_type(&c.value)))
+            .map(|(&i, c)| (cx.node_name(i).to_string(), slot_type(c)))
             .collect(),
     );
     let mut scope = vec![
@@ -1724,6 +2058,7 @@ pub fn elaborate(
     let mut lowered = Lowered {
         args: BTreeMap::new(),
         guards: BTreeMap::new(),
+        overs: BTreeMap::new(),
         filters: BTreeMap::new(),
         pures: BTreeMap::new(),
         ret: lit(Value::Null),
@@ -1747,51 +2082,56 @@ pub fn elaborate(
             lowered.filters.insert(i, f);
             continue;
         }
-        if let (Some(call), ExprKind::Call(_, args)) = (cx.calls.get(&i), &node.value.kind) {
-            let input = call.input.clone();
-            let mut fields = BTreeMap::new();
-            for a in args {
-                let Some(name) = &a.name else { continue };
-                let e = cx.lower(&a.value, &mut Vec::new());
-                let t = cx.type_of(&e, a.value.span, &scope);
-                if let Type::Record(declared) = &input {
-                    match declared.get(&name.text) {
-                        Some(expected) => cx.expect(t, expected, a.value.span),
-                        None => cx.report(
-                            name.span,
-                            What::Argument {
-                                expected: format!(
-                                    "one of the arguments of `{}`",
-                                    call_name(&cx, i)
-                                ),
-                            },
-                        ),
-                    }
-                }
-                fields.insert(name.text.clone(), e);
-            }
-            if let Type::Record(declared) = &input {
-                for missing in declared.keys().filter(|k| !fields.contains_key(*k)) {
-                    cx.report(
-                        node.value.span,
-                        What::Argument {
-                            expected: format!("the argument `{missing}`"),
-                        },
-                    );
-                }
-            }
-            lowered.args.insert(i, K::Record { fields });
-            if let Some(w) = &node.when {
-                let g = cx.lower(w, &mut Vec::new());
-                let t = cx.type_of(&g, w.span, &scope);
-                cx.expect(t, &Type::Bool, w.span);
-                lowered.guards.insert(i, g);
-            }
-        } else {
+        let Some(call) = cx.calls.get(&i) else {
             let e = cx.lower(&node.value, &mut Vec::new());
             let t = cx.type_of(&e, node.value.span, &scope);
             scope.push((node.name.text.clone(), t.unwrap_or(Type::Any)));
             lowered.pures.insert(i, e);
+            continue;
+        };
+        let input = call.input.clone();
+        match &node.value.kind {
+            ExprKind::Call(_, args) => {
+                let args = lower_args(&mut cx, i, args, &input, node.value.span, &scope, &[]);
+                lowered.args.insert(i, args);
+            }
+            ExprKind::ForEach { item, over, call } => {
+                let o = cx.lower(over, &mut Vec::new());
+                let item_type = match cx.type_of(&o, over.span, &scope) {
+                    Some(Type::List(t)) => *t,
+                    Some(Type::Any) | None => Type::Any,
+                    Some(got) => {
+                        cx.expect(Some(got), &Type::List(Box::new(Type::Any)), over.span);
+                        Type::Any
+                    }
+                };
+                let ExprKind::Call(_, args) = &call.kind else {
+                    continue;
+                };
+                let mut item_scope = scope.clone();
+                item_scope.push((item.text.clone(), item_type));
+                let locals = [item.text.clone()];
+                let args = lower_args(&mut cx, i, args, &input, call.span, &item_scope, &locals);
+                lowered.args.insert(i, args);
+                lowered.overs.insert(i, o);
+            }
+            ExprKind::Spawn { arg, .. } => {
+                let e = cx.lower(arg, &mut Vec::new());
+                let t = cx.type_of(&e, arg.span, &scope);
+                cx.expect(t, &input, arg.span);
+                lowered.args.insert(i, e);
+            }
+            _ => {}
+        }
+        if let Some(w) = node
+            .when
+            .as_ref()
+            .filter(|_| !matches!(node.value.kind, ExprKind::Receive { .. }))
+        {
+            let g = cx.lower(w, &mut Vec::new());
+            let t = cx.type_of(&g, w.span, &scope);
+            cx.expect(t, &Type::Bool, w.span);
+            lowered.guards.insert(i, g);
         }
     }
     if let Some(r) = file.returns.first() {
@@ -1823,9 +2163,102 @@ pub fn elaborate(
     if !problems.is_empty() {
         return Err(vec![problem(file.name.span, What::Internal { problems })]);
     }
-    Ok(Elaborated { harness, uses })
+    Ok(Elaborated {
+        harness,
+        uses,
+        harnesses: spawned,
+    })
 }
 
 fn call_name(cx: &Cx, i: usize) -> String {
     cx.calls[&i].target.clone()
+}
+
+/// A node that calls an operation: its slot, with what is wrong with its arguments reported.
+fn classify_call(
+    cx: &mut Cx,
+    interface: &Interface,
+    callee: &syntax::Expr,
+    args: &[syntax::Arg],
+) -> Option<Call> {
+    let name = cx.operation(callee, &[])?;
+    let Some(operation) = interface.operations.get(&name) else {
+        cx.report(callee.span, What::UnknownOperation { op: name });
+        return None;
+    };
+    let mut seen = BTreeSet::new();
+    for a in args {
+        match &a.name {
+            None => cx.report(
+                a.value.span,
+                What::Argument {
+                    expected: format!("named arguments to `{name}`, as `field: value`"),
+                },
+            ),
+            Some(n) if !seen.insert(n.text.clone()) => cx.report(
+                n.span,
+                What::Duplicate {
+                    name: n.text.clone(),
+                },
+            ),
+            Some(_) => {}
+        }
+    }
+    let (kind, value) = match operation.mode {
+        Mode::Single => (Slotted::Single, operation.output.clone()),
+        Mode::Stream => (
+            Slotted::Stream,
+            Type::List(Box::new(operation.output.clone())),
+        ),
+    };
+    Some(Call {
+        kind,
+        target: name,
+        input: operation.input.clone(),
+        value,
+        binder: None,
+        child: None,
+        until: None,
+    })
+}
+
+/// A call's named arguments, lowered and checked against the operation's input, as a record.
+fn lower_args(
+    cx: &mut Cx,
+    node: usize,
+    args: &[syntax::Arg],
+    input: &Type,
+    span: Span,
+    scope: &[(String, Type)],
+    locals: &[String],
+) -> K {
+    let mut fields = BTreeMap::new();
+    for a in args {
+        let Some(name) = &a.name else { continue };
+        let e = cx.lower(&a.value, &mut locals.to_vec());
+        let t = cx.type_of(&e, a.value.span, scope);
+        if let Type::Record(declared) = input {
+            match declared.get(&name.text) {
+                Some(expected) => cx.expect(t, expected, a.value.span),
+                None => cx.report(
+                    name.span,
+                    What::Argument {
+                        expected: format!("one of the arguments of `{}`", call_name(cx, node)),
+                    },
+                ),
+            }
+        }
+        fields.insert(name.text.clone(), e);
+    }
+    if let Type::Record(declared) = input {
+        for missing in declared.keys().filter(|k| !fields.contains_key(*k)) {
+            cx.report(
+                span,
+                What::Argument {
+                    expected: format!("the argument `{missing}`"),
+                },
+            );
+        }
+    }
+    K::Record { fields }
 }

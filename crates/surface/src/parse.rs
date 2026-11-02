@@ -6,9 +6,12 @@
 //!         | "type" name "=" (variant | type) NL
 //!         | "return" expr NL
 //!         | "otherwise" "return" expr NL
-//!         | name "=" (expr | receive) ("when" expr)? ("until" name)? NL
-//! receive = "receive" name? "from" label ("." label)*
-//! use     = name ("=" string)?
+//!         | name "=" (expr | receive | spawn | each) ("when" expr)? ("until" name)? NL
+//! receive = "receive" name? "from" path
+//! spawn   = "spawn" name "(" expr ")" ("only" path ("," path)*)? ("without" path ("," path)*)?
+//! each    = "for" name "in" expr ":" expr
+//! path    = label ("." label)*
+//! use     = name ("=" "harness"? string)?
 //! type    = "List" "[" type "]" | "{" (name ":" type),* "}" | name
 //! variant = case ("|" case)*          case = name ("{" (name ":" type),* "}")?
 //! expr    = "if" expr "then" expr "else" expr | "fold" or "from" expr "with" "(" name "," name ")" "=>" expr | or
@@ -26,7 +29,7 @@ use crate::{Problem, What};
 use serde_json::{Value, json};
 
 /// Words that can't name a node, a parameter or a binding. A field may still be called any of them.
-pub const KEYWORDS: [&str; 20] = [
+pub const KEYWORDS: [&str; 22] = [
     "harness",
     "uses",
     "type",
@@ -35,6 +38,8 @@ pub const KEYWORDS: [&str; 20] = [
     "when",
     "until",
     "receive",
+    "spawn",
+    "for",
     "if",
     "then",
     "else",
@@ -221,12 +226,17 @@ impl Parser {
         if self.eat_word("uses") {
             loop {
                 let name = self.name()?;
-                let capability = if self.eat_sym("=") {
-                    Some(self.string()?)
+                let (capability, harness) = if self.eat_sym("=") {
+                    let harness = self.eat_word("harness");
+                    (Some(self.string()?), harness)
                 } else {
-                    None
+                    (None, false)
                 };
-                file.uses.push(Use { name, capability });
+                file.uses.push(Use {
+                    name,
+                    capability,
+                    harness,
+                });
                 if !self.eat_sym(",") {
                     break;
                 }
@@ -252,6 +262,10 @@ impl Parser {
             self.sym("=")?;
             let value = if self.is_word("receive") {
                 self.receive()?
+            } else if self.is_word("spawn") {
+                self.spawn()?
+            } else if self.is_word("for") {
+                self.each()?
             } else {
                 self.expr()?
             };
@@ -286,15 +300,74 @@ impl Parser {
             Some(self.name()?)
         };
         self.word("from")?;
-        let mut channel = self.label()?;
-        while self.eat_sym(".") {
-            let part = self.label()?;
-            channel.text = format!("{}.{}", channel.text, part.text);
-            channel.span = channel.span.to(part.span);
-        }
+        let channel = self.path()?;
         let span = start.to(channel.span);
         Ok(Expr {
             kind: ExprKind::Receive { binder, channel },
+            span,
+        })
+    }
+
+    /// A dotted name, as one: a channel or an operation.
+    fn path(&mut self) -> Parsed<Name> {
+        let mut path = self.label()?;
+        while self.eat_sym(".") {
+            let part = self.label()?;
+            path.text = format!("{}.{}", path.text, part.text);
+            path.span = path.span.to(part.span);
+        }
+        Ok(path)
+    }
+
+    fn paths(&mut self) -> Parsed<Vec<Name>> {
+        let mut paths = vec![self.path()?];
+        while self.eat_sym(",") {
+            paths.push(self.path()?);
+        }
+        Ok(paths)
+    }
+
+    fn spawn(&mut self) -> Parsed<Expr> {
+        let start = self.word("spawn")?;
+        let harness = self.name()?;
+        self.sym("(")?;
+        let arg = self.expr()?;
+        self.sym(")")?;
+        let only = if self.eat_word("only") {
+            Some(self.paths()?)
+        } else {
+            None
+        };
+        let without = if self.eat_word("without") {
+            self.paths()?
+        } else {
+            Vec::new()
+        };
+        Ok(Expr {
+            kind: ExprKind::Spawn {
+                harness,
+                arg: Box::new(arg),
+                only,
+                without,
+            },
+            span: start.to(self.last()),
+        })
+    }
+
+    fn each(&mut self) -> Parsed<Expr> {
+        let start = self.word("for")?;
+        let item = self.name()?;
+        self.word("in")?;
+        let over = self.expr()?;
+        self.sym(":")?;
+        let call = self.expr()?;
+        let span = start.to(call.span);
+        Ok(Expr {
+            kind: ExprKind::ForEach {
+                item,
+                over: Box::new(over),
+                call: Box::new(call),
+            },
             span,
         })
     }

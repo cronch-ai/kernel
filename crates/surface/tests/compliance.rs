@@ -26,7 +26,7 @@ type Case = (&'static str, &'static str, fn() -> Vec<Value>);
 fn cases() -> Vec<Case> {
     vec![(
         "elaborate",
-        "The platform's approved-note harness elaborated from source, a source with problems, and a turn that streams and can be interrupted.",
+        "The platform's approved-note harness elaborated from source, a source with problems, a turn that streams and can be interrupted, and a fan-out whose total a spawned child doubles.",
         || {
             let capabilities = json!({ "model": fixture("model"), "approve": fixture("approve"), "notes": fixture("notes") });
             let source = "\
@@ -71,10 +71,38 @@ otherwise return \"interrupted\"
                 }}},
                 "session": { "channels": { "user": { "type": "String" } } },
             });
+            let math = json!({ "math": { "operations": {
+                "double": { "input": { "Record": { "n": "Int" } }, "output": "Int" },
+            }}});
+            let child = "\
+harness doubler(n: Int) -> Int
+uses m = \"math\"
+a = m.double(n: n)
+return a
+";
+            let parent = "\
+harness parent(xs: List[Int]) -> Any
+uses m = \"math\"
+uses doubler = harness \"registered:doubler\"
+doubled = for x in xs: m.double(n: x)
+total = fold doubled from 0 with (sum, d) => sum + d
+again = spawn doubler(total) only m.double
+return again
+";
+            let doubler = decode(&surface::api::call(&encode(
+                &json!({ "op": "elaborate", "source": child, "capabilities": math }),
+            )))
+            .unwrap()["result"]["harness"]
+                .clone();
             vec![
                 json!({ "op": "elaborate", "source": source, "capabilities": capabilities }),
                 json!({ "op": "elaborate", "source": broken, "capabilities": capabilities }),
                 json!({ "op": "elaborate", "source": turn, "capabilities": streaming }),
+                json!({ "op": "elaborate", "source": child, "capabilities": math }),
+                json!({
+                    "op": "elaborate", "source": parent, "capabilities": math,
+                    "harnesses": { "registered:doubler": doubler },
+                }),
             ]
         },
     )]

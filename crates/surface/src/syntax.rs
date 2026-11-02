@@ -80,6 +80,19 @@ pub enum ExprKind {
         item: Name,
         body: Box<Expr>,
     },
+    /// `for item in over: call`: one call per item. Only a node can be one.
+    ForEach {
+        item: Name,
+        over: Box<Expr>,
+        call: Box<Expr>,
+    },
+    /// `spawn child(arg) only a.b, c.d without e.f`: a child run against a narrowed interface. Only a node can be one.
+    Spawn {
+        harness: Name,
+        arg: Box<Expr>,
+        only: Option<Vec<Name>>,
+        without: Vec<Name>,
+    },
     /// `receive m from channel`: the first message on a channel. Only a node can be one.
     Receive {
         binder: Option<Name>,
@@ -115,6 +128,8 @@ pub struct Use {
     pub name: Name,
     /// The capability's identifier, when it isn't the name itself.
     pub capability: Option<(String, Span)>,
+    /// `uses name = harness "id"`: a registered harness to spawn, not a capability.
+    pub harness: bool,
 }
 
 #[derive(Clone, Debug)]
