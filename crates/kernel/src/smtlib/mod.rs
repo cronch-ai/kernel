@@ -15,6 +15,7 @@
 //! | `Float`                  | `Float64`, rounding to nearest, ties to even, as the kernel does  |
 //! | `List(t)`                | `(Seq t)`                                                         |
 //! | a record type            | a one-constructor `declare-datatype`, named by its shape's hash   |
+//! | `Json`                   | a recursive datatype of JSON values, its records chains of fields |
 //! | a definition             | `(define-fun def:name (params) sort body)`                        |
 //! | where it is defined      | `(define-fun defined:name (params) Bool ...)`                     |
 //!
@@ -23,6 +24,7 @@
 //! an export is never the kernel's: the kernel only accepts what it can check itself.
 
 mod encode;
+mod json;
 pub mod readings;
 pub mod script;
 pub mod values;
@@ -228,9 +230,13 @@ pub fn induction(
     };
     let state_sort = encoder.sort(state).map_err(at)?;
     let input_sort = encoder.sort(input).map_err(at)?;
-    let records = encoder.records().map_err(refused)?;
     let name = |prefix: &str, n: &str| script::Term::symbol(prefix, n).map_err(at);
     let (s, i) = (name("q:", "state")?, name("q:", "input")?);
+    // What a query quantifies over is a value the kernel could hold, so a model is one it can be handed back.
+    let mut held = Vec::new();
+    held.extend(encoder.well_formed(state, s.clone()).map_err(at)?);
+    held.extend(encoder.well_formed(input, i.clone()).map_err(at)?);
+    let records = encoder.records().map_err(refused)?;
     // Where a function errs in the kernel, it holds of nothing: the invariant is false, the step doesn't happen.
     let holds_of = |of: script::Term| -> Result<script::Term, Refusal> {
         let held = script::Term::app(name("def:", "invariant")?, vec![of.clone()]);
@@ -242,7 +248,8 @@ pub fn induction(
         })
     };
     let after = script::Term::app(name("def:", "next")?, vec![s.clone(), i.clone()]);
-    let mut asserts = vec![holds_of(s.clone())?];
+    let mut asserts = held;
+    asserts.push(holds_of(s.clone())?);
     if partial[1] {
         asserts.push(script::Term::app(
             name("defined:", "next")?,
