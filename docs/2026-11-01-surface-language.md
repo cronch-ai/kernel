@@ -126,7 +126,7 @@ property no_effect_without_approval:
   - `only` and `without` are the kernel's `only` and `drop` narrowings, so the child can never do what the parent couldn't.
   - The target is bound in the header: `uses summarizer = harness "harness:sha256-…"` names a registered harness, so the body never carries a key. A `spawn` action carries the child's whole term, so `elaborate` takes the terms of the harnesses the header names, as it takes the contracts of capabilities, and returns the bindings as `harnesses`.
   - The child is checked against the narrowed interface when the parent is elaborated, so a child that would be refused at run time is reported with its problems instead.
-- **Iteration across steps** (a ReAct loop) is the one thing a fixed graph can't say. See the open questions.
+- **Iteration across steps** (a ReAct loop) is the one thing a fixed graph can't say. See the open questions, and [Agentic loops](2026-11-02-agentic-loops.md) for how it was settled.
 
 ### Properties and invariants (S3)
 
@@ -200,6 +200,7 @@ All in this repo except S4. Each is a PR with compliance vectors, and S1 to S3 t
    - leaving the loop to the host, which starts a new run per turn.
 
    `loop` is the likeliest. It is postponed past v0.4.0; until then, a host that needs a loop starts a run per turn.
+   - **Decided on 2026-11-02:** the whole graph is the loop's body, run once per round with carried values, and a `perform` node acts on an action a model chose. See [Agentic loops](2026-11-02-agentic-loops.md).
 2. **Failure by default.** A node that fails, read as a value, ends the run through `otherwise`. That is the least surprising default for a total `δ`, and declaring `otherwise` keeps the policy in the harness rather than the language. Whether a harness should also be able to say "retry" is left until a real one needs it.
 3. **Versions.** A binding names one identifier, and a module's key pins its exact code. A platform capability's identifier pins nothing, so a contract can change under a registered harness. Whether identifiers should carry versions, as cronch-gleam's `{id, version}` references did, is the platform's call, and the kernel needs no change either way.
 4. **Labels on control state.** The interpreter labels a step's whole input, `kind`, `call` and `op` included, with its result's sources. So a step taken on the model's result runs under the label `model`, and so does every slot it writes. A later step decides what to do from those slots, so its actions and its halt carry `model` too. A hand-written harness that keeps no control state doesn't have this problem. In S1's `approved-note`, the denied run halts with `"denied"` labelled `model`, where the hand-written one's is trusted.
