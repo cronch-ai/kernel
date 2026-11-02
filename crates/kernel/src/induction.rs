@@ -37,11 +37,23 @@ pub fn project(expr: &Expr, field: &str) -> Expr {
             then: Box::new(project(then, field)),
             otherwise: Box::new(project(otherwise, field)),
         },
-        Expr::Let { name, be, body } => Expr::Let {
-            name: name.clone(),
-            be: be.clone(),
-            body: Box::new(project(body, field)),
-        },
+        Expr::Let { name, be, body } => {
+            let body = project(body, field);
+            // A binding the projection reads only through one field is bound to that field alone, so what computes
+            // its other fields goes too.
+            match only_field(&body, name) {
+                Some(f) => Expr::Let {
+                    name: name.clone(),
+                    be: Box::new(project(be, &f)),
+                    body: Box::new(unwrap_field(&body, name, &f)),
+                },
+                None => Expr::Let {
+                    name: name.clone(),
+                    be: be.clone(),
+                    body: Box::new(body),
+                },
+            }
+        }
         Expr::Match {
             of,
             on,
@@ -65,6 +77,185 @@ pub fn project(expr: &Expr, field: &str) -> Expr {
         other => Expr::Get {
             of: Box::new(other.clone()),
             field: field.to_string(),
+        },
+    }
+}
+
+/// Visits every subexpression of `expr` in which `name` still means the binding being looked at, none under a
+/// binder that shadows it. `visit` says whether to look inside the one it is given.
+fn each_use(expr: &Expr, name: &str, visit: &mut impl FnMut(&Expr) -> bool) {
+    if !visit(expr) {
+        return;
+    }
+    let mut go = |e: &Expr| each_use(e, name, visit);
+    match expr {
+        Expr::Lit { .. } | Expr::Var { .. } => {}
+        Expr::Op { args, .. } => args.iter().for_each(go),
+        Expr::Let { name: n, be, body } => {
+            go(be);
+            if n != name {
+                go(body);
+            }
+        }
+        Expr::If {
+            cond,
+            then,
+            otherwise,
+        } => {
+            go(cond);
+            go(then);
+            go(otherwise);
+        }
+        Expr::Record { fields } => fields.values().for_each(go),
+        Expr::List { items } => items.iter().for_each(go),
+        Expr::Get { of, .. } | Expr::Label { of } => go(of),
+        Expr::Match {
+            of,
+            cases,
+            otherwise,
+            ..
+        } => {
+            go(of);
+            for c in cases.values().filter(|c| c.bind != name) {
+                go(&c.body);
+            }
+            if let Some(o) = otherwise {
+                go(o);
+            }
+        }
+        Expr::Fold {
+            over,
+            init,
+            acc,
+            item,
+            body,
+        } => {
+            go(over);
+            go(init);
+            if acc != name && item != name {
+                go(body);
+            }
+        }
+    }
+}
+
+/// The one field through which `body` reads `name`, if it reads it at all and only ever through that field.
+fn only_field(body: &Expr, name: &str) -> Option<String> {
+    let mut field: Option<String> = None;
+    let mut bare = false;
+    each_use(body, name, &mut |e| match e {
+        Expr::Get { of, field: f } if matches!(&**of, Expr::Var { name: n } if n == name) => {
+            match &field {
+                Some(seen) if seen != f => bare = true,
+                _ => field = Some(f.clone()),
+            }
+            // The variable under this `Get` is accounted for: don't count it again as read whole.
+            false
+        }
+        Expr::Var { name: n } if n == name => {
+            bare = true;
+            true
+        }
+        _ => true,
+    });
+    if bare { None } else { field }
+}
+
+/// `body` with every `name.field` read as `name`.
+fn unwrap_field(body: &Expr, name: &str, field: &str) -> Expr {
+    let again = |e: &Expr| Box::new(unwrap_field(e, name, field));
+    match body {
+        Expr::Get { of, field: f }
+            if f == field && matches!(&**of, Expr::Var { name: n } if n == name) =>
+        {
+            Expr::Var {
+                name: name.to_string(),
+            }
+        }
+        Expr::Lit { .. } | Expr::Var { .. } => body.clone(),
+        Expr::Op { op, args } => Expr::Op {
+            op: op.clone(),
+            args: args.iter().map(|a| unwrap_field(a, name, field)).collect(),
+        },
+        Expr::Let {
+            name: n,
+            be,
+            body: inner,
+        } => Expr::Let {
+            name: n.clone(),
+            be: again(be),
+            body: if n == name {
+                inner.clone()
+            } else {
+                again(inner)
+            },
+        },
+        Expr::If {
+            cond,
+            then,
+            otherwise,
+        } => Expr::If {
+            cond: again(cond),
+            then: again(then),
+            otherwise: again(otherwise),
+        },
+        Expr::Record { fields } => Expr::Record {
+            fields: fields
+                .iter()
+                .map(|(k, v)| (k.clone(), unwrap_field(v, name, field)))
+                .collect(),
+        },
+        Expr::List { items } => Expr::List {
+            items: items.iter().map(|i| unwrap_field(i, name, field)).collect(),
+        },
+        Expr::Get { of, field: f } => Expr::Get {
+            of: again(of),
+            field: f.clone(),
+        },
+        Expr::Label { of } => Expr::Label { of: again(of) },
+        Expr::Match {
+            of,
+            on,
+            cases,
+            otherwise,
+        } => Expr::Match {
+            of: again(of),
+            on: on.clone(),
+            cases: cases
+                .iter()
+                .map(|(k, c)| {
+                    let body = if c.bind == name {
+                        c.body.clone()
+                    } else {
+                        unwrap_field(&c.body, name, field)
+                    };
+                    (
+                        k.clone(),
+                        Case {
+                            bind: c.bind.clone(),
+                            body,
+                        },
+                    )
+                })
+                .collect(),
+            otherwise: otherwise.as_ref().map(|o| again(o)),
+        },
+        Expr::Fold {
+            over,
+            init,
+            acc,
+            item,
+            body: inner,
+        } => Expr::Fold {
+            over: again(over),
+            init: again(init),
+            acc: acc.clone(),
+            item: item.clone(),
+            body: if acc == name || item == name {
+                inner.clone()
+            } else {
+                again(inner)
+            },
         },
     }
 }
@@ -239,4 +430,73 @@ pub fn check_step(
     } else {
         Induction::NotInductive { next }
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    fn e(v: serde_json::Value) -> Expr {
+        serde_json::from_value(v).unwrap()
+    }
+
+    #[test]
+    fn a_binding_read_through_one_field_is_projected_too() {
+        // let acc = {state: s, actions: [junk]} in {state: acc.state, actions: acc.actions}
+        let step = e(json!({ "e": "let", "name": "acc",
+            "be": { "e": "record", "fields": { "state": { "e": "var", "name": "s" }, "actions": { "e": "list", "items": [{ "e": "var", "name": "junk" }] } } },
+            "in": { "e": "record", "fields": {
+                "state": { "e": "get", "of": { "e": "var", "name": "acc" }, "field": "state" },
+                "actions": { "e": "get", "of": { "e": "var", "name": "acc" }, "field": "actions" },
+            } },
+        }));
+        let projected = project(&step, "state");
+        assert_eq!(
+            projected,
+            e(
+                json!({ "e": "let", "name": "acc", "be": { "e": "var", "name": "s" }, "in": { "e": "var", "name": "acc" } })
+            )
+        );
+
+        // Read whole, or through two fields, a binding stays as it is.
+        let whole = e(
+            json!({ "e": "let", "name": "acc", "be": { "e": "var", "name": "x" },
+            "in": { "e": "record", "fields": { "state": { "e": "var", "name": "acc" } } } }),
+        );
+        assert_eq!(project(&whole, "state"), whole_projected());
+        fn whole_projected() -> Expr {
+            serde_json::from_value(json!({ "e": "let", "name": "acc", "be": { "e": "var", "name": "x" }, "in": { "e": "var", "name": "acc" } })).unwrap()
+        }
+
+        // Read through a field first and whole later, it stays whole too.
+        let mixed = e(
+            json!({ "e": "let", "name": "acc", "be": { "e": "var", "name": "x" },
+            "in": { "e": "if", "cond": { "e": "get", "of": { "e": "var", "name": "acc" }, "field": "ok" },
+                "then": { "e": "record", "fields": { "state": { "e": "var", "name": "acc" } } },
+                "else": { "e": "record", "fields": { "state": { "e": "lit", "v": 0 } } } } }),
+        );
+        let projected = project(&mixed, "state");
+        assert!(
+            matches!(&projected, Expr::Let { be, .. } if **be == e(json!({ "e": "var", "name": "x" })))
+        );
+
+        // A shadowing binding hides the inner uses: only the outer `be` reads the outer `acc`.
+        let shadowed = e(
+            json!({ "e": "let", "name": "acc", "be": { "e": "record", "fields": { "state": { "e": "lit", "v": 1 }, "actions": { "e": "var", "name": "junk" } } },
+            "in": { "e": "let", "name": "acc",
+                "be": { "e": "record", "fields": { "state": { "e": "get", "of": { "e": "var", "name": "acc" }, "field": "state" } } },
+                "in": { "e": "record", "fields": { "state": { "e": "var", "name": "acc" } } } } }),
+        );
+        let projected = project(&shadowed, "state");
+        assert_eq!(
+            projected,
+            e(
+                json!({ "e": "let", "name": "acc", "be": { "e": "lit", "v": 1 },
+            "in": { "e": "let", "name": "acc",
+                "be": { "e": "record", "fields": { "state": { "e": "var", "name": "acc" } } },
+                "in": { "e": "var", "name": "acc" } } })
+            )
+        );
+    }
 }
