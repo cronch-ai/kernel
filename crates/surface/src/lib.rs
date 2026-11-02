@@ -68,6 +68,20 @@ pub enum What {
     UnknownChannel {
         channel: String,
     },
+    /// A `uses ... = harness` binding names a harness whose term wasn't given.
+    UnknownHarness {
+        name: String,
+        harness: String,
+    },
+    /// `spawn` of something that isn't a harness the header binds.
+    NotAHarness {
+        name: String,
+    },
+    /// A spawned harness that doesn't check against the interface it would run against.
+    Child {
+        name: String,
+        problems: Vec<HarnessProblem>,
+    },
     /// `until` names something that isn't another call or a receive, or is on a receive.
     Until {
         name: String,

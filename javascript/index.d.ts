@@ -217,6 +217,12 @@ export interface Binding {
   readonly capability: string;
 }
 
+/** A registered harness a harness spawns, by the name it uses for it. */
+export interface HarnessBinding {
+  readonly name: string;
+  readonly harness: string;
+}
+
 export type SourceProblem = { readonly span: Span } & (
   | { readonly kind: "syntax"; readonly expected: string; readonly found: string }
   | { readonly kind: "duplicate"; readonly name: string }
@@ -229,6 +235,9 @@ export type SourceProblem = { readonly span: Span } & (
   | { readonly kind: "unknownCapability"; readonly name: string; readonly capability: string }
   | { readonly kind: "unknownOperation"; readonly op: string }
   | { readonly kind: "unknownChannel"; readonly channel: string }
+  | { readonly kind: "unknownHarness"; readonly name: string; readonly harness: string }
+  | { readonly kind: "notAHarness"; readonly name: string }
+  | { readonly kind: "child"; readonly name: string; readonly problems: readonly HarnessProblem[] }
   | { readonly kind: "until"; readonly name: string }
   | { readonly kind: "filterReadsNode"; readonly node: string }
   | { readonly kind: "nestedCall"; readonly op: string }
@@ -626,15 +635,20 @@ export interface Kernel {
         readonly kind: "refused";
         readonly error: { readonly kind: "invariant" | "state" | "input" | "notHeld" | "step" };
       };
-  /** A harness from source, against the contracts of the capabilities its `uses` header names, by identifier. */
+  /**
+   * A harness from source, against the contracts of the capabilities its `uses` header names, and the terms of the
+   * harnesses it spawns, each by identifier.
+   */
   elaborate(
     source: string,
     capabilities: Readonly<Record<string, Interface>>,
+    harnesses?: Readonly<Record<string, Harness>>,
   ):
     | {
         readonly kind: "elaborated";
         readonly harness: Harness;
         readonly uses: readonly Binding[];
+        readonly harnesses: readonly HarnessBinding[];
       }
     | { readonly kind: "problems"; readonly problems: readonly SourceProblem[] };
   key(kind: Kind, object: unknown): string;

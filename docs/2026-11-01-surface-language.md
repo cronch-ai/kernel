@@ -117,9 +117,15 @@ property no_effect_without_approval:
 
 ### Fan-out and spawning (S2b)
 
-- **Fan-out:** `notes = for doc in docs: model.generate(...)` issues one call per item of a list, in one step. Its value is the list of their results, in the list's order, and it settles when every call has. `match` reads the list of outcomes. The slot holds a list, so the number of calls is bounded by the list, not the graph.
-- **`spawn(harness, narrow, arg)`** is a call node filled by a child run, with the kernel's spawn semantics. Its value is `Any`, as in the kernel.
-- **Spawn targets** are bound in the header too: `uses summarizer = harness "harness:sha256-…"` names a registered harness, so `spawn(summarizer, narrow, arg)` never carries a key in the body. A `spawn` action carries the child's whole term, so `elaborate` takes the terms of the harnesses the header names, as it takes the contracts of capabilities.
+- **Fan-out:** `notes = for doc in docs: model.generate(text: doc)` issues one call per item of a list, in one step. Its value is the list of their results, in the list's order.
+  - It settles when every call has, and fails if any call failed or was refused; `match` reads that outcome like any other. An empty list settles at once.
+  - The calls get consecutive identifiers, so the slot keeps the first, and `items`, each call's kind. The number of calls is bounded by the list, not the graph.
+  - Only operations with one result fan out, and a fan-out can't be cancelled with `until`.
+  - The kernel has no typed empty list, so the slot's lists are rebuilt as lists of `Any` when a result arrives. The source's own expressions still see the node at `List[T]`.
+- **Spawning:** `summary = spawn summarizer(draft) only model.generate without fs.write` is a call node filled by a child run, with the kernel's spawn semantics. Its value is `Any`, as in the kernel.
+  - `only` and `without` are the kernel's `only` and `drop` narrowings, so the child can never do what the parent couldn't.
+  - The target is bound in the header: `uses summarizer = harness "harness:sha256-…"` names a registered harness, so the body never carries a key. A `spawn` action carries the child's whole term, so `elaborate` takes the terms of the harnesses the header names, as it takes the contracts of capabilities, and returns the bindings as `harnesses`.
+  - The child is checked against the narrowed interface when the parent is elaborated, so a child that would be refused at run time is reported with its problems instead.
 - **Iteration across steps** (a ReAct loop) is the one thing a fixed graph can't say. See the open questions.
 
 ### Properties and invariants (S3)
@@ -140,8 +146,8 @@ property no_effect_without_approval:
 
 ## Elaboration
 
-- **Input:** the source, and the contract of each capability its header names, by identifier. Installed under the header's names, they type each call node, so the generated state is typed, and proofs must exclude `Any`.
-- **Output:** `{harness, uses, properties, invariants, sourceMap}`, or a list of problems, each with a span. `uses` is the header's bindings, `[{name, capability}]`: what to install, and under which prefix.
+- **Input:** the source, the contract of each capability its header names, and the term of each harness it names, by identifier. Installed under the header's names, they type each call node, so the generated state is typed, and proofs must exclude `Any`.
+- **Output:** `{harness, uses, harnesses, properties, invariants, sourceMap}`, or a list of problems, each with a span. `uses` is the header's capability bindings, `[{name, capability}]`: what to install, and under which prefix. `harnesses` is its harness bindings, `[{name, harness}]`.
 - **The generated state** is a record:
   - `arg`, the start value;
   - `next`, the call counter;
