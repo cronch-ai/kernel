@@ -132,16 +132,45 @@ fn a_started_value_its_test_rejects_still_taints_the_fallback() {
     assert_eq!(after["root"]["outcome"]["label"], json!(["model"]));
 }
 
-#[test]
-fn json_has_no_smt_reading_yet() {
-    let harness = json!({
-        "arg": "Int", "state": { "Record": { "n": "Int" } }, "init": { "n": 0 },
+/// Keeps the last start value, whatever it is.
+fn keeper() -> Value {
+    json!({
+        "arg": "Json", "state": { "Record": { "last": "Json" } }, "init": { "last": null },
         "step": match_(var("input"), "kind", vec![
-            ("start", "s", step(rec(vec![("n", is_type(path("s", &["value"]), json!("Int"), "k", var("k"), lit(json!(0))))]), vec![])),
+            ("start", "s", step(rec(vec![("last", path("s", &["value"]))]), vec![])),
         ], Some(step(var("state"), vec![]))),
-    });
-    let out =
-        call(json!({ "op": "obligation", "harness": harness, "invariant": lit(json!(true)) }));
-    assert_eq!(out["kind"], "refused", "{out}");
-    assert_eq!(out["error"]["refusal"]["reason"]["kind"], "json", "{out}");
+    })
+}
+
+/// The last value, if a whole number, isn't negative.
+fn not_negative() -> Value {
+    is_type(
+        path("state", &["last"]),
+        json!("Int"),
+        "n",
+        op("ge", vec![var("n"), lit(json!(0))]),
+        lit(json!(true)),
+    )
+}
+
+#[test]
+fn json_in_a_state_has_an_smt_reading() {
+    let out = call(json!({ "op": "obligation", "harness": keeper(), "invariant": not_negative() }));
+    assert_eq!(out["kind"], "obligation", "{out}");
+    let text = out["text"].as_str().unwrap();
+    assert!(text.contains("(declare-datatypes ((|json:Json| 0) (|json:Fields| 0))"));
+    // What the query quantifies over is a value the kernel could hold.
+    assert!(text.contains("(assert (|json:ok| (|record:"), "{text}");
+
+    // A model is read back as JSON, records in key order and whole numbers as integers.
+    let reply = r#"((|q:state| (|record:x| (|json:record| (|json:field| "a" (|json:number| (fp #b0 #b10000000000 #x0000000000000)) (|json:field| "b" |json:null| |json:end|))))) (|q:input| x))"#;
+    let state = json!({ "Record": { "last": "Json" } });
+    let read = call(json!({ "op": "readValues", "reply": reply, "types": [state, "Json"] }));
+    assert_eq!(read["kind"], "unreadable", "{read}");
+    let reply = r#"((a (|json:record| (|json:field| "a" (|json:number| (fp #b0 #b10000000000 #x0000000000000)) (|json:field| "b" (|json:list| (seq.unit |json:null|)) |json:end|)))))"#;
+    let read = call(json!({ "op": "readValues", "reply": reply, "types": ["Json"] }));
+    assert_eq!(read["values"], json!([{ "a": 2, "b": [null] }]), "{read}");
+    let twice = r#"((a (|json:record| (|json:field| "a" |json:null| (|json:field| "a" |json:null| |json:end|)))))"#;
+    let read = call(json!({ "op": "readValues", "reply": twice, "types": ["Json"] }));
+    assert_eq!(read["kind"], "unreadable", "{read}");
 }

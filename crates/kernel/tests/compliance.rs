@@ -140,6 +140,24 @@ fn cases() -> Vec<Case> {
                 );
                 r.call(json!({ "op": "evaluate", "expr": text, "vars": { "x": { "op": "a", "args": { "text": "hi" }, "extra": 1 } } }));
                 r.call(json!({ "op": "evaluate", "expr": text, "vars": { "x": { "op": "a", "args": { "text": 7 } } } }));
+                // In SMT-LIB: a state that holds Json, and a model read back.
+                let keeper = json!({
+                    "arg": "Json", "state": { "Record": { "last": "Json" } }, "init": { "last": null },
+                    "step": match_(var("input"), "kind", vec![
+                        ("start", "s", step(rec(vec![("last", path("s", &["value"]))]), vec![])),
+                    ], Some(step(var("state"), vec![]))),
+                });
+                let text = is_type(
+                    path("state", &["last"]),
+                    json!({ "Record": { "text": "String" } }),
+                    "r",
+                    op("ne", vec![path("r", &["text"]), lit(json!(""))]),
+                    lit(json!(true)),
+                );
+                let obligation =
+                    r.call(json!({ "op": "obligation", "harness": keeper, "invariant": text }));
+                let reply = r#"((|q:state| (|record:953bcaaa| (|json:list| (as seq.empty (Seq |json:Json|))))) (|q:input| (|variant:1fef169b#start| (|json:record| (|json:field| "text" (|json:string| "") |json:end|)))))"#;
+                r.call(json!({ "op": "readValues", "reply": reply, "types": obligation["reads"] }));
             },
         ),
         (

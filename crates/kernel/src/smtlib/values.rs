@@ -243,6 +243,109 @@ impl<'s> Reader<'s> {
         }
     }
 
+    /// `s` read as a `Json` term: a constructor applied, its record a chain of fields.
+    fn json(&mut self, s: &'s Sexp, scope: usize, depth: usize) -> Result<Value, Unreadable> {
+        let wrong = || Self::mismatch(&Type::Json, s);
+        let (head, args): (&Sexp, &'s [Sexp]) = match s {
+            Sexp::List(items) if !items.is_empty() => (&items[0], &items[1..]),
+            atom => (atom, &[]),
+        };
+        let Sexp::Atom(head) = head else {
+            return Err(wrong());
+        };
+        match (head.as_str(), args) {
+            ("json:null", []) => Ok(Value::Null),
+            ("json:bool", [b]) => self.value(b, &Type::Bool, scope, depth + 1),
+            ("json:string", [text]) => self.value(text, &Type::String, scope, depth + 1),
+            ("json:number", [n]) => {
+                let read = self.value(n, &Type::Float, scope, depth + 1)?;
+                // A whole number is written as an integer, as JSON writes one.
+                Ok(match read.as_f64() {
+                    Some(f) if f.fract() == 0.0 && f.abs() < 9_007_199_254_740_992.0 => {
+                        Value::from(f as i64)
+                    }
+                    _ => read,
+                })
+            }
+            ("json:list", [items]) => {
+                self.value(items, &Type::List(Box::new(Type::Json)), scope, depth + 1)
+            }
+            ("json:record", [chain]) => {
+                let mut out = serde_json::Map::new();
+                let mut at = (chain, scope);
+                for _ in 0..MAX_NODES {
+                    self.charge()?;
+                    let (node, scope) = self.resolve(at.0, at.1)?;
+                    match node {
+                        Sexp::Atom(end) if end == "json:end" => return Ok(Value::Object(out)),
+                        Sexp::List(items) => match items.as_slice() {
+                            [Sexp::Atom(field), key, value, rest] if field == "json:field" => {
+                                let Value::String(key) =
+                                    self.value(key, &Type::String, scope, depth + 1)?
+                                else {
+                                    return Err(wrong());
+                                };
+                                let value = self.value(value, &Type::Json, scope, depth + 1)?;
+                                // A key twice is not a value the kernel holds.
+                                if out.insert(key, value).is_some() {
+                                    return Err(wrong());
+                                }
+                                at = (rest, scope);
+                            }
+                            _ => return Err(wrong()),
+                        },
+                        _ => return Err(wrong()),
+                    }
+                }
+                Err(Unreadable::TooLarge)
+            }
+            _ => Err(wrong()),
+        }
+    }
+
+    /// `s` with the `let` names it is in scope of followed, and `as` annotations dropped, in the scope it is read in.
+    fn resolve(&mut self, s: &'s Sexp, scope: usize) -> Result<(&'s Sexp, usize), Unreadable> {
+        let (mut s, mut scope) = (s, scope);
+        for _ in 0..MAX_DEPTH {
+            match s {
+                Sexp::Atom(name) => {
+                    match self.scopes[scope]
+                        .bindings
+                        .iter()
+                        .rev()
+                        .find(|(n, _, _)| n == name)
+                        .copied()
+                    {
+                        Some((_, expr, at)) => (s, scope) = (expr, at),
+                        None => return Ok((s, scope)),
+                    }
+                }
+                Sexp::List(items) => match items.as_slice() {
+                    [Sexp::Atom(kw), inner, _] if kw == "as" => s = inner,
+                    [Sexp::Atom(kw), Sexp::List(binds), body] if kw == "let" => {
+                        let mut env = self.scopes[scope].clone();
+                        for bind in binds {
+                            match bind {
+                                Sexp::List(pair) => match pair.as_slice() {
+                                    [Sexp::Atom(name), expr] => {
+                                        env.bindings.push((name, expr, scope))
+                                    }
+                                    _ => return Err(syntax("malformed let binding")),
+                                },
+                                _ => return Err(syntax("malformed let binding")),
+                            }
+                        }
+                        self.scopes.push(env);
+                        (s, scope) = (body, self.scopes.len() - 1);
+                    }
+                    _ => return Ok((s, scope)),
+                },
+                Sexp::Str(_) => return Ok((s, scope)),
+            }
+        }
+        Err(Unreadable::TooLarge)
+    }
+
     /// `s` in scope `scope`, read as a value of `ty`.
     fn value(
         &mut self,
@@ -292,7 +395,8 @@ impl<'s> Reader<'s> {
         }
         let wrong = || Self::mismatch(ty, s);
         match ty {
-            Type::Any | Type::Json => Err(wrong()),
+            Type::Any => Err(wrong()),
+            Type::Json => self.json(s, scope, depth),
             Type::Bool => match s {
                 Sexp::Atom(a) if a == "true" => Ok(Value::Bool(true)),
                 Sexp::Atom(a) if a == "false" => Ok(Value::Bool(false)),
