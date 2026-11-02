@@ -23,7 +23,7 @@ The surface language takes that shape and gives it the kernel's semantics:
 - **What runs is still the pure `δ`.** The elaborator turns the graph into `δ`'s state machine:
   - The state holds one slot per call node: waiting, running, returned, failed, refused or skipped.
   - Each step records the result it was given. It then starts, in dependency order, every call whose dependencies have settled.
-  - The run halts once everything `return` reads has settled.
+  - The run halts once every call has settled, so a call nothing reads still runs.
 
 The graph suits the kernel better than sequential code would:
 
@@ -45,7 +45,7 @@ Everything the kernel proves is about the elaborated `Expr`, which is the term t
    - The alternative was to give `δ` the next identifier as a third variable. That changes the step rule, the SMT-LIB export and every proof for one convenience.
    - If the counter ever disagreed with the interpreter, a result would land in the wrong slot. That breaks the author's intent, not a contract: preconditions are still checked at every call.
 5. **No source object in the kernel yet.** The harness's key is the key of the elaborated term. `elaborate` returns a source map with it, and the platform stores the source next to the harness it registers. Elaboration is deterministic for a given elaborator version, so anyone with the source and the same `@cronch/kernel` can recompute the term.
-6. **Node slots are part of the language, not the elaborator.** The `nodes` field of the generated state, and each slot's cases, are defined here. Properties and invariants may read them and mean the same thing whatever else the elaborator generates. The call counter and anything else the elaborator adds stay out of reach.
+6. **Node slots are part of the language, not the elaborator.** The `nodes` field of the generated state, and each slot's fields, are defined here. Properties and invariants may read them and mean the same thing whatever else the elaborator generates. The call counter and anything else the elaborator adds stay out of reach.
 7. **The harness names its capabilities.** Capabilities have identifiers: a platform capability's is a short string (`notes`), and a user's sandboxed module's is a content key that nobody should have to type. `uses` binds a readable name to each one, and that name is the prefix the capability is installed under. A run no longer picks prefixes; the harness does.
    - The body only ever says `search.query(...)`, never a key. A model writes readable names, which it is good at. The identifiers sit in the `uses` header, which the platform can write from its catalog of the owner's capabilities.
    - `elaborate` takes the contract of each identifier the header names, installs them under their names with the kernel's `install`, and types the harness against the result. It returns the header's bindings with the term, and the platform installs exactly those for every run of the harness.
@@ -91,9 +91,9 @@ property no_effect_without_approval:
 - **Reading a node:**
   - Its name, used as a value, is what it returned.
   - A node that reads a skipped node is skipped too.
-  - A failed or refused node read this way ends the run through `otherwise`.
-  - `match node { ok(v) => ..., failed(e) => ..., refused => ..., skipped => ... }` reads its outcome instead. A node read only through `match` can fail without ending the run.
-- **`return expr`**, once per harness, is `halt(expr)`, emitted once everything `expr` reads has settled. `return` may not read, as a value, a node that can be skipped (one with a guard, or that reads such a node). It must `match` it.
+  - `match node { ok(v) => ..., failed(e) => ..., refused => ..., skipped => ... }` reads its outcome instead. It must cover `ok`, and `skipped` if the node can be skipped, or have a `_` arm.
+  - A call node that fails or is refused ends the run through `otherwise`, unless every read of it is a `match` with arms for both, or a `_`. A node nothing reads ends the run too, since nothing handles its failure.
+- **`return expr`**, once per harness, is `halt(expr)`, emitted once every call, and everything `expr` reads, has settled. `return` may not read, as a value, a node that can be skipped (one with a guard, or that reads such a node). It must `match` it.
 - **`otherwise return expr`** is what a failure or refusal read as a value halts with. Without it, the run halts with `{"failed": name}`. `expr` can't read nodes.
 - **Types:** `String`, `Int`, `Float`, `Bool`, `Any`, `List[T]`, records as `{field: T}`, and named record and variant types declared with `type`. A `|` of tagged records is a variant. The names are the kernel's.
 - **Expressions** are the pure fragment, mapped one-to-one onto `Expr`:
@@ -104,14 +104,22 @@ property no_effect_without_approval:
   - `match` on a variant onto `Match`, and on literals onto a chain of `If`;
   - `fold xs from init with (acc, x) => body` onto `Fold`.
 
-### Fan-out, messages and spawning (S2)
+### Streams, messages and cancellation (S2a)
+
+- **Streams:** `chunks = op(...)` on a streaming operation collects its items in order and settles at `end`, with the list as its value. Reading a stream before it ends is left until a harness needs it.
+- **Messages:** `stop = receive said from session.user when said == "stop"` starts listening once the run starts, and settles at the first message on the channel that passes its filter, with that message as its value.
+  - The filter reads the message and the parameter, never a node, so it can be decided when the message arrives.
+  - A message nobody is listening for changes nothing.
+  - A receive nothing reads doesn't keep the run going: the run halts once every call, and everything `return` reads, has settled.
+- **Cancellation:** `reply = model.generate(...) until stop` cancels the call once `stop` returns. The slot fails with `{"cancelled": true}`, whether the call was running or still waiting, and is handled like any other failure.
+  - The kernel's `cancel` of a call is a request to the world, and the call stays pending. The elaborator settles the slot itself, and any result that still arrives finds no slot running its call.
+  - That is enough for the Claude Code exercise's P4, "an interrupt stops effects until the next prompt".
+
+### Fan-out and spawning (S2b)
 
 - **Fan-out:** `notes = for doc in docs: model.generate(...)` issues one call per item of a list, in one step. Its value is the list of their results, in the list's order, and it settles when every call has. `match` reads the list of outcomes. The slot holds a list, so the number of calls is bounded by the list, not the graph.
-- **Streams:** `chunks = op(...)` on a streaming operation settles at `end`, and its value is the list of items, in order. `for chunk in op(...): expr` maps each item as it arrives instead, so a node can read the stream before it ends.
-- **Messages:** `stop = receive interrupt` is a node that settles when the first message arrives on `interrupt`, with that message as its value. A message on a channel nobody receives on changes nothing.
-- **Cancellation:** `reply = model.generate(...) until stop` cancels the call if `stop` settles first. A cancelled call fails, and is handled like any other failure. That is enough for the Claude Code exercise's P4, "an interrupt stops effects until the next prompt".
 - **`spawn(harness, narrow, arg)`** is a call node filled by a child run, with the kernel's spawn semantics. Its value is `Any`, as in the kernel.
-- **Spawn targets** are bound in the header too: `uses summarizer = harness "harness:sha256-…"` names a registered harness, so `spawn(summarizer, narrow, arg)` never carries a key in the body.
+- **Spawn targets** are bound in the header too: `uses summarizer = harness "harness:sha256-…"` names a registered harness, so `spawn(summarizer, narrow, arg)` never carries a key in the body. A `spawn` action carries the child's whole term, so `elaborate` takes the terms of the harnesses the header names, as it takes the contracts of capabilities.
 - **Iteration across steps** (a ReAct loop) is the one thing a fixed graph can't say. See the open questions.
 
 ### Properties and invariants (S3)
@@ -137,16 +145,18 @@ property no_effect_without_approval:
 - **The generated state** is a record:
   - `arg`, the start value;
   - `next`, the call counter;
-  - `nodes`, a record with one slot per call node. A slot is a variant: `waiting`, `running {call}`, `ok {value}`, `failed {error}`, `refused` or `skipped`, with `value` at the operation's output type.
+  - `nodes`, a record with one slot per call or receive node. A slot is a record `{kind, call, value, error}`. `kind` is `waiting`, `running`, `ok`, `failed`, `refused` or `skipped`, and says which of the other fields mean anything. `value` is the operation's output, a stream's items as a list, or the message.
+  - A slot is a record rather than a variant because the kernel has no expression that builds a value at a variant type: a record literal never conforms to one. `value` is carried from slot to slot, never rebuilt from a literal, so it keeps its type in every branch.
 - **The generated `δ`** is one pass:
-  1. **Record:** `start` stores `arg`. `ret`, `failed` or `refused` for call `k` settles the slot running `k`. A result for a call no slot is running (only possible after a cancel) changes nothing.
-  2. **Schedule:** for each waiting call node, in a topological order, whose dependencies have all settled:
-     - if a dependency read as a value failed or was refused, halt through `otherwise`;
-     - if one was skipped, or the guard is false, mark the slot `skipped`;
-     - otherwise emit a `call` with identifier `next`, mark the slot `running`, and add one to `next`.
+  1. **Record:** `start` stores `arg`. `ret`, `failed` or `refused` for call `k` settles the slot running `k`; on a stream, `ret` appends an item and `end` settles it. A message settles every receive listening on its channel whose filter it passes. An input for a call no slot is running (only possible after a cancel) changes nothing.
+  2. **Cancel:** every call whose `until` node has returned fails as cancelled, and `cancel` is emitted for it if it was running.
+  3. **Fail:** if a node whose failure isn't handled has failed or been refused, halt through `otherwise`.
+  4. **Schedule:** for each waiting call or receive node, in a topological order, whose dependencies have all settled:
+     - if one read as a value was skipped, or the guard is false, mark the slot `skipped`;
+     - otherwise emit a `call` with identifier `next`, mark the slot `running`, and add one to `next`. A receive is marked `running` and emits nothing.
 
      Each node is a `Let` over the record the previous one produced, so nodes settled in this pass are seen by the nodes after them. Pure nodes are `Let`s over the slots they read, so the pass needs no `fold`.
-  3. **Return:** if everything `return` reads has settled, emit `halt` with its value.
+  5. **Return:** once every call, and everything `return` reads, has settled, emit `halt` with `return`'s value.
 - **Checking:** the kernel checks the generated harness (`checkHarness`) and each property, as for hand-written terms. A problem there is an elaborator bug, and is reported as one.
 
 ## Pieces
@@ -157,8 +167,9 @@ All in this repo except S4. Each is a PR with compliance vectors, and S1 to S3 t
   - `crates/surface`: the lexer, the parser, the graph checks, and elaboration of nodes, guards, `match` on outcomes, `return` and `otherwise`.
   - The `elaborate` request.
   - Vectors: each platform fixture harness written in source elaborates to a term whose runs match the hand-written one's on the same inputs.
-- **S2, fan-out and messages:** `for` fan-out, streams, `receive`, `until`, `spawn`.
-  - Acceptance: the Claude Code exercise's single turn, with an interrupt channel, elaborates and runs against the kernel's test interface, and P4 holds on its monitored runs. The loop across turns waits for open question 1.
+- **S2a, streams and messages:** streams, `receive`, `until`.
+  - Acceptance: the Claude Code exercise's single turn, with an interrupt channel, elaborates and runs. P4 holds on its monitored runs and up to a depth, and is refuted for the same turn without `until`. The loop across turns waits for open question 1.
+- **S2b, fan-out and spawning:** `for` fan-out and `spawn`.
 - **S3, properties:** properties, invariants and source maps, with explicit guards and node helpers.
   - Vectors: each platform fixture property in source elaborates to a formula with the same verdicts.
 - **S4, the platform:** `POST /objects/harness` accepts `{ source, capabilities }` as well as a term.
@@ -177,4 +188,7 @@ All in this repo except S4. Each is a PR with compliance vectors, and S1 to S3 t
    `loop` is the likeliest. It is postponed past v0.4.0; until then, a host that needs a loop starts a run per turn.
 2. **Failure by default.** A node that fails, read as a value, ends the run through `otherwise`. That is the least surprising default for a total `δ`, and declaring `otherwise` keeps the policy in the harness rather than the language. Whether a harness should also be able to say "retry" is left until a real one needs it.
 3. **Versions.** A binding names one identifier, and a module's key pins its exact code. A platform capability's identifier pins nothing, so a contract can change under a registered harness. Whether identifiers should carry versions, as cronch-gleam's `{id, version}` references did, is the platform's call, and the kernel needs no change either way.
-4. **Surface for models.** Each construct is something a model can get wrong. The graph form has fewer of them than Python did, but it's less familiar. Measure how often models write valid harnesses before adding sugar.
+4. **Labels on control state.** The interpreter labels a step's whole input, `kind`, `call` and `op` included, with its result's sources. So a step taken on the model's result runs under the label `model`, and so does every slot it writes. A later step decides what to do from those slots, so its actions and its halt carry `model` too. A hand-written harness that keeps no control state doesn't have this problem. In S1's `approved-note`, the denied run halts with `"denied"` labelled `model`, where the hand-written one's is trusted.
+   - Labels only ever over-approximate, so this loses precision, not safety. But a property about information flow, such as "no untrusted data reaches a send", could be refuted for an elaborated harness and hold for the hand-written one.
+   - The fix is in the kernel: treat the interpreter's own fields of an input (`kind`, `call`, `op`) as trusted, and label only `value` and `error`. Whether _that_ a result arrived, and when, is information about the untrusted source is the question to decide first.
+5. **Surface for models.** Each construct is something a model can get wrong. The graph form has fewer of them than Python did, but it's less familiar. Measure how often models write valid harnesses before adding sugar.

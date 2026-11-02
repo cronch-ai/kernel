@@ -65,9 +65,16 @@ pub enum What {
     UnknownOperation {
         op: String,
     },
-    /// A construct a later piece of the language provides.
-    NotYet {
-        feature: String,
+    UnknownChannel {
+        channel: String,
+    },
+    /// `until` names something that isn't another call or a receive, or is on a receive.
+    Until {
+        name: String,
+    },
+    /// A receive's filter reads a node.
+    FilterReadsNode {
+        node: String,
     },
     /// A call of an operation inside an expression, rather than as a node of its own.
     NestedCall {

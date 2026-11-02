@@ -228,7 +228,9 @@ export type SourceProblem = { readonly span: Span } & (
   | { readonly kind: "unknownFunction"; readonly name: string }
   | { readonly kind: "unknownCapability"; readonly name: string; readonly capability: string }
   | { readonly kind: "unknownOperation"; readonly op: string }
-  | { readonly kind: "notYet"; readonly feature: string }
+  | { readonly kind: "unknownChannel"; readonly channel: string }
+  | { readonly kind: "until"; readonly name: string }
+  | { readonly kind: "filterReadsNode"; readonly node: string }
   | { readonly kind: "nestedCall"; readonly op: string }
   | { readonly kind: "argument"; readonly expected: string }
   | { readonly kind: "guardOnValue"; readonly node: string }

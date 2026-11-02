@@ -26,7 +26,7 @@ type Case = (&'static str, &'static str, fn() -> Vec<Value>);
 fn cases() -> Vec<Case> {
     vec![(
         "elaborate",
-        "The platform's approved-note harness elaborated from source, and a source with problems.",
+        "The platform's approved-note harness elaborated from source, a source with problems, and a turn that streams and can be interrupted.",
         || {
             let capabilities = json!({ "model": fixture("model"), "approve": fixture("approve"), "notes": fixture("notes") });
             let source = "\
@@ -51,9 +51,30 @@ uses model
 draft = model.generate(messages: [{role: \"user\", content: topic}])
 return draft
 ";
+            let turn = "\
+harness turn(prompt: String) -> Any
+uses model, fs, session
+stop   = receive said from session.user when said == \"stop\"
+chunks = model.generate(messages: [{role: \"user\", content: prompt}]) until stop
+reply  = fold chunks from \"\" with (text, chunk) => concat(text, chunk)
+saved  = fs.write(path: \"/workspace/reply.md\", text: reply) until stop
+return saved
+otherwise return \"interrupted\"
+";
+            let streaming = json!({
+                "model": { "operations": { "generate": {
+                    "input": { "Record": { "messages": { "List": { "Record": { "role": "String", "content": "String" } } } } },
+                    "output": "String", "mode": "stream",
+                }}},
+                "fs": { "operations": { "write": {
+                    "input": { "Record": { "path": "String", "text": "String" } }, "output": "Int", "effect": true,
+                }}},
+                "session": { "channels": { "user": { "type": "String" } } },
+            });
             vec![
                 json!({ "op": "elaborate", "source": source, "capabilities": capabilities }),
                 json!({ "op": "elaborate", "source": broken, "capabilities": capabilities }),
+                json!({ "op": "elaborate", "source": turn, "capabilities": streaming }),
             ]
         },
     )]
