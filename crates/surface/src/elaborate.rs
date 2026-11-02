@@ -89,10 +89,38 @@ impl Needs {
     }
 }
 
+/// What fills a slot.
+#[derive(Clone, Copy, PartialEq)]
+enum Slotted {
+    /// A call that delivers one result.
+    Single,
+    /// A call that delivers items, then an end.
+    Stream,
+    /// A message on a channel.
+    Receive,
+}
+
+/// An input about a call.
+#[derive(Clone, Copy, PartialEq)]
+enum Input {
+    Ret,
+    End,
+    Failed,
+    Refused,
+}
+
+/// A node with a slot in the state: a call of an operation, or a receive on a channel.
 struct Call {
-    op: String,
+    kind: Slotted,
+    /// The operation called, or the channel received on.
+    target: String,
     input: Type,
-    output: Type,
+    /// What the slot's `value` holds: the operation's output, a stream's items as a list, or the message.
+    value: Type,
+    /// What a receive names its message, for its filter.
+    binder: Option<String>,
+    /// The node whose return cancels this call.
+    until: Option<usize>,
 }
 
 struct Cx<'a> {
@@ -550,6 +578,12 @@ impl<'a> Cx<'a> {
                     }
                 }
             }
+            ExprKind::Receive { .. } => self.report(
+                e.span,
+                What::NestedCall {
+                    op: "receive".to_string(),
+                },
+            ),
             ExprKind::Fold {
                 over,
                 init,
@@ -715,6 +749,8 @@ impl<'a> Cx<'a> {
                 Some(i) => self.lower_outcome(e.span, i, arms, locals),
                 None => self.lower_match(e.span, scrutinee, arms, locals),
             },
+            // Reported by `walk`: a receive is only ever a node.
+            ExprKind::Receive { .. } => lit(Value::Null),
             ExprKind::Fold {
                 over,
                 init,
@@ -958,6 +994,8 @@ struct Lowered {
     /// Each call node's arguments, as a record.
     args: BTreeMap<usize, K>,
     guards: BTreeMap<usize, K>,
+    /// Each receive's filter, over its message and the parameter.
+    filters: BTreeMap<usize, K>,
     pures: BTreeMap<usize, K>,
     ret: K,
     otherwise: Option<K>,
@@ -1038,16 +1076,28 @@ impl Cx<'_> {
         one_of(&OUTCOMES, get(self.slot(state, node), "kind"))
     }
 
-    /// One pass over the call nodes, from the state in `@state`, then a halt if every slot has settled.
-    fn schedule(&self, plan: &Plan, lowered: &Lowered) -> K {
-        let calls: Vec<usize> = plan
-            .order
+    /// The slotted nodes in dependency order, or only those of these kinds.
+    fn slotted(&self, plan: &Plan, kinds: &[Slotted]) -> Vec<usize> {
+        plan.order
             .iter()
             .copied()
-            .filter(|i| self.calls.contains_key(i))
+            .filter(|i| self.calls.get(i).is_some_and(|c| kinds.contains(&c.kind)))
+            .collect()
+    }
+
+    /// One pass over the slotted nodes, from the state in `@state` and the actions in `@pre`, then a halt once every
+    /// call, and everything `return` reads, has settled. A receive nothing reads doesn't keep the run going.
+    fn schedule(&self, plan: &Plan, lowered: &Lowered) -> K {
+        let mut must_settle: BTreeSet<usize> = self
+            .slotted(plan, &[Slotted::Single, Slotted::Stream])
+            .into_iter()
             .collect();
+        must_settle.extend(plan.return_needs.calls());
         let finish = {
-            let all_settled = all(calls.iter().map(|&c| self.settled("@state", c)).collect());
+            let all_settled = all(must_settle
+                .iter()
+                .map(|&c| self.settled("@state", c))
+                .collect());
             let halted = step(
                 var("@state"),
                 op(
@@ -1062,47 +1112,58 @@ impl Cx<'_> {
             )
         };
         let mut out = enter(finish);
-        for &n in calls.iter().rev() {
+        for n in self
+            .slotted(plan, &[Slotted::Single, Slotted::Stream, Slotted::Receive])
+            .into_iter()
+            .rev()
+        {
             let needs = &plan.needs[n];
             let next = get(var("@state"), "next");
+            let call = get(self.slot("@state", n), "call");
             let skip = step(
                 self.with_slot(
                     "@state",
                     next.clone(),
                     n,
-                    self.moved(
-                        "@state",
-                        n,
-                        "skipped",
-                        get(self.slot("@state", n), "call"),
-                        None,
-                        lit(Value::Null),
-                    ),
+                    self.moved("@state", n, "skipped", call.clone(), None, lit(Value::Null)),
                 ),
                 get(var("@acc"), "actions"),
             );
-            let call = step(
-                self.with_slot(
-                    "@state",
-                    op("add", vec![next.clone(), lit(json!(1))]),
-                    n,
-                    self.moved("@state", n, "running", next, None, lit(Value::Null)),
-                ),
-                op(
-                    "append",
-                    vec![
-                        get(var("@acc"), "actions"),
-                        rec(vec![
-                            ("kind", lit(json!("call"))),
-                            ("op", lit(json!(self.calls[&n].op))),
-                            ("args", lowered.args[&n].clone()),
-                        ]),
-                    ],
-                ),
-            );
+            let started = if self.calls[&n].kind == Slotted::Receive {
+                // A receive starts listening; there is nothing to ask the world.
+                step(
+                    self.with_slot(
+                        "@state",
+                        next,
+                        n,
+                        self.moved("@state", n, "running", call, None, lit(Value::Null)),
+                    ),
+                    get(var("@acc"), "actions"),
+                )
+            } else {
+                step(
+                    self.with_slot(
+                        "@state",
+                        op("add", vec![next.clone(), lit(json!(1))]),
+                        n,
+                        self.moved("@state", n, "running", next, None, lit(Value::Null)),
+                    ),
+                    op(
+                        "append",
+                        vec![
+                            get(var("@acc"), "actions"),
+                            rec(vec![
+                                ("kind", lit(json!("call"))),
+                                ("op", lit(json!(self.calls[&n].target))),
+                                ("args", lowered.args[&n].clone()),
+                            ]),
+                        ],
+                    ),
+                )
+            };
             let guarded = match lowered.guards.get(&n) {
-                Some(g) => if_(g.clone(), call, skip.clone()),
-                None => call,
+                Some(g) => if_(g.clone(), started, skip.clone()),
+                None => started,
             };
             let skipped_dep = any(needs
                 .values
@@ -1119,10 +1180,15 @@ impl Cx<'_> {
             let moved = enter(if_(all(vec![waiting, ready]), body, var("@acc")));
             out = let_("@acc", moved, out);
         }
-        let_("@acc", step(var("@state"), list(vec![])), out)
+        let_(
+            "@acc",
+            step(var("@state"), get(var("@pre"), "actions")),
+            out,
+        )
     }
 
-    /// After a result: halt through `otherwise` if an unhandled node has failed, or else schedule.
+    /// After the input is recorded and calls are cancelled: halt through `otherwise` if an unhandled node has failed,
+    /// or else schedule.
     fn after_result(&self, plan: &Plan, lowered: &Lowered, scheduled: K) -> K {
         let mut out = scheduled;
         for &n in plan.unhandled.iter().rev() {
@@ -1131,62 +1197,175 @@ impl Cx<'_> {
                 None => lit(json!({ "failed": self.node_name(n) })),
             };
             let failed = one_of(&["failed", "refused"], get(self.slot("@state", n), "kind"));
-            out = if_(failed, step(var("@state"), list(vec![halt(value)])), out);
+            let halted = op("append", vec![get(var("@pre"), "actions"), halt(value)]);
+            out = if_(failed, step(var("@state"), halted), out);
         }
         out
     }
 
-    /// The state after a result for one of `nodes`: the slot running its call settles at `kind`.
-    fn record(&self, nodes: &[usize], kind: &str) -> K {
-        let call = get(var("@in"), "call");
-        let mut out = var("state");
-        for &n in nodes.iter().rev() {
-            let hit = all(vec![
-                eq(get(self.slot("state", n), "kind"), lit(json!("running"))),
-                eq(get(self.slot("state", n), "call"), call.clone()),
+    /// `@pre` after cancelling every call whose `until` node has returned: its slot fails with `{"cancelled": true}`,
+    /// and if it was running, the world is asked to stop it. Its results, if any still come, find no slot running it.
+    fn cancellations(&self, plan: &Plan, body: K) -> K {
+        let mut out = let_("@state", get(var("@pre"), "state"), body);
+        for &n in plan.order.iter().rev() {
+            let Some(stop) = self.calls.get(&n).and_then(|c| c.until) else {
+                continue;
+            };
+            let kind = get(self.slot("@state", n), "kind");
+            let call = get(self.slot("@state", n), "call");
+            let stopped = all(vec![
+                eq(get(self.slot("@state", stop), "kind"), lit(json!("ok"))),
+                one_of(&["waiting", "running"], kind.clone()),
             ]);
-            let value = (kind == "ok").then(|| get(var("@in"), "value"));
-            let error = if kind == "failed" {
+            let cancelled = self.moved(
+                "@state",
+                n,
+                "failed",
+                call.clone(),
+                None,
+                lit(json!({ "cancelled": true })),
+            );
+            let actions = if_(
+                eq(kind, lit(json!("running"))),
+                op(
+                    "append",
+                    vec![
+                        get(var("@pre"), "actions"),
+                        rec(vec![("kind", lit(json!("cancel"))), ("call", call)]),
+                    ],
+                ),
+                get(var("@pre"), "actions"),
+            );
+            let next = get(var("@state"), "next");
+            let moved = step(self.with_slot("@state", next, n, cancelled), actions);
+            let checked = let_(
+                "@state",
+                get(var("@pre"), "state"),
+                if_(stopped, moved, var("@pre")),
+            );
+            out = let_("@pre", checked, out);
+        }
+        let_("@pre", step(var("@state"), list(vec![])), out)
+    }
+
+    /// The state in `@r` after `then` is applied to each of `nodes` the input `hit`s, in turn.
+    fn each(&self, nodes: &[usize], hit: impl Fn(usize) -> K, then: impl Fn(usize) -> K) -> K {
+        let mut out = var("@r");
+        for &n in nodes.iter().rev() {
+            out = let_("@r", if_(hit(n), then(n), var("@r")), out);
+        }
+        let_("@r", var("state"), out)
+    }
+
+    /// The state after an input about a call of one of `nodes`: the slot running it settles. A stream's item is
+    /// appended to its slot, which stays running until the stream ends.
+    fn record(&self, nodes: &[usize], input: Input) -> K {
+        let call = get(var("@in"), "call");
+        let hit = |n| {
+            all(vec![
+                eq(get(self.slot("@r", n), "kind"), lit(json!("running"))),
+                eq(get(self.slot("@r", n), "call"), call.clone()),
+            ])
+        };
+        let then = |n| {
+            let slot = get(self.slot("@r", n), "value");
+            let item = get(var("@in"), "value");
+            let (kind, value) = match (input, self.calls[&n].kind) {
+                (Input::Ret, Slotted::Stream) => ("running", Some(op("append", vec![slot, item]))),
+                (Input::Ret, _) => ("ok", Some(item)),
+                (Input::End, _) => ("ok", None),
+                (Input::Failed, _) => ("failed", None),
+                (Input::Refused, _) => ("refused", None),
+            };
+            let error = if input == Input::Failed {
                 get(var("@in"), "error")
             } else {
                 lit(Value::Null)
             };
-            let settled = self.moved("state", n, kind, call.clone(), value, error);
-            out = if_(
-                hit,
-                self.with_slot("state", get(var("state"), "next"), n, settled),
-                out,
-            );
-        }
-        out
+            let settled = self.moved("@r", n, kind, call.clone(), value, error);
+            self.with_slot("@r", get(var("@r"), "next"), n, settled)
+        };
+        self.each(nodes, hit, then)
     }
 
-    fn generate(&self, plan: &Plan, lowered: &Lowered) -> Harness {
-        let calls: Vec<usize> = plan
-            .order
-            .iter()
-            .copied()
-            .filter(|i| self.calls.contains_key(i))
-            .collect();
-        let mut by_op: BTreeMap<&str, Vec<usize>> = BTreeMap::new();
-        for &n in &calls {
-            by_op.entry(self.calls[&n].op.as_str()).or_default().push(n);
-        }
-        let results = K::Match {
+    /// The state after a message on a channel: every receive listening there whose filter it passes returns it.
+    fn record_message(&self, nodes: &[usize], lowered: &Lowered, param: &str) -> K {
+        let hit = |n| {
+            let listening = eq(get(self.slot("@r", n), "kind"), lit(json!("running")));
+            match (&lowered.filters.get(&n), &self.calls[&n].binder) {
+                (Some(filter), binder) => {
+                    let mut f = let_(param, get(var("@r"), "arg"), (*filter).clone());
+                    if let Some(b) = binder {
+                        f = let_(b, get(var("@in"), "value"), f);
+                    }
+                    // A filter is only read of a message a receive is listening for.
+                    if_(listening, f, lit(json!(false)))
+                }
+                (None, _) => listening,
+            }
+        };
+        let then = |n| {
+            let call = get(self.slot("@r", n), "call");
+            let value = Some(get(var("@in"), "value"));
+            let settled = self.moved("@r", n, "ok", call, value, lit(Value::Null));
+            self.with_slot("@r", get(var("@r"), "next"), n, settled)
+        };
+        self.each(nodes, hit, then)
+    }
+
+    /// A `match` of `@in` on `on`, with one case per key, each binding `@in` again.
+    fn dispatch(&self, on: &str, cases: BTreeMap<String, K>) -> K {
+        K::Match {
             of: Box::new(var("@in")),
-            on: "op".to_string(),
-            cases: by_op
-                .iter()
-                .map(|(op, nodes)| {
+            on: on.to_string(),
+            cases: cases
+                .into_iter()
+                .map(|(name, body)| {
                     let case = Case {
                         bind: "@in".to_string(),
-                        body: self.record(nodes, "ok"),
+                        body,
                     };
-                    (op.to_string(), case)
+                    (name, case)
                 })
                 .collect(),
             otherwise: Some(Box::new(var("state"))),
+        }
+    }
+
+    fn generate(&self, plan: &Plan, lowered: &Lowered) -> Harness {
+        let ops = self.slotted(plan, &[Slotted::Single, Slotted::Stream]);
+        let streams = self.slotted(plan, &[Slotted::Stream]);
+        let receives = self.slotted(plan, &[Slotted::Receive]);
+        let grouped = |nodes: &[usize]| {
+            let mut by: BTreeMap<String, Vec<usize>> = BTreeMap::new();
+            for &n in nodes {
+                by.entry(self.calls[&n].target.clone()).or_default().push(n);
+            }
+            by
         };
+        let results = self.dispatch(
+            "op",
+            grouped(&ops)
+                .into_iter()
+                .map(|(op, nodes)| (op, self.record(&nodes, Input::Ret)))
+                .collect(),
+        );
+        let ends = self.dispatch(
+            "op",
+            grouped(&streams)
+                .into_iter()
+                .map(|(op, nodes)| (op, self.record(&nodes, Input::End)))
+                .collect(),
+        );
+        let messages = self.dispatch(
+            "channel",
+            grouped(&receives)
+                .into_iter()
+                .map(|(channel, nodes)| {
+                    (channel, self.record_message(&nodes, lowered, &plan.param))
+                })
+                .collect(),
+        );
         let started = rec(vec![
             ("arg", get(var("@in"), "value")),
             ("next", get(var("state"), "next")),
@@ -1199,30 +1378,32 @@ impl Cx<'_> {
         let cases = BTreeMap::from([
             ("start".to_string(), case(started)),
             ("ret".to_string(), case(results)),
-            ("failed".to_string(), case(self.record(&calls, "failed"))),
-            ("refused".to_string(), case(self.record(&calls, "refused"))),
+            ("end".to_string(), case(ends)),
+            ("msg".to_string(), case(messages)),
+            ("failed".to_string(), case(self.record(&ops, Input::Failed))),
+            (
+                "refused".to_string(),
+                case(self.record(&ops, Input::Refused)),
+            ),
         ]);
         let recorded = K::Match {
             of: Box::new(var("input")),
             on: "kind".to_string(),
             cases,
-            otherwise: Some(Box::new(var("state"))),
+            otherwise: None,
         };
-        // A message, or the end of a stream nobody reads, changes nothing; nor may anything run before `start`.
-        let ignored = one_of(&["msg", "end"], get(var("input"), "kind"));
-        let step_fn = if_(
-            ignored,
-            step(var("state"), list(vec![])),
-            let_(
-                "@state",
-                recorded,
+        let step_fn = let_(
+            "@state",
+            recorded,
+            self.cancellations(
+                plan,
                 self.after_result(plan, lowered, self.schedule(plan, lowered)),
             ),
         );
         let slots = self
             .calls
             .iter()
-            .map(|(&i, c)| (self.node_name(i).to_string(), slot_type(&c.output)))
+            .map(|(&i, c)| (self.node_name(i).to_string(), slot_type(&c.value)))
             .collect();
         let state = Type::Record(BTreeMap::from([
             ("arg".to_string(), plan.arg.clone()),
@@ -1233,7 +1414,7 @@ impl Cx<'_> {
             .calls
             .iter()
             .map(|(&i, c)| {
-                let slot = json!({ "kind": "waiting", "call": 0, "value": default_value(&c.output), "error": null });
+                let slot = json!({ "kind": "waiting", "call": 0, "value": default_value(&c.value), "error": null });
                 (self.node_name(i).to_string(), slot)
             })
             .collect();
@@ -1297,8 +1478,39 @@ pub fn elaborate(
         );
     }
 
-    // Which nodes are calls, and of what.
+    // Which nodes are calls or receives, and of what.
     for (i, node) in file.nodes.iter().enumerate() {
+        if let ExprKind::Receive { binder, channel } = &node.value.kind {
+            let Some(c) = interface.channels.get(&channel.text) else {
+                cx.report(
+                    channel.span,
+                    What::UnknownChannel {
+                        channel: channel.text.clone(),
+                    },
+                );
+                continue;
+            };
+            if let Some(u) = &node.until {
+                cx.report(
+                    u.span,
+                    What::Until {
+                        name: u.text.clone(),
+                    },
+                );
+            }
+            cx.calls.insert(
+                i,
+                Call {
+                    kind: Slotted::Receive,
+                    target: channel.text.clone(),
+                    input: Type::Any,
+                    value: c.ty.clone(),
+                    binder: binder.as_ref().map(|b| b.text.clone()),
+                    until: None,
+                },
+            );
+            continue;
+        }
         let ExprKind::Call(callee, args) = &node.value.kind else {
             if let Some(w) = &node.when {
                 cx.report(
@@ -1325,14 +1537,6 @@ pub fn elaborate(
             cx.report(callee.span, What::UnknownOperation { op: name });
             continue;
         };
-        if operation.mode == Mode::Stream {
-            cx.report(
-                callee.span,
-                What::NotYet {
-                    feature: "streams".to_string(),
-                },
-            );
-        }
         let mut seen = BTreeSet::new();
         for a in args {
             match &a.name {
@@ -1351,19 +1555,67 @@ pub fn elaborate(
                 Some(_) => {}
             }
         }
+        let (kind, value) = match operation.mode {
+            Mode::Single => (Slotted::Single, operation.output.clone()),
+            Mode::Stream => (
+                Slotted::Stream,
+                Type::List(Box::new(operation.output.clone())),
+            ),
+        };
         cx.calls.insert(
             i,
             Call {
-                op: name,
+                kind,
+                target: name,
                 input: operation.input.clone(),
-                output: operation.output.clone(),
+                value,
+                binder: None,
+                until: None,
             },
         );
+    }
+    for (i, node) in file.nodes.iter().enumerate() {
+        let Some(u) = &node.until else { continue };
+        if cx.calls.get(&i).is_none_or(|c| c.kind == Slotted::Receive) {
+            continue;
+        }
+        match cx.names.get(&u.text) {
+            Some(Bound::Node(j)) if *j != i && cx.calls.contains_key(j) => {
+                let j = *j;
+                if let Some(c) = cx.calls.get_mut(&i) {
+                    c.until = Some(j);
+                }
+            }
+            _ => cx.report(
+                u.span,
+                What::Until {
+                    name: u.text.clone(),
+                },
+            ),
+        }
     }
 
     // What each expression reads.
     let mut node_reads: Vec<Reads> = Vec::new();
     for (i, node) in file.nodes.iter().enumerate() {
+        if let ExprKind::Receive { binder, .. } = &node.value.kind {
+            // A filter reads the message and the parameter, never a node: it runs when the message arrives,
+            // whatever else has settled.
+            if let Some(w) = &node.when {
+                let mut reads = Vec::new();
+                cx.walk(
+                    w,
+                    &mut binder.iter().map(|b| b.text.clone()).collect(),
+                    &mut reads,
+                );
+                for (j, _) in reads {
+                    let read = cx.node_name(j).to_string();
+                    cx.report(w.span, What::FilterReadsNode { node: read });
+                }
+            }
+            node_reads.push(Vec::new());
+            continue;
+        }
         let mut reads = match (&node.value.kind, cx.calls.contains_key(&i)) {
             (ExprKind::Call(_, args), true) => {
                 args.iter().flat_map(|a| cx.reads(&a.value)).collect()
@@ -1403,7 +1655,8 @@ pub fn elaborate(
     let mut of_pure = BTreeMap::new();
     for &i in &order {
         let n = cx.needs(&node_reads[i], &of_pure);
-        let skippable = (file.nodes[i].when.is_some() && cx.calls.contains_key(&i))
+        let guarded = cx.calls.get(&i).is_some_and(|c| c.kind != Slotted::Receive);
+        let skippable = (file.nodes[i].when.is_some() && guarded)
             || n.values.iter().any(|d| cx.may_skip.contains(d));
         if skippable {
             cx.may_skip.insert(i);
@@ -1437,10 +1690,12 @@ pub fn elaborate(
     }
     let every_read: Vec<&(usize, Read)> =
         node_reads.iter().flatten().chain(&return_reads).collect();
+    // A receive can't fail, but a cancelled call does.
     let unhandled = cx
         .calls
-        .keys()
-        .copied()
+        .iter()
+        .filter(|(_, c)| c.kind != Slotted::Receive)
+        .map(|(&i, _)| i)
         .filter(|&c| {
             let reads: Vec<_> = every_read.iter().filter(|(i, _)| *i == c).collect();
             reads.is_empty()
@@ -1456,7 +1711,7 @@ pub fn elaborate(
     let nodes_type = Type::Record(
         cx.calls
             .iter()
-            .map(|(&i, c)| (cx.node_name(i).to_string(), slot_type(&c.output)))
+            .map(|(&i, c)| (cx.node_name(i).to_string(), slot_type(&c.value)))
             .collect(),
     );
     let mut scope = vec![
@@ -1464,17 +1719,34 @@ pub fn elaborate(
         (file.param.text.clone(), arg.clone()),
     ];
     for (&i, c) in &cx.calls {
-        scope.push((cx.node_name(i).to_string(), c.output.clone()));
+        scope.push((cx.node_name(i).to_string(), c.value.clone()));
     }
     let mut lowered = Lowered {
         args: BTreeMap::new(),
         guards: BTreeMap::new(),
+        filters: BTreeMap::new(),
         pures: BTreeMap::new(),
         ret: lit(Value::Null),
         otherwise: None,
     };
     for &i in &order {
         let node = &file.nodes[i];
+        if let ExprKind::Receive { binder, .. } = &node.value.kind {
+            let (Some(w), Some(call)) = (&node.when, cx.calls.get(&i)) else {
+                continue;
+            };
+            let mut filter_scope = vec![(file.param.text.clone(), arg.clone())];
+            let mut locals = Vec::new();
+            if let Some(b) = binder {
+                filter_scope.push((b.text.clone(), call.value.clone()));
+                locals.push(b.text.clone());
+            }
+            let f = cx.lower(w, &mut locals);
+            let t = cx.type_of(&f, w.span, &filter_scope);
+            cx.expect(t, &Type::Bool, w.span);
+            lowered.filters.insert(i, f);
+            continue;
+        }
         if let (Some(call), ExprKind::Call(_, args)) = (cx.calls.get(&i), &node.value.kind) {
             let input = call.input.clone();
             let mut fields = BTreeMap::new();
@@ -1555,5 +1827,5 @@ pub fn elaborate(
 }
 
 fn call_name(cx: &Cx, i: usize) -> String {
-    cx.calls[&i].op.clone()
+    cx.calls[&i].target.clone()
 }

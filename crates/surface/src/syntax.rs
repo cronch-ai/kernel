@@ -80,6 +80,12 @@ pub enum ExprKind {
         item: Name,
         body: Box<Expr>,
     },
+    /// `receive m from channel`: the first message on a channel. Only a node can be one.
+    Receive {
+        binder: Option<Name>,
+        /// The channel's full name, `prefix.name`.
+        channel: Name,
+    },
 }
 
 #[derive(Clone, Debug)]
@@ -115,7 +121,10 @@ pub struct Use {
 pub struct Node {
     pub name: Name,
     pub value: Expr,
+    /// A call's guard, or a receive's filter.
     pub when: Option<Expr>,
+    /// The node whose settling cancels this call.
+    pub until: Option<Name>,
 }
 
 #[derive(Clone, Debug)]

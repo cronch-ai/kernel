@@ -6,7 +6,8 @@
 //!         | "type" name "=" (variant | type) NL
 //!         | "return" expr NL
 //!         | "otherwise" "return" expr NL
-//!         | name "=" expr ("when" expr)? NL
+//!         | name "=" (expr | receive) ("when" expr)? ("until" name)? NL
+//! receive = "receive" name? "from" label ("." label)*
 //! use     = name ("=" string)?
 //! type    = "List" "[" type "]" | "{" (name ":" type),* "}" | name
 //! variant = case ("|" case)*          case = name ("{" (name ":" type),* "}")?
@@ -25,13 +26,15 @@ use crate::{Problem, What};
 use serde_json::{Value, json};
 
 /// Words that can't name a node, a parameter or a binding. A field may still be called any of them.
-pub const KEYWORDS: [&str; 18] = [
+pub const KEYWORDS: [&str; 20] = [
     "harness",
     "uses",
     "type",
     "return",
     "otherwise",
     "when",
+    "until",
+    "receive",
     "if",
     "then",
     "else",
@@ -247,18 +250,53 @@ impl Parser {
         } else if matches!(self.peek(), Tok::Ident(_)) && *self.peek_at(1) == Tok::Sym("=") {
             let name = self.name()?;
             self.sym("=")?;
-            let value = self.expr()?;
+            let value = if self.is_word("receive") {
+                self.receive()?
+            } else {
+                self.expr()?
+            };
             let when = if self.eat_word("when") {
                 Some(self.expr()?)
             } else {
                 None
             };
-            file.nodes.push(Node { name, value, when });
+            let until = if self.eat_word("until") {
+                Some(self.name()?)
+            } else {
+                None
+            };
+            file.nodes.push(Node {
+                name,
+                value,
+                when,
+                until,
+            });
         } else {
             return self
                 .fail("a declaration: `uses`, `type`, `return`, `otherwise` or `name = ...`");
         }
         self.newline()
+    }
+
+    fn receive(&mut self) -> Parsed<Expr> {
+        let start = self.word("receive")?;
+        let binder = if self.is_word("from") {
+            None
+        } else {
+            Some(self.name()?)
+        };
+        self.word("from")?;
+        let mut channel = self.label()?;
+        while self.eat_sym(".") {
+            let part = self.label()?;
+            channel.text = format!("{}.{}", channel.text, part.text);
+            channel.span = channel.span.to(part.span);
+        }
+        let span = start.to(channel.span);
+        Ok(Expr {
+            kind: ExprKind::Receive { binder, channel },
+            span,
+        })
     }
 
     fn fields_type(&mut self) -> Parsed<Vec<(Name, TypeExpr)>> {
