@@ -24,3 +24,4 @@ pub mod property;
 pub mod run;
 pub mod smtlib;
 pub mod types;
+pub mod view;

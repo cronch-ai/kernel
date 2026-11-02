@@ -409,6 +409,36 @@ export type Event =
       readonly error: StepError;
     };
 
+/**
+ * An event as a property reads it (`crates/kernel/src/view.rs`): every field it can have is present. A call, spawn or
+ * cancel carries its identifier as `action.call`, and a call its operation's footprint as `action.footprint`; an action
+ * that wasn't performed is `refused`. A child run's events have no `state`.
+ */
+export type EventView =
+  | {
+      readonly kind: "in";
+      readonly origin: readonly number[];
+      readonly input: Value;
+      readonly label: Label;
+      readonly state?: Value;
+    }
+  | {
+      readonly kind: "out";
+      readonly origin: readonly number[];
+      readonly action: Value;
+      readonly effect: boolean;
+      readonly labels: Value;
+      readonly state?: Value;
+    }
+  | {
+      readonly kind: "refused";
+      readonly origin: readonly number[];
+      readonly action: Value;
+      readonly labels: Value;
+      readonly state?: Value;
+    }
+  | Extract<Event, { readonly kind: "withheld" | "failed" }>;
+
 // Properties (`crates/kernel/src/property.rs`).
 
 export type Formula =
@@ -611,8 +641,8 @@ export interface Kernel {
   ):
     | { readonly kind: "value"; readonly value: Value }
     | { readonly kind: "failed"; readonly error: EvalError };
-  /** Against an interface, the harness's input is typed by `inputType`; without one, it is `Any`. */
-  checkHarness(harness: Harness, iface?: Interface): readonly HarnessProblem[];
+  /** The harness's input is typed by `inputType`, and its actions by the interface's operations. */
+  checkHarness(harness: Harness, iface: Interface): readonly HarnessProblem[];
   inputType(harness: Harness, iface: Interface): Type;
   checkInterface(iface: Interface): readonly HarnessProblem[];
   install(
@@ -632,7 +662,13 @@ export interface Kernel {
     system: System,
     delivery: Delivery,
   ): { readonly system: System; readonly events: readonly Event[] };
-  checkProperty(property: Property): readonly PropertyProblem[];
+  /** Events as a property reads them. */
+  view(events: readonly Event[]): readonly EventView[];
+  /** What a property may read of an event: every field some event has, at the type every event that has it gives it. */
+  eventType(harness: Harness, iface: Interface): Type;
+  /** Problems with a property of runs of this harness against this interface. */
+  checkProperty(property: Property, harness: Harness, iface: Interface): readonly PropertyProblem[];
+  /** Over recorded events: the kernel reads each as its view. */
   monitor(property: Property, trace: readonly Event[]): Monitored;
   /** The incremental monitor before any event, for a quantifier-free property. */
   monitorStart(

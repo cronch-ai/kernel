@@ -38,27 +38,6 @@
                   "e": "var",
                   "name": "event"
                 },
-                "field": "performed"
-              },
-              {
-                "e": "lit",
-                "v": true
-              }
-            ]
-          }
-        },
-        {
-          "f": "atom",
-          "holds": {
-            "e": "op",
-            "op": "eq",
-            "args": [
-              {
-                "e": "get",
-                "of": {
-                  "e": "var",
-                  "name": "event"
-                },
                 "field": "effect"
               },
               {

@@ -264,56 +264,42 @@
                       {
                         "args": [
                           {
-                            "args": [
-                              {
-                                "e": "get",
-                                "field": "kind",
-                                "of": {
-                                  "e": "var",
-                                  "name": "event"
-                                }
-                              },
-                              {
-                                "e": "lit",
-                                "v": "out"
-                              }
-                            ],
-                            "e": "op",
-                            "op": "eq"
+                            "e": "get",
+                            "field": "kind",
+                            "of": {
+                              "e": "var",
+                              "name": "event"
+                            }
                           },
                           {
-                            "args": [
-                              {
-                                "e": "get",
-                                "field": "kind",
-                                "of": {
-                                  "e": "get",
-                                  "field": "action",
-                                  "of": {
-                                    "e": "var",
-                                    "name": "event"
-                                  }
-                                }
-                              },
-                              {
-                                "e": "lit",
-                                "v": "call"
-                              }
-                            ],
-                            "e": "op",
-                            "op": "eq"
+                            "e": "lit",
+                            "v": "out"
                           }
                         ],
                         "e": "op",
-                        "op": "and"
+                        "op": "eq"
                       },
                       {
-                        "e": "get",
-                        "field": "performed",
-                        "of": {
-                          "e": "var",
-                          "name": "event"
-                        }
+                        "args": [
+                          {
+                            "e": "get",
+                            "field": "kind",
+                            "of": {
+                              "e": "get",
+                              "field": "action",
+                              "of": {
+                                "e": "var",
+                                "name": "event"
+                              }
+                            }
+                          },
+                          {
+                            "e": "lit",
+                            "v": "call"
+                          }
+                        ],
+                        "e": "op",
+                        "op": "eq"
                       }
                     ],
                     "e": "op",
@@ -442,10 +428,10 @@
               ],
               "kind": "counterexample"
             },
-            "property": "sha256:e14c086676f803a797f346bc88fc1ac30ade302bade53d412974affc4520ec6c",
+            "property": "sha256:7ebaff759052c11146032c74dc68ae8f7b4519a76f795ad09d5412bc2317894c",
             "verdict": "refuted"
           },
-          "key": "sha256:dbb03c35ff6f1e75a8e5c5ff2d225315958070f2663ddc6a3fa3088872b5a14c",
+          "key": "sha256:d5a2ce689ea507d5e220c14bebc5970c9c26c0061abda40ff7d180447babac9f",
           "kind": "evidence"
         }
       }
@@ -506,7 +492,7 @@
             ],
             "kind": "counterexample"
           },
-          "property": "sha256:e14c086676f803a797f346bc88fc1ac30ade302bade53d412974affc4520ec6c",
+          "property": "sha256:7ebaff759052c11146032c74dc68ae8f7b4519a76f795ad09d5412bc2317894c",
           "verdict": "refuted"
         },
         "harness": {
@@ -752,56 +738,42 @@
                       {
                         "args": [
                           {
-                            "args": [
-                              {
-                                "e": "get",
-                                "field": "kind",
-                                "of": {
-                                  "e": "var",
-                                  "name": "event"
-                                }
-                              },
-                              {
-                                "e": "lit",
-                                "v": "out"
-                              }
-                            ],
-                            "e": "op",
-                            "op": "eq"
+                            "e": "get",
+                            "field": "kind",
+                            "of": {
+                              "e": "var",
+                              "name": "event"
+                            }
                           },
                           {
-                            "args": [
-                              {
-                                "e": "get",
-                                "field": "kind",
-                                "of": {
-                                  "e": "get",
-                                  "field": "action",
-                                  "of": {
-                                    "e": "var",
-                                    "name": "event"
-                                  }
-                                }
-                              },
-                              {
-                                "e": "lit",
-                                "v": "call"
-                              }
-                            ],
-                            "e": "op",
-                            "op": "eq"
+                            "e": "lit",
+                            "v": "out"
                           }
                         ],
                         "e": "op",
-                        "op": "and"
+                        "op": "eq"
                       },
                       {
-                        "e": "get",
-                        "field": "performed",
-                        "of": {
-                          "e": "var",
-                          "name": "event"
-                        }
+                        "args": [
+                          {
+                            "e": "get",
+                            "field": "kind",
+                            "of": {
+                              "e": "get",
+                              "field": "action",
+                              "of": {
+                                "e": "var",
+                                "name": "event"
+                              }
+                            }
+                          },
+                          {
+                            "e": "lit",
+                            "v": "call"
+                          }
+                        ],
+                        "e": "op",
+                        "op": "eq"
                       }
                     ],
                     "e": "op",
@@ -1078,56 +1050,42 @@
                       {
                         "args": [
                           {
-                            "args": [
-                              {
-                                "e": "get",
-                                "field": "kind",
-                                "of": {
-                                  "e": "var",
-                                  "name": "event"
-                                }
-                              },
-                              {
-                                "e": "lit",
-                                "v": "out"
-                              }
-                            ],
-                            "e": "op",
-                            "op": "eq"
+                            "e": "get",
+                            "field": "kind",
+                            "of": {
+                              "e": "var",
+                              "name": "event"
+                            }
                           },
                           {
-                            "args": [
-                              {
-                                "e": "get",
-                                "field": "kind",
-                                "of": {
-                                  "e": "get",
-                                  "field": "action",
-                                  "of": {
-                                    "e": "var",
-                                    "name": "event"
-                                  }
-                                }
-                              },
-                              {
-                                "e": "lit",
-                                "v": "call"
-                              }
-                            ],
-                            "e": "op",
-                            "op": "eq"
+                            "e": "lit",
+                            "v": "out"
                           }
                         ],
                         "e": "op",
-                        "op": "and"
+                        "op": "eq"
                       },
                       {
-                        "e": "get",
-                        "field": "performed",
-                        "of": {
-                          "e": "var",
-                          "name": "event"
-                        }
+                        "args": [
+                          {
+                            "e": "get",
+                            "field": "kind",
+                            "of": {
+                              "e": "get",
+                              "field": "action",
+                              "of": {
+                                "e": "var",
+                                "name": "event"
+                              }
+                            }
+                          },
+                          {
+                            "e": "lit",
+                            "v": "call"
+                          }
+                        ],
+                        "e": "op",
+                        "op": "eq"
                       }
                     ],
                     "e": "op",
@@ -1251,10 +1209,10 @@
               "depth": 3,
               "kind": "bounded"
             },
-            "property": "sha256:e14c086676f803a797f346bc88fc1ac30ade302bade53d412974affc4520ec6c",
+            "property": "sha256:7ebaff759052c11146032c74dc68ae8f7b4519a76f795ad09d5412bc2317894c",
             "verdict": "holdsUpTo"
           },
-          "key": "sha256:3885aabdaa87f751de8eb71e606c43ef92a1a6a283fcfe3c3d0060a4cdcf4274",
+          "key": "sha256:1428da53cf30e166a14467601766029394d70561b53b41e086525fd2daf43b81",
           "kind": "evidence"
         }
       }
@@ -1456,56 +1414,42 @@
                       {
                         "args": [
                           {
-                            "args": [
-                              {
-                                "e": "get",
-                                "field": "kind",
-                                "of": {
-                                  "e": "var",
-                                  "name": "event"
-                                }
-                              },
-                              {
-                                "e": "lit",
-                                "v": "out"
-                              }
-                            ],
-                            "e": "op",
-                            "op": "eq"
+                            "e": "get",
+                            "field": "kind",
+                            "of": {
+                              "e": "var",
+                              "name": "event"
+                            }
                           },
                           {
-                            "args": [
-                              {
-                                "e": "get",
-                                "field": "kind",
-                                "of": {
-                                  "e": "get",
-                                  "field": "action",
-                                  "of": {
-                                    "e": "var",
-                                    "name": "event"
-                                  }
-                                }
-                              },
-                              {
-                                "e": "lit",
-                                "v": "call"
-                              }
-                            ],
-                            "e": "op",
-                            "op": "eq"
+                            "e": "lit",
+                            "v": "out"
                           }
                         ],
                         "e": "op",
-                        "op": "and"
+                        "op": "eq"
                       },
                       {
-                        "e": "get",
-                        "field": "performed",
-                        "of": {
-                          "e": "var",
-                          "name": "event"
-                        }
+                        "args": [
+                          {
+                            "e": "get",
+                            "field": "kind",
+                            "of": {
+                              "e": "get",
+                              "field": "action",
+                              "of": {
+                                "e": "var",
+                                "name": "event"
+                              }
+                            }
+                          },
+                          {
+                            "e": "lit",
+                            "v": "call"
+                          }
+                        ],
+                        "e": "op",
+                        "op": "eq"
                       }
                     ],
                     "e": "op",
@@ -1628,10 +1572,10 @@
               "kind": "exhaustive",
               "limit": 10000
             },
-            "property": "sha256:e14c086676f803a797f346bc88fc1ac30ade302bade53d412974affc4520ec6c",
+            "property": "sha256:7ebaff759052c11146032c74dc68ae8f7b4519a76f795ad09d5412bc2317894c",
             "verdict": "holds"
           },
-          "key": "sha256:70405a7340a5ab104f6ed676264bc2968a534edc7c8741ebec2865ca74326893",
+          "key": "sha256:cf2f4978f7e4d397153626ab5410a7c0a938219c9a6393e5958aab79e6713417",
           "kind": "evidence"
         }
       }
@@ -1686,7 +1630,7 @@
             "kind": "exhaustive",
             "limit": 10000
           },
-          "property": "sha256:e14c086676f803a797f346bc88fc1ac30ade302bade53d412974affc4520ec6c",
+          "property": "sha256:7ebaff759052c11146032c74dc68ae8f7b4519a76f795ad09d5412bc2317894c",
           "verdict": "holds"
         },
         "harness": {
@@ -1859,56 +1803,42 @@
                       {
                         "args": [
                           {
-                            "args": [
-                              {
-                                "e": "get",
-                                "field": "kind",
-                                "of": {
-                                  "e": "var",
-                                  "name": "event"
-                                }
-                              },
-                              {
-                                "e": "lit",
-                                "v": "out"
-                              }
-                            ],
-                            "e": "op",
-                            "op": "eq"
+                            "e": "get",
+                            "field": "kind",
+                            "of": {
+                              "e": "var",
+                              "name": "event"
+                            }
                           },
                           {
-                            "args": [
-                              {
-                                "e": "get",
-                                "field": "kind",
-                                "of": {
-                                  "e": "get",
-                                  "field": "action",
-                                  "of": {
-                                    "e": "var",
-                                    "name": "event"
-                                  }
-                                }
-                              },
-                              {
-                                "e": "lit",
-                                "v": "call"
-                              }
-                            ],
-                            "e": "op",
-                            "op": "eq"
+                            "e": "lit",
+                            "v": "out"
                           }
                         ],
                         "e": "op",
-                        "op": "and"
+                        "op": "eq"
                       },
                       {
-                        "e": "get",
-                        "field": "performed",
-                        "of": {
-                          "e": "var",
-                          "name": "event"
-                        }
+                        "args": [
+                          {
+                            "e": "get",
+                            "field": "kind",
+                            "of": {
+                              "e": "get",
+                              "field": "action",
+                              "of": {
+                                "e": "var",
+                                "name": "event"
+                              }
+                            }
+                          },
+                          {
+                            "e": "lit",
+                            "v": "call"
+                          }
+                        ],
+                        "e": "op",
+                        "op": "eq"
                       }
                     ],
                     "e": "op",

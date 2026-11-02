@@ -12,7 +12,7 @@ The kernel gives agent harnesses a formal semantics. A harness is a state machin
 - **Types**: structural, with records, lists and variants. A harness's input is a variant typed by its interface, which `match` reads case by case.
 - **Spawning**: a child runs against its parent's interface narrowed by combinators that can only drop, restrict or distrust. A child can never do what its parent couldn't. Cancelling the spawn revokes the child.
 - **Labels**: every value carries the untrusted sources it may depend on, including through control flow. Of an input, only what arrived (its `value`, or a failure's `error`) carries its sources: which call it answers is the interpreter's. Preconditions and properties can read them.
-- **Properties**: `□φ`, with `φ` in first-order past-time temporal logic over the events of a run. Every property is a safety property, monitored online or offline. Quantifier-free properties also have an incremental monitor (`monitorStart`, `monitorStep`) whose small state a host keeps between deliveries.
+- **Properties**: `□φ`, with `φ` in first-order past-time temporal logic over the events of a run, each read as a view with every field it can have (`view`) and checked against the harness and interface (`eventType`). Every property is a safety property, monitored online or offline. Quantifier-free properties also have an incremental monitor (`monitorStart`, `monitorStep`) whose small state a host keeps between deliveries.
 - **Evidence**: a verdict on a property, reached by the kernel itself:
   - by replaying a counterexample;
   - by searching every run to a depth;

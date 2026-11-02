@@ -34,6 +34,7 @@ use crate::property::{
     quantifier_free,
 };
 use crate::run::{Delivery, Event, InitError, Run, System, Withheld, WorldInput};
+use crate::view::view;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
@@ -219,10 +220,7 @@ fn kernel_version() -> String {
 }
 
 fn events_as_values(events: &[Event]) -> Vec<Value> {
-    events
-        .iter()
-        .map(|e| serde_json::to_value(e).unwrap_or(Value::Null))
-        .collect()
+    events.iter().map(view).collect()
 }
 
 fn start(subject: &Subject) -> Result<System, ProveError> {
@@ -479,7 +477,7 @@ pub fn certificate(
     alphabet: &Alphabet,
     limit: usize,
 ) -> Result<Vec<Configuration>, ProveError> {
-    let problems = check_property(&subject.property);
+    let problems = check_property(&subject.property, &subject.harness, &subject.interface);
     if !problems.is_empty() {
         return Err(ProveError::Property { problems });
     }
@@ -533,7 +531,7 @@ fn invariant(
 }
 
 fn verdict(subject: &Subject, method: &Method) -> Result<Verdict, ProveError> {
-    let problems = check_property(&subject.property);
+    let problems = check_property(&subject.property, &subject.harness, &subject.interface);
     if !problems.is_empty() {
         return Err(ProveError::Property { problems });
     }

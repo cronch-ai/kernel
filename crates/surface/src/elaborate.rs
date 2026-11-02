@@ -1944,7 +1944,7 @@ pub fn elaborate(
                         continue;
                     }
                 };
-                let problems = check_harness(&child, Some(&narrowed));
+                let problems = check_harness(&child, &narrowed);
                 if !problems.is_empty() {
                     cx.report(
                         harness.span,
@@ -2279,7 +2279,7 @@ pub fn elaborate(
         unhandled,
     };
     let harness = cx.generate(&plan, &lowered);
-    let problems = check_harness(&harness, Some(&interface));
+    let problems = check_harness(&harness, &interface);
     if !problems.is_empty() {
         return Err(vec![problem(file.name.span, What::Internal { problems })]);
     }
@@ -2304,7 +2304,7 @@ pub fn elaborate(
                     name: name.text.clone(),
                 },
             );
-        } else if let Some(p) = cx.property(name, body, &interface) {
+        } else if let Some(p) = cx.property(name, body, &harness, &interface) {
             properties.push(p);
         }
     }

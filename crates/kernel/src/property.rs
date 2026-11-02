@@ -6,14 +6,16 @@
 //! `once`, `historically`), which is what lets a property be checked as the trace grows, and lets it be monitored at
 //! runtime before it is proved.
 //!
-//! Atoms are expressions over `event` (the event at the current position, as data) and the variables quantifiers
+//! Atoms are expressions over `event` (the event at the current position, as `view` presents it) and the variables quantifiers
 //! bind. An atom that fails to evaluate (a field the event doesn't have) is false, so field access is guarded by a
 //! separate atom under `implies`, or by an `if`. Quantifiers are bounded by the trace: `exists x of e` ranges over the
 //! values `e` gave at the events so far, which is how a property connects a result to the call it answers.
 
 use crate::check::{Problem, check, infer};
+use crate::harness::{Harness, Interface};
 use crate::ir::{Expr, Type};
 use crate::labeled::{self, LValue};
+use crate::view::event_type;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -81,19 +83,30 @@ pub struct PropertyProblem {
     pub problem: Problem,
 }
 
-/// Problems with a property's atoms and quantifier bounds. Events are typed `Any`, as `δ`'s inputs are.
-pub fn check_property(property: &Property) -> Vec<PropertyProblem> {
+/// Problems with a property's atoms and quantifier bounds, in runs of this harness against this interface: `event`
+/// has the type `view::event_type` gives, and what a quantifier binds is `Any`.
+pub fn check_property(
+    property: &Property,
+    harness: &Harness,
+    interface: &Interface,
+) -> Vec<PropertyProblem> {
     let mut out = Vec::new();
-    check_formula(&property.always, "", &mut vec![], &mut out);
+    let event = event_type(harness, interface);
+    check_formula(&property.always, "", &event, &mut vec![], &mut out);
     out
 }
 
-fn check_formula(f: &Formula, at: &str, bound: &mut Vec<String>, out: &mut Vec<PropertyProblem>) {
+fn check_formula(
+    f: &Formula,
+    at: &str,
+    event: &Type,
+    bound: &mut Vec<String>,
+    out: &mut Vec<PropertyProblem>,
+) {
     let child = |s: &str| format!("{at}/{s}");
     let mut expr = |e: &Expr, at: String, bound: &Vec<String>, want: Option<Type>| {
-        let scope = std::iter::once("event".to_string())
-            .chain(bound.iter().cloned())
-            .map(|n| (n, Type::Any))
+        let scope = std::iter::once(("event".to_string(), event.clone()))
+            .chain(bound.iter().map(|n| (n.clone(), Type::Any)))
             .collect();
         let (_, problems) = match &want {
             Some(expected) => check(e, expected, scope),
@@ -109,23 +122,23 @@ fn check_formula(f: &Formula, at: &str, bound: &mut Vec<String>, out: &mut Vec<P
         Formula::Not { of }
         | Formula::Prev { of }
         | Formula::Once { of }
-        | Formula::Historically { of } => check_formula(of, &child("of"), bound, out),
+        | Formula::Historically { of } => check_formula(of, &child("of"), event, bound, out),
         Formula::And { of } | Formula::Or { of } => of
             .iter()
             .enumerate()
-            .for_each(|(i, g)| check_formula(g, &child(&format!("of/{i}")), bound, out)),
+            .for_each(|(i, g)| check_formula(g, &child(&format!("of/{i}")), event, bound, out)),
         Formula::Implies { condition, then } => {
-            check_formula(condition, &child("if"), bound, out);
-            check_formula(then, &child("then"), bound, out);
+            check_formula(condition, &child("if"), event, bound, out);
+            check_formula(then, &child("then"), event, bound, out);
         }
         Formula::Since { left, right } => {
-            check_formula(left, &child("left"), bound, out);
-            check_formula(right, &child("right"), bound, out);
+            check_formula(left, &child("left"), event, bound, out);
+            check_formula(right, &child("right"), event, bound, out);
         }
         Formula::Exists { var, of, body } | Formula::Forall { var, of, body } => {
             expr(of, child("of"), bound, None);
             bound.push(var.clone());
-            check_formula(body, &child("body"), bound, out);
+            check_formula(body, &child("body"), event, bound, out);
             bound.pop();
         }
     }

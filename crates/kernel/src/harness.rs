@@ -581,9 +581,9 @@ pub fn error_type() -> Type {
     }
 }
 
-/// Problems with a harness. Against an interface, its input has the type `input_type` gives; without one, it is
-/// typed `Any` and checked only when it arrives.
-pub fn check_harness(harness: &Harness, interface: Option<&Interface>) -> Vec<HarnessProblem> {
+/// Problems with a harness against an interface: its input has the type `input_type` gives, and its actions the type
+/// `action_type` gives.
+pub fn check_harness(harness: &Harness, interface: &Interface) -> Vec<HarnessProblem> {
     let mut problems = Vec::new();
     if !inhabits(&harness.init, &harness.state) {
         problems.push(HarnessProblem::Init {
@@ -591,20 +591,18 @@ pub fn check_harness(harness: &Harness, interface: Option<&Interface>) -> Vec<Ha
             got: harness.init.clone(),
         });
     }
-    if let Some(i) = interface {
-        for name in harness.spawns.keys() {
-            if i.operations.contains_key(&spawn_op(name)) {
-                problems.push(HarnessProblem::SpawnClash { name: name.clone() });
-            }
+    for name in harness.spawns.keys() {
+        if interface.operations.contains_key(&spawn_op(name)) {
+            problems.push(HarnessProblem::SpawnClash { name: name.clone() });
         }
     }
-    let input = interface.map_or(Type::Any, |i| input_type(harness, i));
+    let input = input_type(harness, interface);
     let scope = vec![
         ("state".to_string(), harness.state.clone()),
         ("input".to_string(), input),
     ];
     // The step is checked against its type, so the state it builds can hold variants.
-    let action = interface.map_or(Type::Any, |i| action_type(&harness.result, i));
+    let action = action_type(&harness.result, interface);
     let (_, found) = check(&harness.step, &step_type(&harness.state, &action), scope);
     for problem in found {
         problems.push(match problem {

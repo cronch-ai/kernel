@@ -248,6 +248,7 @@
             "name": "n"
           }
         },
+        "interface": {},
         "op": "checkHarness"
       },
       "response": {

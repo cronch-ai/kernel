@@ -135,7 +135,7 @@ property no_effect_without_approval:
   - `exists x in e: φ` and `forall x in e: φ` range over the values `e` gave at the events so far, as the kernel requires. The kernel only searches quantifier-free properties, so a quantified one is monitored, not proved.
   - Any other boolean expression is an atom over `event`.
 - **Event helpers** spell the common atoms. Each takes an operation or channel as a path from a capability (`approve.ask`) or a string. An optional condition reads what arrived:
-  - `called(op, cond)`: a performed call, with the arguments as `args`;
+  - `called(op, cond)`: a performed call (an `out` event), with the arguments as `args`;
   - `returned(op, cond)`: a result, as `value`;
   - `failed(op, cond)`: a failure, as `error`; and `refused(op)`;
   - `effect()`: a performed call that has an effect;

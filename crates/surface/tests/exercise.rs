@@ -103,7 +103,6 @@ fn p4() -> Value {
     let effect = atom(all(vec![
         eq(ev(&["kind"]), lit(json!("out"))),
         eq(ev(&["action", "kind"]), lit(json!("call"))),
-        ev(&["performed"]),
         ev(&["effect"]),
     ]));
     let interrupted = json!({ "f": "since", "left": not(user_says("stop", false)), "right": user_says("stop", true) });

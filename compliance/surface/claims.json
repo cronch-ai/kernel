@@ -4556,26 +4556,11 @@
                         "v": false
                       },
                       "then": {
-                        "cond": {
-                          "e": "get",
-                          "field": "performed",
-                          "of": {
-                            "e": "var",
-                            "name": "event"
-                          }
-                        },
-                        "e": "if",
-                        "else": {
-                          "e": "lit",
-                          "v": false
-                        },
-                        "then": {
-                          "e": "get",
-                          "field": "effect",
-                          "of": {
-                            "e": "var",
-                            "name": "event"
-                          }
+                        "e": "get",
+                        "field": "effect",
+                        "of": {
+                          "e": "var",
+                          "name": "event"
                         }
                       }
                     }
