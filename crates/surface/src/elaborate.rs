@@ -9,8 +9,9 @@
 //! `running`, `ok`, `failed`, `refused` or `skipped`) says which of the other fields mean anything. It is a record
 //! rather than a variant because the kernel has no expression that builds a value at a variant type. `value` is
 //! carried from slot to slot, never rebuilt from a literal, so it keeps the operation's output type throughout.
-//! `error` is the failure's error as text (`str`), or `"cancelled"`: a failure's error is `Any`, and a state that
-//! holds `Any` has no SMT sort, so no induction obligation could be written for it.
+//! `error` is the kind of the failure's error (`cancelled`, `child` or `world`), as text: what the world and a failed
+//! child say is `Any`, and a state that held it would have no SMT sort, so no induction obligation could be written for
+//! it.
 //!
 //! The generated step does three things, in order:
 //!
@@ -1566,7 +1567,7 @@ impl Cx<'_> {
                 (Input::Refused, _) => ("refused", None),
             };
             let error = if input == Input::Failed {
-                op("str", vec![get(var("@in"), "error")])
+                get(get(var("@in"), "error"), "kind")
             } else {
                 lit(json!(""))
             };
@@ -1591,7 +1592,7 @@ impl Cx<'_> {
             _ => get(slot(), "value"),
         };
         let error = match input {
-            Input::Failed => op("str", vec![get(var("@in"), "error")]),
+            Input::Failed => get(get(var("@in"), "error"), "kind"),
             _ => get(slot(), "error"),
         };
         let has = |k: &str| op("contains", vec![var("@kinds"), lit(json!(k))]);
@@ -1724,29 +1725,21 @@ impl Cx<'_> {
                 "refused".to_string(),
                 case(self.record(&ops, Input::Refused)),
             ),
+            ("failed".to_string(), case(self.record(&ops, Input::Failed))),
         ]);
         // Only the inputs the harness can use are named. An induction obligation drops the cases of the input that
-        // have no SMT sort, a failure's among them (its error is `Any`), and a step that named one would be refused.
+        // have no SMT sort, and a step that named one would be refused.
         if !streams.is_empty() {
             cases.insert("end".to_string(), case(ends));
         }
         if !receives.is_empty() {
             cases.insert("msg".to_string(), case(messages));
         }
-        let failures = let_(
-            "@in",
-            var("input"),
-            if_(
-                eq(get(var("input"), "kind"), lit(json!("failed"))),
-                self.record(&ops, Input::Failed),
-                var("state"),
-            ),
-        );
         let recorded = K::Match {
             of: Box::new(var("input")),
             on: "kind".to_string(),
             cases,
-            otherwise: Some(Box::new(failures)),
+            otherwise: Some(Box::new(var("state"))),
         };
         let step_fn = let_(
             "@state",

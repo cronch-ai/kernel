@@ -199,7 +199,7 @@ fn cancelling_a_spawn_revokes_the_child() {
     );
     let (system, events) = deliver_all(system, vec![act(json!({ "kind": "cancel", "call": 0 }))]);
     assert_eq!(shape(&events), ["in:msg", "out:cancel", "in:failed"]);
-    assert_eq!(events[2]["input"]["error"], json!({ "cancelled": true }));
+    assert_eq!(events[2]["input"]["error"], json!({ "kind": "cancelled" }));
     // The child is gone: its call's result has nowhere to go.
     let (_, events) = deliver_all(system, vec![to(vec![0], ret(0, json!(1)))]);
     assert_eq!(shape(&events), ["withheld:noSuchRun"]);

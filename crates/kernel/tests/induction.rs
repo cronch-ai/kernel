@@ -126,7 +126,10 @@ fn consecution_is_a_query_whose_counterexamples_the_kernel_checks() {
     );
     assert_eq!(out["kind"], "obligation", "{out}");
     assert_eq!(out["initiation"], json!(true));
-    assert_eq!(out["excluded"], json!(["failed", "ret.spawn"]));
+    assert_eq!(
+        out["excluded"],
+        json!(["failed.child", "failed.world", "ret.spawn"])
+    );
     assert_eq!(out["reads"][0], json!({ "Record": { "n": "Int" } }));
     let text = out["text"].as_str().unwrap();
     assert!(text.contains("(declare-const |q:state| |record:"), "{text}");

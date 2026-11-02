@@ -375,7 +375,7 @@
       "response": {
         "ok": true,
         "result": {
-          "excluded": ["failed", "ret.spawn"],
+          "excluded": ["failed.child", "failed.world", "ret.spawn"],
           "initiation": false,
           "kind": "obligation",
           "reads": [
@@ -401,6 +401,22 @@
             {
               "Variant": {
                 "cases": {
+                  "failed": {
+                    "Record": {
+                      "call": "Int",
+                      "error": {
+                        "Variant": {
+                          "cases": {
+                            "cancelled": {
+                              "Record": {}
+                            }
+                          },
+                          "tag": "kind"
+                        }
+                      },
+                      "op": "String"
+                    }
+                  },
                   "refused": {
                     "Record": {
                       "call": "Int",
@@ -417,7 +433,7 @@
               }
             }
           ],
-          "text": "; Consecution: sat exactly where the invariant holds of a state and fails after one step.\n; A model is a counterexample to induction for the kernel to check; unsat is not a verdict.\n; Inputs left out, whose types have no sort: failed, ret.spawn.\n(set-option :produce-models true)\n(set-logic ALL)\n\n; Records and variants.\n; A variant with the cases ok, waiting.\n(declare-datatype |variant:fda1d360| ((|variant:fda1d360#ok| (|variant:fda1d360#ok.value| Int)) (|variant:fda1d360#waiting|)))\n; {slot: <kind: ok: {value: Int} | waiting: {}>}\n(declare-datatype |record:a473073e| ((|record:a473073e| (|record:a473073e.slot| |variant:fda1d360|))))\n; A variant with the cases refused, start.\n(declare-datatype |variant:c74b9b78| ((|variant:c74b9b78#refused| (|variant:c74b9b78#refused.call| Int) (|variant:c74b9b78#refused.op| String)) (|variant:c74b9b78#start| (|variant:c74b9b78#start.value| Int))))\n\n; Definitions.\n; The invariant, of a state.\n(define-fun |def:invariant| ((|v:state| |record:a473073e|)) Bool (= (ite ((_ is |variant:fda1d360#ok|) (|record:a473073e.slot| |v:state|)) \"ok\" \"waiting\") \"ok\"))\n; The state the step gives.\n(define-fun |def:next| ((|v:state| |record:a473073e|) (|v:input| |variant:c74b9b78|)) |record:a473073e| (let ((|v:n| 1)) (let ((|v:next| (|record:a473073e| (|variant:fda1d360#ok| |v:n|)))) |v:next|)))\n\n; A counterexample to induction.\n(declare-const |q:state| |record:a473073e|)\n(declare-const |q:input| |variant:c74b9b78|)\n(assert (|def:invariant| |q:state|))\n(assert (not (|def:invariant| (|def:next| |q:state| |q:input|))))\n(check-sat)\n(get-value (|q:state| |q:input|))\n"
+          "text": "; Consecution: sat exactly where the invariant holds of a state and fails after one step.\n; A model is a counterexample to induction for the kernel to check; unsat is not a verdict.\n; Inputs left out, whose types have no sort: failed.child, failed.world, ret.spawn.\n(set-option :produce-models true)\n(set-logic ALL)\n\n; Records and variants.\n; A variant with the cases ok, waiting.\n(declare-datatype |variant:fda1d360| ((|variant:fda1d360#ok| (|variant:fda1d360#ok.value| Int)) (|variant:fda1d360#waiting|)))\n; {slot: <kind: ok: {value: Int} | waiting: {}>}\n(declare-datatype |record:a473073e| ((|record:a473073e| (|record:a473073e.slot| |variant:fda1d360|))))\n; A variant with the cases cancelled.\n(declare-datatype |variant:e5c32e86| ((|variant:e5c32e86#cancelled|)))\n; A variant with the cases failed, refused, start.\n(declare-datatype |variant:fa1fccf3| ((|variant:fa1fccf3#failed| (|variant:fa1fccf3#failed.call| Int) (|variant:fa1fccf3#failed.error| |variant:e5c32e86|) (|variant:fa1fccf3#failed.op| String)) (|variant:fa1fccf3#refused| (|variant:fa1fccf3#refused.call| Int) (|variant:fa1fccf3#refused.op| String)) (|variant:fa1fccf3#start| (|variant:fa1fccf3#start.value| Int))))\n\n; Definitions.\n; The invariant, of a state.\n(define-fun |def:invariant| ((|v:state| |record:a473073e|)) Bool (= (ite ((_ is |variant:fda1d360#ok|) (|record:a473073e.slot| |v:state|)) \"ok\" \"waiting\") \"ok\"))\n; The state the step gives.\n(define-fun |def:next| ((|v:state| |record:a473073e|) (|v:input| |variant:fa1fccf3|)) |record:a473073e| (let ((|v:n| 1)) (let ((|v:next| (|record:a473073e| (|variant:fda1d360#ok| |v:n|)))) |v:next|)))\n\n; A counterexample to induction.\n(declare-const |q:state| |record:a473073e|)\n(declare-const |q:input| |variant:fa1fccf3|)\n(assert (|def:invariant| |q:state|))\n(assert (not (|def:invariant| (|def:next| |q:state| |q:input|))))\n(check-sat)\n(get-value (|q:state| |q:input|))\n"
         }
       }
     }

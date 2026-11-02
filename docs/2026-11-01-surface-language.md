@@ -143,7 +143,7 @@ property no_effect_without_approval:
 - **Node helpers** read the slots in the state each event carries: `ok(saved)`, `failed(saved)`, `refused(saved)`, `skipped(saved)`, `running(saved)` and `waiting(saved)`. A node's name in an atom is its slot, so `saved.value` and `saved.kind` read it. This is what decision 6 allows. Slots are read only at the root run's own steps, so an atom that reads one is false at every other event.
 - **Guards are explicit.** An atom that fails to evaluate is false as a whole. So each helper is an atom of its own, with its field reads behind `if`s, and one helper's missing field can't falsify another. That is gap 5 of the design session.
 - **`invariant name: expr`** over node slots, and the parameter, becomes an expression over the generated state, for an invariant certificate or an induction obligation. With one slot per node, the invariants worth stating are short, such as "`saved` never runs unless `decision` returned something other than `deny`".
-  - An obligation needs a state with no `Any` in it. That is why a slot's `error` holds the failure's error as text, and why the generated step names only the inputs the harness can use, and handles failures in its `otherwise`, which an obligation can leave out.
+  - An obligation needs a state with no `Any` in it. That is why a slot's `error` holds only the kind of the failure, as text, and why the generated step names only the inputs the harness can use.
   - A harness that spawns still has an `Any` in its state, the child's result, so it gets no obligation until the kernel types spawn results. See [Removing `Any`](2026-11-02-removing-any.md).
 
 ### Source maps (S3)
@@ -159,7 +159,7 @@ property no_effect_without_approval:
 - **The generated state** is a record:
   - `arg`, the start value;
   - `next`, the call counter;
-  - `nodes`, a record with one slot per call or receive node. A slot is a record `{kind, call, value, error}`, with `error` as text. `kind` is `waiting`, `running`, `ok`, `failed`, `refused` or `skipped`, and says which of the other fields mean anything. `value` is the operation's output, a stream's items as a list, or the message.
+  - `nodes`, a record with one slot per call or receive node. A slot is a record `{kind, call, value, error}`, with `error` as text: the kind of the failure (`cancelled`, `child` or `world`). `kind` is `waiting`, `running`, `ok`, `failed`, `refused` or `skipped`, and says which of the other fields mean anything. `value` is the operation's output, a stream's items as a list, or the message.
   - A slot is a record rather than a variant. When S1 was written, the kernel had no expression that builds a value at a variant type. Since A1 it has, but slots stay records (decided on 2026-11-02): as a variant, every read of a slot's `call` or `value`, in the generated step and in properties, would become a `match`, and what a property reads of a slot would change, for no gain in what can be proved. `value` is carried from slot to slot, never rebuilt from a literal, so it keeps its type in every branch.
 - **The generated `δ`** is one pass:
   1. **Record:** `start` stores `arg`. `ret`, `failed` or `refused` for call `k` settles the slot running `k`; on a stream, `ret` appends an item and `end` settles it. A message settles every receive listening on its channel whose filter it passes. An input for a call no slot is running (only possible after a cancel) changes nothing.

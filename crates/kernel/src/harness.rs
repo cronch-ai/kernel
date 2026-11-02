@@ -496,7 +496,7 @@ pub fn input_type(harness: &Harness, interface: &Interface) -> Type {
     let called = || record(vec![("call", Type::Int), ("op", Type::String)]);
     let mut failed = called();
     if let Type::Record(fields) = &mut failed {
-        fields.insert("error".to_string(), Type::Any);
+        fields.insert("error".to_string(), error_type());
     }
     variant(
         "kind",
@@ -512,6 +512,29 @@ pub fn input_type(harness: &Harness, interface: &Interface) -> Type {
             ("msg".to_string(), variant("channel", messages)),
         ]),
     )
+}
+
+/// Why a call or a child failed, a variant over `kind`: `cancelled`, made by the interpreter when a harness cancels a
+/// child; `child`, a child run that failed, with its step error; `world`, what the world said about a call it couldn't
+/// complete. What the world and a failed child say is `Any` until it can be `Json`, so an induction obligation still
+/// leaves those two cases out, but no longer the whole of a failure.
+pub fn error_type() -> Type {
+    let record = |fields: Vec<(&str, Type)>| {
+        Type::Record(
+            fields
+                .into_iter()
+                .map(|(n, t)| (n.to_string(), t))
+                .collect(),
+        )
+    };
+    Type::Variant {
+        tag: "kind".to_string(),
+        cases: BTreeMap::from([
+            ("cancelled".to_string(), record(vec![])),
+            ("child".to_string(), record(vec![("error", Type::Any)])),
+            ("world".to_string(), record(vec![("detail", Type::Any)])),
+        ]),
+    }
 }
 
 /// Problems with a harness. Against an interface, its input has the type `input_type` gives; without one, it is

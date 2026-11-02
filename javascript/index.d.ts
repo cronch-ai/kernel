@@ -302,8 +302,15 @@ export type WorldInput =
   | { readonly kind: "start"; readonly value: Value; readonly label?: Label }
   | { readonly kind: "ret"; readonly call: number; readonly value: Value }
   | { readonly kind: "end"; readonly call: number }
+  /** `δ` receives `error` as `{ kind: "world", detail: error }`: see `CallError`. */
   | { readonly kind: "failed"; readonly call: number; readonly error: Value }
   | { readonly kind: "msg"; readonly channel: string; readonly value: Value };
+
+/** Why a call or a child failed, as `δ` receives it. */
+export type CallError =
+  | { readonly kind: "cancelled" }
+  | { readonly kind: "child"; readonly error: StepError }
+  | { readonly kind: "world"; readonly detail: Value };
 
 /** An input from the world, to the run at `to` (a path of spawn identifiers; `[]` is the root). */
 export interface Delivery {
