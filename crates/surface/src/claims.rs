@@ -9,7 +9,7 @@
 //! the others.
 //!
 //! In a property or an invariant, a call node's name is its slot, `{kind, call, value, error}`, which the language
-//! defines (decision 6 of the plan). A property reads slots from the state each event carries, and only at the root
+//! defines (decision 6 of the plan), and a carried value's name is its value in the current round. A property reads slots from the state each event carries, and only at the root
 //! run's own steps: at any other event, an atom that reads a slot is false.
 
 use crate::What;
@@ -59,7 +59,7 @@ fn at_root_step() -> Vec<K> {
 }
 
 /// Whether `k` reads the variable `name` anywhere, shadowed or not: enough to know whether to bind it.
-fn mentions(k: &K, name: &str) -> bool {
+pub(crate) fn mentions(k: &K, name: &str) -> bool {
     match k {
         K::Lit { .. } => false,
         K::Var { name: n } => n == name,
@@ -156,7 +156,9 @@ impl Cx<'_> {
         }
         let mut body = self.lower(e, &mut scope);
         let param = self.file.param.text.clone();
-        let reads_state = !slots.is_empty() || mentions(&body, "@nodes") || mentions(&body, &param);
+        let carried = self.carries.iter().any(|(c, _)| mentions(&body, c));
+        let reads_state =
+            !slots.is_empty() || carried || mentions(&body, "@nodes") || mentions(&body, &param);
         for &n in slots.iter().rev() {
             body = let_(
                 self.node_name(n),
@@ -165,6 +167,7 @@ impl Cx<'_> {
             );
         }
         if reads_state {
+            body = self.carried_from(&ev(&["state"]), body);
             body = let_(&param, ev(&["state", "arg"]), body);
             body = let_("@nodes", ev(&["state", "nodes"]), body);
         }
@@ -427,6 +430,7 @@ impl Cx<'_> {
             );
         }
         let param = self.file.param.text.clone();
+        expr = self.carried_from(&var("state"), expr);
         expr = let_(&param, get(var("state"), "arg"), expr);
         expr = let_("@nodes", get(var("state"), "nodes"), expr);
         let t = self.type_of(&expr, body.span, &[("state".to_string(), state.clone())]);

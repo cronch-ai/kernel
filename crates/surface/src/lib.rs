@@ -152,6 +152,19 @@ pub enum What {
     OtherwiseReadsNode {
         node: String,
     },
+    /// A carried value's start reads something other than the parameter.
+    CarryReads {
+        name: String,
+    },
+    /// `next` names something that isn't a carried value.
+    NotACarry {
+        name: String,
+    },
+    /// `next` in a harness whose `return` has no `when`, so it never reaches a second round.
+    NextWithoutLoop,
+    /// A round that stalls would end the run with `{"failed": "round"}`, which the result type doesn't admit, and there
+    /// is no `otherwise` to say what to halt with instead.
+    RoundNeedsOtherwise,
     /// The kernel's type checker found a problem in an expression.
     Type {
         problem: Box<kernel::check::Problem>,

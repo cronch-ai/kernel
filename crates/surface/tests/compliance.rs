@@ -93,6 +93,28 @@ return d
 otherwise return -1
 ";
 
+const LOOP: &str = "\
+harness climb(goal: Int) -> Int
+uses m = \"math\"
+carry total: Int = 0
+step = m.double(n: total + 1)
+more = perform {kind: \"call\", op: \"m.double\", args: {n: step}}
+got  = match more { ok(v) => if v is Int as i then i else 0, _ => 0 }
+next total = total + got
+return total when total >= goal
+otherwise return total
+";
+
+const BROKEN_LOOP: &str = "\
+harness broken(goal: Int) -> Int
+uses m = \"math\"
+carry total: Int = goal
+step = m.double(n: total)
+next goal = step
+return total
+otherwise return 0
+";
+
 fn platform() -> Value {
     json!({ "model": fixture("model"), "approve": fixture("approve"), "notes": fixture("notes") })
 }
@@ -146,6 +168,11 @@ fn cases() -> Vec<Case> {
             "json",
             "A Json argument read only after testing it against a type.",
             || vec![elaborate(PICK, math())],
+        ),
+        (
+            "loops",
+            "A harness that goes round, carrying a total and performing a call chosen at run time, and a loop with problems.",
+            || vec![elaborate(LOOP, math()), elaborate(BROKEN_LOOP, math())],
         ),
         (
             "spawn",
