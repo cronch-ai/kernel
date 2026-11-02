@@ -68,13 +68,9 @@ pub enum NoReading {
     Unchecked,
     /// An operator with no registered reading.
     Operator { op: String },
-    /// A list used as a list of another element type: SMT-LIB has no map over sequences.
-    ListConversion { from: Type, to: Type },
     /// Equality the kernel decides on JSON values, which may hold more than their type says (a record's undeclared
     /// fields, a float's integer encoding).
     Equality { left: Type, right: Type },
-    /// `str` of a value the kernel writes as JSON text.
-    Text { of: Type },
     /// A fold: it runs once per item of a list whose length a solver doesn't know.
     Fold,
     /// A label: an export reads values, not their provenance.

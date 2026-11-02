@@ -274,6 +274,9 @@ pub struct Encoder {
     floats: Floats,
     /// Whether `Json`'s datatypes and functions are used, and so declared.
     json: bool,
+    /// Functions the encoding declares as it needs them, by name, each after the ones it calls: maps over sequences,
+    /// and the text of values `str` writes as JSON.
+    helpers: Vec<(String, Entry)>,
 }
 
 impl Encoder {
@@ -286,6 +289,7 @@ impl Encoder {
             defined: Vec::new(),
             floats: Floats::Exact,
             json: false,
+            helpers: Vec::new(),
         }
     }
 
@@ -437,6 +441,151 @@ impl Encoder {
         Ok((chained, field_ty))
     }
 
+    /// A function from a sequence of `from` to the sequence of each item's image at `to`, which `image` gives of the
+    /// item `x`. Declared on first use, after any function `image` uses.
+    fn map(
+        &mut self,
+        kind: &str,
+        from: &Type,
+        to: &Type,
+        image: impl FnOnce(&mut Self, Term) -> Read<Term>,
+    ) -> Read<Term> {
+        let name = format!("{kind}.{}", short_hash(&json!([kind, from, to])));
+        let f = Term::symbol("map:", &name)?;
+        if self.helpers.iter().any(|(n, _)| *n == name) {
+            return Ok(f);
+        }
+        let (from_seq, to_seq) = (
+            self.sort(&Type::List(Box::new(from.clone())))?,
+            self.sort(&Type::List(Box::new(to.clone())))?,
+        );
+        let s = Term::atom("s");
+        let len = Term::call("seq.len", vec![s.clone()]);
+        let first = image(
+            self,
+            Term::call("seq.nth", vec![s.clone(), Term::atom("0")]),
+        )?;
+        let rest = Term::call(
+            "seq.extract",
+            vec![
+                s.clone(),
+                Term::atom("1"),
+                Term::call("-", vec![len.clone(), Term::atom("1")]),
+            ],
+        );
+        let body = Term::call(
+            "ite",
+            vec![
+                Term::call("=", vec![len, Term::atom("0")]),
+                Term::List(vec![
+                    Term::atom("as"),
+                    Term::atom("seq.empty"),
+                    to_seq.clone(),
+                ]),
+                Term::call(
+                    "seq.++",
+                    vec![
+                        Term::call("seq.unit", vec![first]),
+                        Term::app(f.clone(), vec![rest]),
+                    ],
+                ),
+            ],
+        );
+        self.declare_map(
+            name,
+            format!(
+                "Each item of a {} as {}.",
+                describe(&Type::List(Box::new(from.clone()))),
+                describe(to)
+            ),
+            (f.clone(), vec![(s, from_seq)], to_seq, body),
+        );
+        Ok(f)
+    }
+
+    /// A function saying whether `holds`, given of an item `x`, holds of every item of a sequence of `Json`.
+    fn every(
+        &mut self,
+        item: &Type,
+        holds: impl FnOnce(&mut Self, Term) -> Read<Term>,
+    ) -> Read<Term> {
+        let name = format!("is.{}", short_hash(&json!(["is", item])));
+        let f = Term::symbol("map:", &name)?;
+        if self.helpers.iter().any(|(n, _)| *n == name) {
+            return Ok(f);
+        }
+        let seq = self.sort(&Type::List(Box::new(Type::Json)))?;
+        let s = Term::atom("s");
+        let len = Term::call("seq.len", vec![s.clone()]);
+        let first = holds(
+            self,
+            Term::call("seq.nth", vec![s.clone(), Term::atom("0")]),
+        )?;
+        let rest = Term::call(
+            "seq.extract",
+            vec![
+                s.clone(),
+                Term::atom("1"),
+                Term::call("-", vec![len.clone(), Term::atom("1")]),
+            ],
+        );
+        let body = Term::call(
+            "or",
+            vec![
+                Term::call("=", vec![len, Term::atom("0")]),
+                Term::call("and", vec![first, Term::app(f.clone(), vec![rest])]),
+            ],
+        );
+        self.declare_map(
+            name,
+            format!(
+                "Whether every item of a List(Json) is a {}.",
+                describe(item)
+            ),
+            (f.clone(), vec![(s, seq)], Term::atom("Bool"), body),
+        );
+        Ok(f)
+    }
+
+    fn declare_map(
+        &mut self,
+        name: String,
+        comment: String,
+        function: (Term, Vec<(Term, Term)>, Term, Term),
+    ) {
+        let entry = Entry {
+            comments: vec![comment],
+            command: Some(Command::DefineFunsRec {
+                functions: vec![function],
+            }),
+        };
+        self.helpers.push((name, entry));
+    }
+
+    /// The JSON text `str` writes of a value of `ty`, as a function the solver chooses: SMT-LIB can't write JSON. So a
+    /// model that reads it is a candidate the kernel re-checks, and an `unsat` that rests on it says nothing. There is
+    /// one per type, so `str(1)` and `str(1.0)` may differ, as they do in the kernel.
+    fn text(&mut self, ty: &Type) -> Read<Term> {
+        let name = format!("text.{}", short_hash(&json!(["text", ty])));
+        let f = Term::symbol("fn:", &name)?;
+        if !self.helpers.iter().any(|(n, _)| *n == name) {
+            let sort = self.sort(ty)?;
+            let entry = Entry {
+                comments: vec![format!(
+                    "The JSON text of a {}, unconstrained: what a solver finds with it, the kernel re-checks.",
+                    describe(ty)
+                )],
+                command: Some(Command::DeclareFun {
+                    name: f.clone(),
+                    params: vec![sort],
+                    sort: Term::atom("String"),
+                }),
+            };
+            self.helpers.push((name, entry));
+        }
+        Ok(f)
+    }
+
     fn constructor(&mut self, fields: &BTreeMap<String, Type>) -> Read<Term> {
         let name = self.record(fields)?;
         Term::symbol("", &name)
@@ -534,10 +683,10 @@ impl Encoder {
                 let constructor = self.constructor(want)?;
                 Ok(Term::bind(r, term, Term::app(constructor, fields)))
             }
-            (Type::List(_), Type::List(_)) => Err(NoReading::ListConversion {
-                from: from.clone(),
-                to: to.clone(),
-            }),
+            (Type::List(a), Type::List(b)) => {
+                let f = self.map("coerce", a, b, |e, x| e.coerce(x, a, b))?;
+                Ok(Term::app(f, vec![term]))
+            }
             (_, Type::Json) => self.json_of(term, from),
             _ => Err(NoReading::Unchecked),
         }
@@ -588,10 +737,10 @@ impl Encoder {
             Type::String => json::wrap("string", term),
             Type::Bool => json::wrap("bool", term),
             Type::List(item) if **item == Type::Json => json::wrap("list", term),
-            Type::List(_) => Err(NoReading::ListConversion {
-                from: from.clone(),
-                to: Type::Json,
-            }),
+            Type::List(item) => {
+                let f = self.map("json", item, &Type::Json, |e, x| e.json_of(x, item))?;
+                json::wrap("list", Term::app(f, vec![term]))
+            }
             Type::Record(_) | Type::Variant { .. } => {
                 let x = self.fresh();
                 let mut cases = self.json_cases(x.clone(), from)?;
@@ -691,11 +840,13 @@ impl Encoder {
                 Term::call("and", vec![json::tester("number", j.clone())?, integral])
             }
             Type::List(item) if **item == Type::Json => json::tester("list", j)?,
-            Type::List(_) => {
-                return Err(NoReading::ListConversion {
-                    from: Type::List(Box::new(Type::Json)),
-                    to: ty.clone(),
-                });
+            Type::List(item) => {
+                let f = self.every(item, |e, x| e.json_is(item, x))?;
+                let items = json::select("list.v", j.clone())?;
+                Term::call(
+                    "and",
+                    vec![json::tester("list", j)?, Term::app(f, vec![items])],
+                )
             }
             Type::Record(fields) => {
                 let r = json::select("record.v", j.clone())?;
@@ -755,10 +906,10 @@ impl Encoder {
                 Floats::Real => Term::call("to_int", vec![number()?]),
             }),
             Type::List(item) if **item == Type::Json => json::select("list.v", j),
-            Type::List(_) => Err(NoReading::ListConversion {
-                from: Type::List(Box::new(Type::Json)),
-                to: ty.clone(),
-            }),
+            Type::List(item) => {
+                let f = self.map("read", &Type::Json, item, |e, x| e.json_as(item, x))?;
+                Ok(Term::app(f, vec![json::select("list.v", j)?]))
+            }
             Type::Record(fields) => {
                 let r = json::select("record.v", j)?;
                 let constructor = self.constructor(fields)?;
@@ -1336,7 +1487,7 @@ impl Encoder {
                             Term::call("ite", vec![negative, minus, digits(n)]),
                         )
                     }
-                    other => return Err(NoReading::Text { of: other.clone() }),
+                    other => Term::app(self.text(other)?, vec![term]),
                 }
             }
             Reading::Prefix | Reading::Contains => {
@@ -1497,6 +1648,7 @@ impl Encoder {
             };
             records.push(entry);
         }
+        records.extend(self.helpers.iter().map(|(_, entry)| entry.clone()));
         Ok(Section {
             heading: "Records and variants.",
             entries: records,

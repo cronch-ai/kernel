@@ -255,3 +255,86 @@ fn action_is_what_the_interface_it_runs_against_allows() {
     );
     assert_eq!(out["kind"], "obligation", "{out}");
 }
+
+/// One definition as SMT-LIB text, which must export.
+fn exported(params: Value, body: Value, result: Option<Value>) -> String {
+    let mut definition = json!({ "name": "f", "params": params, "body": body });
+    if let Some(r) = result {
+        definition["result"] = r;
+    }
+    let out = call(json!({ "op": "smtlib", "definitions": [definition] }));
+    assert_eq!(out["kind"], "exported", "{out}");
+    out["text"].as_str().unwrap().to_string()
+}
+
+#[test]
+fn lists_are_read_as_json_item_by_item() {
+    let ints = json!({ "List": "Int" });
+    let declared = |text: &str, kind: &str| {
+        text.matches(&format!("(define-funs-rec ((|map:{kind}."))
+            .count()
+    };
+    // A list of Int as Json, through a map declared once however often it is used.
+    let as_json =
+        |xs: Value| json!({ "e": "let", "name": "j", "type": "Json", "be": xs, "in": var("j") });
+    let text = exported(
+        json!([{ "name": "xs", "type": ints }]),
+        rec(vec![("a", as_json(var("xs"))), ("b", as_json(var("xs")))]),
+        None,
+    );
+    assert_eq!(declared(&text, "json"), 1, "{text}");
+    assert!(text.contains("(|json:list| (|map:json."), "{text}");
+
+    // Json tested against, then read at, a list of Int.
+    let text = exported(
+        json!([{ "name": "j", "type": "Json" }]),
+        is_type(var("j"), ints.clone(), "xs", var("xs"), list(vec![])),
+        Some(ints.clone()),
+    );
+    assert_eq!(declared(&text, "is"), 1, "{text}");
+    assert_eq!(declared(&text, "read"), 1, "{text}");
+
+    // A list of Int where a list of Float is wanted.
+    let text = exported(
+        json!([{ "name": "xs", "type": ints.clone() }]),
+        var("xs"),
+        Some(json!({ "List": "Float" })),
+    );
+    assert_eq!(declared(&text, "coerce"), 1, "{text}");
+
+    // A list of lists: the inner map is declared before the outer one, which calls it.
+    let text = exported(
+        json!([{ "name": "xss", "type": { "List": ints } }]),
+        as_json(var("xss")),
+        None,
+    );
+    assert_eq!(declared(&text, "json"), 2, "{text}");
+    let first = text.find("(define-funs-rec ((|map:json.").unwrap();
+    let outer = text.rfind("(define-funs-rec ((|map:json.").unwrap();
+    let inner_name = &text[first + "(define-funs-rec ((".len()..]
+        .split_whitespace()
+        .next()
+        .unwrap()
+        .to_string();
+    assert!(text[outer..].contains(inner_name.as_str()), "{text}");
+}
+
+#[test]
+fn the_text_of_a_value_is_unconstrained_but_per_type() {
+    let text = exported(
+        json!([
+            { "name": "r", "type": { "Record": { "a": "Int" } } },
+            { "name": "j", "type": "Json" },
+        ]),
+        rec(vec![
+            ("r", op("str", vec![var("r")])),
+            ("again", op("str", vec![var("r")])),
+            ("j", op("str", vec![var("j")])),
+            ("n", op("str", vec![lit(json!(3))])),
+        ]),
+        None,
+    );
+    // One function for the record type and one for Json; an Int's text is exact.
+    assert_eq!(text.matches("(declare-fun |fn:text.").count(), 2, "{text}");
+    assert!(text.contains("str.from_int"), "{text}");
+}

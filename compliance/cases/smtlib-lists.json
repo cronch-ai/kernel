@@ -1,0 +1,125 @@
+{
+  "description": "Lists read as Json, tested and read back item by item, and the text of a record, which a solver chooses.",
+  "exchanges": [
+    {
+      "request": {
+        "definitions": [
+          {
+            "body": {
+              "be": {
+                "e": "var",
+                "name": "xs"
+              },
+              "e": "let",
+              "in": {
+                "e": "var",
+                "name": "j"
+              },
+              "name": "j",
+              "type": "Json"
+            },
+            "name": "wrap",
+            "params": [
+              {
+                "name": "xs",
+                "type": {
+                  "List": "Int"
+                }
+              }
+            ]
+          }
+        ],
+        "op": "smtlib"
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "kind": "exported",
+          "text": "; Exported from Cronch. Each definition's identity is the content key of its deterministic CBOR, not this text.\n(set-logic ALL)\n\n; Records and variants.\n; JSON values: a record is a chain of fields.\n(declare-datatypes ((|json:Json| 0) (|json:Fields| 0)) (((|json:null|) (|json:bool| (|json:bool.v| Bool)) (|json:number| (|json:number.v| Float64)) (|json:string| (|json:string.v| String)) (|json:list| (|json:list.v| (Seq |json:Json|))) (|json:record| (|json:record.v| |json:Fields|))) ((|json:end|) (|json:field| (|json:field.key| String) (|json:field.value| |json:Json|) (|json:field.rest| |json:Fields|)))))\n; Whether a record has a field, and its value (null if it has none).\n(define-funs-rec ((|json:has| ((f |json:Fields|) (k String)) Bool) (|json:get| ((f |json:Fields|) (k String)) |json:Json|)) ((ite ((_ is |json:field|) f) (or (= (|json:field.key| f) k) (|json:has| (|json:field.rest| f) k)) false) (ite ((_ is |json:field|) f) (ite (= (|json:field.key| f) k) (|json:field.value| f) (|json:get| (|json:field.rest| f) k)) |json:null|)))\n; Whether a term is a value the kernel could hold: finite numbers, and each record's keys once.\n(define-funs-rec ((|json:ok| ((j |json:Json|)) Bool) (|json:ok.items| ((s (Seq |json:Json|))) Bool) (|json:ok.fields| ((f |json:Fields|)) Bool)) ((and (ite ((_ is |json:number|) j) (not (or (fp.isNaN (|json:number.v| j)) (fp.isInfinite (|json:number.v| j)))) true) (ite ((_ is |json:list|) j) (|json:ok.items| (|json:list.v| j)) true) (ite ((_ is |json:record|) j) (|json:ok.fields| (|json:record.v| j)) true)) (ite (= (seq.len s) 0) true (and (|json:ok| (seq.nth s 0)) (|json:ok.items| (seq.extract s 1 (- (seq.len s) 1))))) (ite ((_ is |json:field|) f) (and (|json:ok| (|json:field.value| f)) (not (|json:has| (|json:field.rest| f) (|json:field.key| f))) (|json:ok.fields| (|json:field.rest| f))) true)))\n; Each item of a List(Int) as Json.\n(define-funs-rec ((|map:json.3256407d| ((s (Seq Int))) (Seq |json:Json|))) ((ite (= (seq.len s) 0) (as seq.empty (Seq |json:Json|)) (seq.++ (seq.unit (|json:number| ((_ to_fp 11 53) RNE (to_real (seq.nth s 0))))) (|map:json.3256407d| (seq.extract s 1 (- (seq.len s) 1)))))))\n\n; Definitions.\n(define-fun |def:wrap| ((|v:xs| (Seq Int))) |json:Json| (let ((|v:j| (|json:list| (|map:json.3256407d| |v:xs|)))) |v:j|))\n"
+        }
+      }
+    },
+    {
+      "request": {
+        "definitions": [
+          {
+            "body": {
+              "bind": "xs",
+              "e": "is",
+              "else": {
+                "e": "list",
+                "items": []
+              },
+              "of": {
+                "e": "var",
+                "name": "j"
+              },
+              "then": {
+                "e": "var",
+                "name": "xs"
+              },
+              "type": {
+                "List": "Int"
+              }
+            },
+            "name": "read",
+            "params": [
+              {
+                "name": "j",
+                "type": "Json"
+              }
+            ],
+            "result": {
+              "List": "Int"
+            }
+          }
+        ],
+        "op": "smtlib"
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "kind": "exported",
+          "text": "; Exported from Cronch. Each definition's identity is the content key of its deterministic CBOR, not this text.\n(set-logic ALL)\n\n; Records and variants.\n; JSON values: a record is a chain of fields.\n(declare-datatypes ((|json:Json| 0) (|json:Fields| 0)) (((|json:null|) (|json:bool| (|json:bool.v| Bool)) (|json:number| (|json:number.v| Float64)) (|json:string| (|json:string.v| String)) (|json:list| (|json:list.v| (Seq |json:Json|))) (|json:record| (|json:record.v| |json:Fields|))) ((|json:end|) (|json:field| (|json:field.key| String) (|json:field.value| |json:Json|) (|json:field.rest| |json:Fields|)))))\n; Whether a record has a field, and its value (null if it has none).\n(define-funs-rec ((|json:has| ((f |json:Fields|) (k String)) Bool) (|json:get| ((f |json:Fields|) (k String)) |json:Json|)) ((ite ((_ is |json:field|) f) (or (= (|json:field.key| f) k) (|json:has| (|json:field.rest| f) k)) false) (ite ((_ is |json:field|) f) (ite (= (|json:field.key| f) k) (|json:field.value| f) (|json:get| (|json:field.rest| f) k)) |json:null|)))\n; Whether a term is a value the kernel could hold: finite numbers, and each record's keys once.\n(define-funs-rec ((|json:ok| ((j |json:Json|)) Bool) (|json:ok.items| ((s (Seq |json:Json|))) Bool) (|json:ok.fields| ((f |json:Fields|)) Bool)) ((and (ite ((_ is |json:number|) j) (not (or (fp.isNaN (|json:number.v| j)) (fp.isInfinite (|json:number.v| j)))) true) (ite ((_ is |json:list|) j) (|json:ok.items| (|json:list.v| j)) true) (ite ((_ is |json:record|) j) (|json:ok.fields| (|json:record.v| j)) true)) (ite (= (seq.len s) 0) true (and (|json:ok| (seq.nth s 0)) (|json:ok.items| (seq.extract s 1 (- (seq.len s) 1))))) (ite ((_ is |json:field|) f) (and (|json:ok| (|json:field.value| f)) (not (|json:has| (|json:field.rest| f) (|json:field.key| f))) (|json:ok.fields| (|json:field.rest| f))) true)))\n; Whether every item of a List(Json) is a Int.\n(define-funs-rec ((|map:is.0a75c678| ((s (Seq |json:Json|))) Bool)) ((or (= (seq.len s) 0) (and (and ((_ is |json:number|) (seq.nth s 0)) (and (not (fp.isInfinite (|json:number.v| (seq.nth s 0)))) (fp.eq (fp.roundToIntegral RNE (|json:number.v| (seq.nth s 0))) (|json:number.v| (seq.nth s 0))))) (|map:is.0a75c678| (seq.extract s 1 (- (seq.len s) 1)))))))\n; Each item of a List(Json) as Int.\n(define-funs-rec ((|map:read.116f5629| ((s (Seq |json:Json|))) (Seq Int))) ((ite (= (seq.len s) 0) (as seq.empty (Seq Int)) (seq.++ (seq.unit (to_int (fp.to_real (|json:number.v| (seq.nth s 0))))) (|map:read.116f5629| (seq.extract s 1 (- (seq.len s) 1)))))))\n\n; Definitions.\n(define-fun |def:read| ((|v:j| |json:Json|)) (Seq Int) (let ((|c:1| |v:j|)) (ite (and ((_ is |json:list|) |c:1|) (|map:is.0a75c678| (|json:list.v| |c:1|))) (let ((|v:xs| (|map:read.116f5629| (|json:list.v| |c:1|)))) |v:xs|) (as seq.empty (Seq Int)))))\n"
+        }
+      }
+    },
+    {
+      "request": {
+        "definitions": [
+          {
+            "body": {
+              "args": [
+                {
+                  "e": "var",
+                  "name": "r"
+                }
+              ],
+              "e": "op",
+              "op": "str"
+            },
+            "name": "text",
+            "params": [
+              {
+                "name": "r",
+                "type": {
+                  "Record": {
+                    "a": "Int"
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "op": "smtlib"
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "kind": "exported",
+          "text": "; Exported from Cronch. Each definition's identity is the content key of its deterministic CBOR, not this text.\n(set-logic ALL)\n\n; Records and variants.\n; {a: Int}\n(declare-datatype |record:2b7534d1| ((|record:2b7534d1| (|record:2b7534d1.a| Int))))\n; The JSON text of a {a: Int}, unconstrained: what a solver finds with it, the kernel re-checks.\n(declare-fun |fn:text.17037da4| (|record:2b7534d1|) String)\n\n; Definitions.\n(define-fun |def:text| ((|v:r| |record:2b7534d1|)) String (|fn:text.17037da4| |v:r|))\n"
+        }
+      }
+    }
+  ]
+}

@@ -501,4 +501,16 @@ invariant small: k <= 3
         obligation["reads"][0]["Record"]["carry"],
         json!({ "Record": { "k": "Int" } })
     );
+
+    // The agent's too: a performed call's result is read as `Json` whichever operation gave it, including
+    // `notes.read`'s list, and `str` of it is text a solver chooses.
+    let agent = elaborated(AGENT);
+    let obligation = call(json!({
+        "op": "obligation", "harness": agent["harness"], "interface": interface(),
+        "invariant": agent["invariants"][0]["expr"],
+    }));
+    assert_eq!(obligation["kind"], "obligation", "{obligation}");
+    let text = obligation["text"].as_str().unwrap();
+    assert!(text.contains("(define-funs-rec ((|map:json."), "{text}");
+    assert!(text.contains("(declare-fun |fn:text."), "{text}");
 }
