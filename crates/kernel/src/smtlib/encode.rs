@@ -521,6 +521,112 @@ impl Encoder {
     }
 
     pub fn expr(&mut self, expr: &Expr, at: &str) -> Result<(Term, Type), ExportError> {
+        self.encode(expr, at, None)
+    }
+
+    /// `expr` encoded at `expected`, as the checker checks it: a record literal whose tag names a case is built with
+    /// that case's constructor, a list literal has the expected element sort (so `[]` has one), and `let`, `if` and
+    /// `match` pass `expected` on. Anything else is encoded as it is and coerced.
+    pub fn expr_as(
+        &mut self,
+        expr: &Expr,
+        expected: &Type,
+        at: &str,
+    ) -> Result<(Term, Type), ExportError> {
+        self.encode(expr, at, Some(expected))
+    }
+
+    fn encode(
+        &mut self,
+        expr: &Expr,
+        at: &str,
+        expected: Option<&Type>,
+    ) -> Result<(Term, Type), ExportError> {
+        let Some(want) = expected.filter(|t| **t != Type::Any) else {
+            return self.encode_inner(expr, at, None);
+        };
+        let here = at_body(at);
+        match (expr, want) {
+            (Expr::Record { fields }, Type::Variant { tag, cases }) => {
+                let case = match fields.get(tag) {
+                    Some(Expr::Lit {
+                        v: Value::String(case),
+                    }) => cases.get(case).map(|t| (case.clone(), t)),
+                    _ => None,
+                };
+                if let Some((case, case_ty)) = case {
+                    let name = self.variant(tag, cases).map_err(&here)?;
+                    let constructor = case_constructor(&name, &case).map_err(&here)?;
+                    let mut rest = fields.clone();
+                    rest.remove(tag);
+                    let args = match case_ty {
+                        Type::Record(wanted) => {
+                            let mut args = Vec::new();
+                            for (field, field_ty) in wanted {
+                                let e = rest.get(field).ok_or_else(|| {
+                                    here(NoReading::UndeclaredField {
+                                        field: field.clone(),
+                                    })
+                                })?;
+                                let field_at = child(at, &format!("fields/{field}"));
+                                args.push(self.encode(e, &field_at, Some(field_ty))?.0);
+                            }
+                            args
+                        }
+                        nested => {
+                            let rest = Expr::Record { fields: rest };
+                            vec![self.encode(&rest, at, Some(nested))?.0]
+                        }
+                    };
+                    return Ok((Term::app(constructor, args), want.clone()));
+                }
+            }
+            (Expr::Record { fields }, Type::Record(wanted)) => {
+                let mut terms = Vec::new();
+                let mut types = BTreeMap::new();
+                for (field, e) in fields {
+                    let field_at = child(at, &format!("fields/{field}"));
+                    let (t, ty) = self.encode(e, &field_at, wanted.get(field))?;
+                    terms.push(t);
+                    types.insert(field.clone(), ty);
+                }
+                let constructor = self.constructor(&types).map_err(&here)?;
+                let got = Type::Record(types);
+                let term = self
+                    .coerce(Term::app(constructor, terms), &got, want)
+                    .map_err(here)?;
+                return Ok((term, want.clone()));
+            }
+            (Expr::Op { op, args }, Type::List(item)) if op == "append" && args.len() == 2 => {
+                let (list, _) = self.encode(&args[0], &child(at, "args/0"), Some(want))?;
+                let (added, _) = self.encode(&args[1], &child(at, "args/1"), Some(item))?;
+                let unit = Term::call("seq.unit", vec![added]);
+                return Ok((Term::call("seq.++", vec![list, unit]), want.clone()));
+            }
+            (Expr::List { items }, Type::List(item)) => {
+                let sort = self.sort(want).map_err(&here)?;
+                let mut units = Vec::new();
+                for (i, e) in items.iter().enumerate() {
+                    let item_at = child(at, &format!("items/{i}"));
+                    let (t, _) = self.encode(e, &item_at, Some(item))?;
+                    units.push(Term::call("seq.unit", vec![t]));
+                }
+                let empty = Term::List(vec![Term::atom("as"), Term::atom("seq.empty"), sort]);
+                return Ok((Term::fold("seq.++", empty, units), want.clone()));
+            }
+            _ => {}
+        }
+        let (t, ty) = self.encode_inner(expr, at, Some(want))?;
+        Ok((self.coerce(t, &ty, want).map_err(here)?, want.clone()))
+    }
+
+    /// `expr` encoded by its form; `let`, `if` and `match` encode their bodies at `expected`.
+    fn encode_inner(
+        &mut self,
+        expr: &Expr,
+        at: &str,
+        expected: Option<&Type>,
+    ) -> Result<(Term, Type), ExportError> {
         let here = at_body(at);
         match expr {
             Expr::Lit { v } => {
@@ -567,12 +673,12 @@ impl Encoder {
                 self.require_for(parsed, &term, &operands, &types, &ty);
                 Ok((term, ty))
             }
-            Expr::Let { name, be, body } => {
-                let (bound, bound_ty) = self.expr(be, &child(at, "be"))?;
+            Expr::Let { name, be, body, ty } => {
+                let (bound, bound_ty) = self.encode(be, &child(at, "be"), ty.as_ref())?;
                 let var = local(name).map_err(here)?;
                 self.scope.push((name.clone(), bound_ty));
                 let from = self.defined.len();
-                let result = self.expr(body, &child(at, "in"));
+                let result = self.encode(body, &child(at, "in"), expected);
                 self.scope.pop();
                 let (term, ty) = result?;
                 // What the body requires mentions the bound variable, so it is stated under the same binding.
@@ -589,13 +695,15 @@ impl Encoder {
                 let (c, _) = self.expr(cond, &child(at, "cond"))?;
                 // Only the branch taken is evaluated, so each requires only where it is taken.
                 self.guards.push(c.clone());
-                let then = self.expr(then, &child(at, "then"));
+                let then = self.encode(then, &child(at, "then"), expected);
                 self.guards.pop();
                 self.guards.push(Term::call("not", vec![c.clone()]));
-                let otherwise = self.expr(otherwise, &child(at, "else"));
+                let otherwise = self.encode(otherwise, &child(at, "else"), expected);
                 self.guards.pop();
                 let ((t, then_ty), (e, else_ty)) = (then?, otherwise?);
-                let ty = if conforms(&else_ty, &then_ty) {
+                let ty = if let Some(want) = expected {
+                    want.clone()
+                } else if conforms(&else_ty, &then_ty) {
                     then_ty.clone()
                 } else {
                     else_ty.clone()
@@ -710,7 +818,7 @@ impl Encoder {
                             let var = local(&c.bind).map_err(&here)?;
                             self.scope.push((c.bind.clone(), case_ty.clone()));
                             let inner = self.defined.len();
-                            let body = self.expr(&c.body, &body_at);
+                            let body = self.encode(&c.body, &body_at, expected);
                             self.scope.pop();
                             body.map(|(t, bt)| {
                                 for condition in &mut self.defined[inner..] {
@@ -723,7 +831,8 @@ impl Encoder {
                         None => match otherwise {
                             Some(o) => {
                                 let body_at = child(at, "otherwise");
-                                self.expr(o, &body_at).map(|(t, bt)| (t, bt, body_at))
+                                self.encode(o, &body_at, expected)
+                                    .map(|(t, bt)| (t, bt, body_at))
                             }
                             None => Err(here(NoReading::Any)),
                         },
@@ -736,8 +845,13 @@ impl Encoder {
                     .first()
                     .map(|b| b.2.clone())
                     .ok_or_else(|| here(NoReading::Any))?;
-                for b in &branches[1..] {
-                    joined = join(&joined, &b.2).ok_or_else(|| here(NoReading::Any))?;
+                match expected {
+                    Some(want) => joined = want.clone(),
+                    None => {
+                        for b in &branches[1..] {
+                            joined = join(&joined, &b.2).ok_or_else(|| here(NoReading::Any))?;
+                        }
+                    }
                 }
                 let mut chained: Option<Term> = None;
                 for (test, t, bt, body_at) in branches.into_iter().rev() {
@@ -1012,7 +1126,10 @@ impl Encoder {
             params.push((local(&p.name).map_err(&at)?, self.sort(&p.ty).map_err(&at)?));
             self.scope.push((p.name.clone(), p.ty.clone()));
         }
-        let (body, ty) = self.expr(&def.body, "")?;
+        let (body, ty) = match &def.result {
+            Some(result) => self.expr_as(&def.body, result, "")?,
+            None => self.expr(&def.body, "")?,
+        };
         let sort = self.sort(&ty).map_err(at_body(""))?;
         let name = Term::symbol("def:", &def.name).map_err(at_body(""))?;
         let mut entries = vec![Entry {

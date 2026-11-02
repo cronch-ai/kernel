@@ -1,7 +1,7 @@
 //! The kernel's interface: one request in, one response out, each in deterministic CBOR.
 
 use crate::cbor::{self, DecodeError};
-use crate::check::infer;
+use crate::check::{check, infer};
 use crate::evidence::{Alphabet, Evidence, Method, Subject, certificate, prove, verify};
 use crate::harness::{
     Harness, Installation, Interface, Narrowing, check_harness, check_interface, input_type,
@@ -23,11 +23,14 @@ use std::collections::BTreeMap;
 #[derive(Deserialize)]
 #[serde(tag = "op", rename_all = "camelCase")]
 pub enum Request {
-    /// The type of an expression, given its variables' types, and what is wrong with it.
+    /// The type of an expression, given its variables' types, and what is wrong with it; checked against `expected`
+    /// if it is given.
     Infer {
         expr: Expr,
         #[serde(default)]
         vars: BTreeMap<String, Type>,
+        #[serde(default)]
+        expected: Option<Type>,
     },
     /// The value of an expression, given its variables' values, all trusted.
     Evaluate {
@@ -155,8 +158,16 @@ fn refused_or<T: Serialize, E: Serialize>(kind: &str, field: &str, result: Resul
 
 fn respond(request: Request) -> Value {
     match request {
-        Request::Infer { expr, vars } => {
-            let (ty, problems) = infer(&expr, vars.into_iter().collect());
+        Request::Infer {
+            expr,
+            vars,
+            expected,
+        } => {
+            let scope = vars.into_iter().collect();
+            let (ty, problems) = match &expected {
+                Some(t) => check(&expr, t, scope),
+                None => infer(&expr, scope),
+            };
             json!({ "type": ty, "problems": problems })
         }
         Request::Evaluate { expr, vars } => {

@@ -11,7 +11,7 @@
 //! separate atom under `implies`, or by an `if`. Quantifiers are bounded by the trace: `exists x of e` ranges over the
 //! values `e` gave at the events so far, which is how a property connects a result to the call it answers.
 
-use crate::check::{Problem, infer};
+use crate::check::{Problem, check, infer};
 use crate::ir::{Expr, Type};
 use crate::labeled::{self, LValue};
 use serde::{Deserialize, Serialize};
@@ -95,23 +95,14 @@ fn check_formula(f: &Formula, at: &str, bound: &mut Vec<String>, out: &mut Vec<P
             .chain(bound.iter().cloned())
             .map(|n| (n, Type::Any))
             .collect();
-        let (ty, problems) = infer(e, scope);
+        let (_, problems) = match &want {
+            Some(expected) => check(e, expected, scope),
+            None => infer(e, scope),
+        };
         out.extend(problems.into_iter().map(|problem| PropertyProblem {
             at: at.clone(),
             problem,
         }));
-        if let (Some(got), Some(expected)) = (ty, want)
-            && !crate::types::conforms(&got, &expected)
-        {
-            out.push(PropertyProblem {
-                at,
-                problem: Problem::Mismatch {
-                    at: String::new(),
-                    expected,
-                    got,
-                },
-            });
-        }
     };
     match f {
         Formula::Atom { holds } => expr(holds, child("holds"), bound, Some(Type::Bool)),

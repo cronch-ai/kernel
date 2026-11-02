@@ -44,7 +44,8 @@ export async function instantiate(source) {
   };
 
   return {
-    infer: (expr, vars) => call({ op: "infer", expr, vars: vars ?? {} }),
+    infer: (expr, vars, expected) =>
+      call({ op: "infer", expr, vars: vars ?? {}, ...(expected ? { expected } : {}) }),
     evaluate: (expr, vars) => call({ op: "evaluate", expr, vars: vars ?? {} }),
     checkHarness: (harness, iface) =>
       call({ op: "checkHarness", harness, interface: iface ?? null }).problems,

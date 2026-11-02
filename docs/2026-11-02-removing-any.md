@@ -43,7 +43,7 @@ Bidirectional checking: an expression is checked against the type it must have w
 
 Checked against a type:
 - **A record literal against a variant** is that variant's case when its tag field is a string literal naming one: `{kind: "ok", value: v}` against `waiting | ok {value: T} | …` is the `ok` case, and `v` is checked against `T`. This is variant introduction, the missing rule.
-- **`[]` against `List(T)`** is a `List(T)`, and so is any list literal whose items each check against `T`.
+- **`[]` against `List(T)`** is a `List(T)`, and so is any list literal whose items each check against `T`, and an `append` whose list and item check against it.
 - **Annotations:** `let` and `fold` gain an optional `type`, for the bound value and the accumulator. A sequential step builds its state in `let`s, where nothing else would say what type is expected, so without them variant introduction would reach only the last expression. An absent annotation isn't serialized, so every existing term keeps its key.
 
 Partial field reads stay `Any` in A1, and `null` stays `Any`. Both become errors in A3, when there is no `Any` to give them, except `null` at `Json`.
@@ -82,7 +82,7 @@ Once A1 lands, the workarounds go, each in its own change:
 
 Each is a kernel PR with compliance vectors, and the platform follows A2 and A3 in lockstep.
 
-- **A1:** expected types in `check.rs`, variant introduction, typed `[]`, and `type` annotations on `let` and `fold`. Minor version.
+- **A1:** expected types in `check.rs`, variant introduction, typed `[]`, and `type` annotations on `let` and `fold`. The SMT encoder encodes against an expected type the same way, so a variant built from a literal gets its constructor: an SMT-LIB definition gains an optional `result`, and an induction obligation's step is encoded at the state type. Minor version.
 - **A2:** errors, harness results and declared children, typed actions, declared grant parts, typed events, and `checkHarness` against an interface. Breaking version.
 - **A3:** `Json`, its `match`, its SMT encoding, the removal of `Any`, and `null` refused but at `Json`. Breaking version, with the platform's contracts updated.
 

@@ -4,11 +4,19 @@
 //! Checking is structural and gradual: `Any` conforms both ways, so shapes the interpreter checks when they arrive
 //! pass here. Lists and the branches of an `if` take the join of their parts' types, so a list of records of different
 //! shapes has the fields they share.
+//!
+//! Checking is also bidirectional. Where a type is expected (a harness's state, a contract's condition, an annotated
+//! `let` or `fold`), an expression is checked against it rather than inferred and compared afterwards. That is what
+//! lets an expression build a value at a variant type: a record literal whose tag field is a string literal naming a
+//! case is checked against that case, and has the variant's type. An empty list literal checked against `List(T)` is a
+//! `List(T)`, and so is an `append` whose list and item check against it. Everything else is inferred, and must
+//! conform to what was expected.
 
 use crate::ir::{Expr, Type};
 use crate::ops::{self, Op, OpTypeError};
 use crate::types::{conforms, join, of_value, record_view};
 use serde::Serialize;
+use serde_json::Value;
 use std::collections::BTreeMap;
 
 /// Where in an expression something is: a `/`-separated path of fields from the root (`""`).
@@ -80,6 +88,20 @@ pub fn infer(expr: &Expr, scope: Vec<(String, Type)>) -> (Option<Type>, Vec<Prob
     (ty, checker.problems)
 }
 
+/// The type of an expression checked against `expected`, with these variables in scope, and what is wrong with it.
+pub fn check(
+    expr: &Expr,
+    expected: &Type,
+    scope: Vec<(String, Type)>,
+) -> (Option<Type>, Vec<Problem>) {
+    let mut checker = Checker {
+        scope,
+        problems: Vec::new(),
+    };
+    let ty = checker.check(expr, expected, "");
+    (ty, checker.problems)
+}
+
 struct Checker {
     /// Variables in scope, innermost last.
     scope: Vec<(String, Type)>,
@@ -94,6 +116,94 @@ impl Checker {
 
     /// The expression's type, or `None` after recording why it has none.
     fn infer(&mut self, expr: &Expr, at: &str) -> Option<Type> {
+        self.synth(expr, at, None)
+    }
+
+    /// The expression's type, checked against `expected`.
+    fn check(&mut self, expr: &Expr, expected: &Type, at: &str) -> Option<Type> {
+        self.typed(expr, at, Some(expected))
+    }
+
+    fn typed(&mut self, expr: &Expr, at: &str, expected: Option<&Type>) -> Option<Type> {
+        let Some(want) = expected.filter(|t| **t != Type::Any) else {
+            return self.infer(expr, at);
+        };
+        match (expr, want) {
+            // Variant introduction: the case the tag names, with the other fields checked against it.
+            (Expr::Record { fields }, Type::Variant { tag, cases }) => {
+                let case = match fields.get(tag) {
+                    Some(Expr::Lit {
+                        v: Value::String(case),
+                    }) => cases.get(case),
+                    _ => None,
+                };
+                if let Some(case_ty) = case {
+                    let mut rest = fields.clone();
+                    rest.remove(tag);
+                    self.check(&Expr::Record { fields: rest }, case_ty, at)?;
+                    return Some(want.clone());
+                }
+            }
+            (Expr::Record { fields }, Type::Record(wanted)) => {
+                let mut types = BTreeMap::new();
+                let mut ok = true;
+                for (name, e) in fields {
+                    let field_at = child(at, &format!("fields/{name}"));
+                    match self.typed(e, &field_at, wanted.get(name)) {
+                        Some(t) => {
+                            types.insert(name.clone(), t);
+                        }
+                        None => ok = false,
+                    }
+                }
+                let got = Type::Record(types);
+                if !ok {
+                    return None;
+                }
+                return if conforms(&got, want) {
+                    Some(got)
+                } else {
+                    self.problem(Problem::Mismatch {
+                        at: at.to_string(),
+                        expected: want.clone(),
+                        got,
+                    })
+                };
+            }
+            (Expr::List { items }, Type::List(item)) => {
+                let mut ok = true;
+                for (i, e) in items.iter().enumerate() {
+                    ok &= self
+                        .check(e, item, &child(at, &format!("items/{i}")))
+                        .is_some();
+                }
+                return ok.then(|| want.clone());
+            }
+            // `append` builds a list from a list and an item, so both are checked against what it must build.
+            (Expr::Op { op, args }, Type::List(item)) if op == "append" && args.len() == 2 => {
+                let list = self.check(&args[0], want, &child(at, "args/0"));
+                let added = self.check(&args[1], item, &child(at, "args/1"));
+                return (list.is_some() && added.is_some()).then(|| want.clone());
+            }
+            (Expr::Let { .. } | Expr::If { .. } | Expr::Match { .. } | Expr::Fold { .. }, _) => {
+                return self.synth(expr, at, Some(want));
+            }
+            _ => {}
+        }
+        let got = self.infer(expr, at)?;
+        if conforms(&got, want) {
+            Some(got)
+        } else {
+            self.problem(Problem::Mismatch {
+                at: at.to_string(),
+                expected: want.clone(),
+                got,
+            })
+        }
+    }
+
+    /// The expression's type, inferred, or, for the forms that pass it on, checked against `expected`.
+    fn synth(&mut self, expr: &Expr, at: &str, expected: Option<&Type>) -> Option<Type> {
         match expr {
             Expr::Lit { v } => Some(of_value(v)),
             Expr::Var { name } => match self.scope.iter().rev().find(|(n, _)| n == name) {
@@ -125,10 +235,17 @@ impl Checker {
                     }),
                 }
             }
-            Expr::Let { name, be, body } => {
-                let bound = self.infer(be, &child(at, "be"));
+            Expr::Let { name, be, body, ty } => {
+                let bound = match ty {
+                    // An annotated binding has its annotation, whatever is wrong with what it binds.
+                    Some(t) => {
+                        self.check(be, t, &child(at, "be"));
+                        Some(t.clone())
+                    }
+                    None => self.infer(be, &child(at, "be")),
+                };
                 self.scope.push((name.clone(), bound.unwrap_or(Type::Any)));
-                let t = self.infer(body, &child(at, "in"));
+                let t = self.typed(body, &child(at, "in"), expected);
                 self.scope.pop();
                 t
             }
@@ -147,8 +264,11 @@ impl Checker {
                         got: c,
                     });
                 }
-                let t = self.infer(then, &child(at, "then"));
-                let e = self.infer(otherwise, &child(at, "else"));
+                let t = self.typed(then, &child(at, "then"), expected);
+                let e = self.typed(otherwise, &child(at, "else"), expected);
+                if let Some(want) = expected {
+                    return (t.is_some() && e.is_some()).then(|| want.clone());
+                }
                 match (t, e) {
                     (Some(t), Some(e)) => match join(&t, &e) {
                         Some(j) => Some(j),
@@ -290,16 +410,19 @@ impl Checker {
                         .unwrap_or(Type::Any);
                     self.scope.push((case.bind.clone(), bound));
                     let body_at = child(at, &format!("cases/{name}/body"));
-                    let t = self.infer(&case.body, &body_at);
+                    let t = self.typed(&case.body, &body_at, expected);
                     self.scope.pop();
                     merge(self, t, body_at);
                 }
                 if let Some(o) = otherwise {
                     let body_at = child(at, "otherwise");
-                    let t = self.infer(o, &body_at);
+                    let t = self.typed(o, &body_at, expected);
                     merge(self, t, body_at);
                 }
-                result.flatten()
+                match expected {
+                    Some(want) => result.flatten().map(|_| want.clone()),
+                    None => result.flatten(),
+                }
             }
             Expr::Fold {
                 over,
@@ -307,6 +430,7 @@ impl Checker {
                 acc,
                 item,
                 body,
+                ty,
             } => {
                 let over_at = child(at, "over");
                 let item_ty = match self.infer(over, &over_at) {
@@ -315,12 +439,20 @@ impl Checker {
                     Some(got) => self.problem(Problem::NotAList { at: over_at, got }),
                     None => None,
                 };
-                let acc_ty = self.infer(init, &child(at, "init"));
+                // The accumulator's type: its annotation, or what is expected of the fold, or `init`'s.
+                let declared = ty.clone().or(expected.cloned());
+                let acc_ty = match &declared {
+                    Some(t) => self.check(init, t, &child(at, "init")).map(|_| t.clone()),
+                    None => self.infer(init, &child(at, "init")),
+                };
                 self.scope
                     .push((acc.clone(), acc_ty.clone().unwrap_or(Type::Any)));
                 self.scope
                     .push((item.clone(), item_ty.unwrap_or(Type::Any)));
-                let body_ty = self.infer(body, &child(at, "body"));
+                let body_ty = match &declared {
+                    Some(t) => self.check(body, t, &child(at, "body")),
+                    None => self.infer(body, &child(at, "body")),
+                };
                 self.scope.truncate(self.scope.len() - 2);
                 let (acc_ty, body_ty) = (acc_ty?, body_ty?);
                 if !conforms(&body_ty, &acc_ty) {
@@ -328,6 +460,15 @@ impl Checker {
                         at: child(at, "body"),
                         expected: acc_ty,
                         got: body_ty,
+                    });
+                }
+                if let Some(want) = expected
+                    && !conforms(&acc_ty, want)
+                {
+                    return self.problem(Problem::Mismatch {
+                        at: at.to_string(),
+                        expected: want.clone(),
+                        got: acc_ty,
                     });
                 }
                 Some(acc_ty)
@@ -344,6 +485,89 @@ mod tests {
     fn infer_json(e: serde_json::Value, scope: Vec<(&str, Type)>) -> (Option<Type>, Vec<Problem>) {
         let scope = scope.into_iter().map(|(n, t)| (n.to_string(), t)).collect();
         infer(&serde_json::from_value(e).unwrap(), scope)
+    }
+
+    fn check_json(
+        e: serde_json::Value,
+        expected: &Type,
+        scope: Vec<(&str, Type)>,
+    ) -> (Option<Type>, Vec<Problem>) {
+        let scope = scope.into_iter().map(|(n, t)| (n.to_string(), t)).collect();
+        check(&serde_json::from_value(e).unwrap(), expected, scope)
+    }
+
+    fn slot() -> Type {
+        serde_json::from_value(json!({ "Variant": { "tag": "kind", "cases": {
+            "waiting": { "Record": {} },
+            "ok": { "Record": { "value": "String" } },
+        }}}))
+        .unwrap()
+    }
+
+    #[test]
+    fn a_record_literal_naming_a_case_has_the_variants_type() {
+        let ok = json!({ "e": "record", "fields": { "kind": { "e": "lit", "v": "ok" }, "value": { "e": "var", "name": "s" } } });
+        assert_eq!(
+            check_json(ok.clone(), &slot(), vec![("s", Type::String)]),
+            (Some(slot()), vec![])
+        );
+        // Inferred, it is only a record, which no variant accepts.
+        assert!(!crate::types::conforms(
+            &infer_json(ok.clone(), vec![("s", Type::String)]).0.unwrap(),
+            &slot()
+        ));
+
+        // The case's fields are checked against it.
+        let (_, problems) = check_json(ok, &slot(), vec![("s", Type::Int)]);
+        assert_eq!(
+            problems,
+            [Problem::Mismatch {
+                at: "/fields/value".into(),
+                expected: Type::String,
+                got: Type::Int
+            }]
+        );
+
+        // A tag that names no case, or isn't a literal, is a record like any other.
+        let unknown = json!({ "e": "record", "fields": { "kind": { "e": "lit", "v": "gone" } } });
+        let (ty, problems) = check_json(unknown, &slot(), vec![]);
+        assert_eq!(ty, None);
+        assert!(matches!(problems[0], Problem::Mismatch { .. }));
+    }
+
+    #[test]
+    fn expected_types_reach_through_lets_branches_and_lists() {
+        let waiting =
+            json!({ "e": "record", "fields": { "kind": { "e": "lit", "v": "waiting" } } });
+        let ok = json!({ "e": "record", "fields": { "kind": { "e": "lit", "v": "ok" }, "value": { "e": "lit", "v": "x" } } });
+        let branch =
+            json!({ "e": "if", "cond": { "e": "var", "name": "c" }, "then": waiting, "else": ok });
+        let slots = Type::List(Box::new(slot()));
+        let both = json!({ "e": "list", "items": [branch.clone()] });
+        assert_eq!(
+            check_json(both, &slots, vec![("c", Type::Bool)]),
+            (Some(slots.clone()), vec![])
+        );
+        assert_eq!(
+            check_json(json!({ "e": "list", "items": [] }), &slots, vec![]),
+            (Some(slots.clone()), vec![])
+        );
+
+        // An annotated binding has its annotation, so its uses are typed by it, even under `infer`.
+        let annotated = json!({ "e": "let", "name": "s", "type": slot(), "be": branch, "in": { "e": "list", "items": [{ "e": "var", "name": "s" }] } });
+        assert_eq!(
+            infer_json(annotated, vec![("c", Type::Bool)]),
+            (Some(slots.clone()), vec![])
+        );
+
+        // So does an annotated fold's accumulator, from an empty start.
+        let collect = json!({ "e": "fold", "type": slots, "over": { "e": "var", "name": "xs" },
+            "init": { "e": "list", "items": [] }, "acc": "a", "item": "x",
+            "body": { "e": "op", "op": "append", "args": [{ "e": "var", "name": "a" },
+                { "e": "record", "fields": { "kind": { "e": "lit", "v": "ok" }, "value": { "e": "var", "name": "x" } } }] } });
+        let (ty, problems) = infer_json(collect, vec![("xs", Type::List(Box::new(Type::String)))]);
+        assert_eq!(problems, []);
+        assert_eq!(ty, Some(Type::List(Box::new(slot()))));
     }
 
     #[test]

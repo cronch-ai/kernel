@@ -29,7 +29,7 @@ pub mod values;
 
 pub use encode::Floats;
 
-use crate::check::{Path, Problem, infer};
+use crate::check::{Path, Problem, check, infer};
 use crate::ir::{Expr, Param, Type};
 use encode::Encoder;
 use script::Script;
@@ -43,6 +43,9 @@ pub struct Definition {
     #[serde(default)]
     pub params: Vec<Param>,
     pub body: Expr,
+    /// The type `body` is encoded at. Absent, it is the type the body has.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub result: Option<Type>,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub description: String,
 }
@@ -125,7 +128,10 @@ pub fn export(definitions: &[Definition], floats: Floats) -> Result<String, Refu
             .iter()
             .map(|p| (p.name.clone(), p.ty.clone()))
             .collect();
-        let (_, problems) = infer(&def.body, scope);
+        let (_, problems) = match &def.result {
+            Some(result) => check(&def.body, result, scope),
+            None => infer(&def.body, scope),
+        };
         if !problems.is_empty() {
             return Err(refused(ExportError::IllFormed { problems }));
         }
@@ -173,12 +179,14 @@ pub fn induction(
             name: "invariant".into(),
             params: vec![param("state", state)],
             body: invariant.clone(),
+            result: Some(Type::Bool),
             description: "The invariant, of a state.".into(),
         },
         Definition {
             name: "next".into(),
             params: vec![param("state", state), param("input", input)],
             body: next.clone(),
+            result: Some(state.clone()),
             description: "The state the step gives.".into(),
         },
     ];
@@ -195,7 +203,10 @@ pub fn induction(
             .iter()
             .map(|p| (p.name.clone(), p.ty.clone()))
             .collect();
-        let (_, problems) = infer(&def.body, scope);
+        let (_, problems) = match &def.result {
+            Some(result) => check(&def.body, result, scope),
+            None => infer(&def.body, scope),
+        };
         if !problems.is_empty() {
             return Err(refused(ExportError::IllFormed { problems }));
         }

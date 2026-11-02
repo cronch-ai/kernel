@@ -37,20 +37,25 @@ pub fn project(expr: &Expr, field: &str) -> Expr {
             then: Box::new(project(then, field)),
             otherwise: Box::new(project(otherwise, field)),
         },
-        Expr::Let { name, be, body } => {
+        Expr::Let { name, be, body, ty } => {
             let body = project(body, field);
             // A binding the projection reads only through one field is bound to that field alone, so what computes
-            // its other fields goes too.
+            // its other fields goes too. Its annotation narrows with it, or goes if it says nothing of that field.
             match only_field(&body, name) {
                 Some(f) => Expr::Let {
                     name: name.clone(),
                     be: Box::new(project(be, &f)),
                     body: Box::new(unwrap_field(&body, name, &f)),
+                    ty: match ty {
+                        Some(Type::Record(fields)) => fields.get(&f).cloned(),
+                        _ => None,
+                    },
                 },
                 None => Expr::Let {
                     name: name.clone(),
                     be: be.clone(),
                     body: Box::new(body),
+                    ty: ty.clone(),
                 },
             }
         }
@@ -91,7 +96,9 @@ fn each_use(expr: &Expr, name: &str, visit: &mut impl FnMut(&Expr) -> bool) {
     match expr {
         Expr::Lit { .. } | Expr::Var { .. } => {}
         Expr::Op { args, .. } => args.iter().for_each(go),
-        Expr::Let { name: n, be, body } => {
+        Expr::Let {
+            name: n, be, body, ..
+        } => {
             go(be);
             if n != name {
                 go(body);
@@ -129,6 +136,7 @@ fn each_use(expr: &Expr, name: &str, visit: &mut impl FnMut(&Expr) -> bool) {
             acc,
             item,
             body,
+            ..
         } => {
             go(over);
             go(init);
@@ -181,8 +189,10 @@ fn unwrap_field(body: &Expr, name: &str, field: &str) -> Expr {
             name: n,
             be,
             body: inner,
+            ty,
         } => Expr::Let {
             name: n.clone(),
+            ty: ty.clone(),
             be: again(be),
             body: if n == name {
                 inner.clone()
@@ -246,7 +256,9 @@ fn unwrap_field(body: &Expr, name: &str, field: &str) -> Expr {
             acc,
             item,
             body: inner,
+            ty,
         } => Expr::Fold {
+            ty: ty.clone(),
             over: again(over),
             init: again(init),
             acc: acc.clone(),

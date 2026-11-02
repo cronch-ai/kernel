@@ -50,11 +50,14 @@ pub enum Expr {
         op: String,
         args: Vec<Expr>,
     },
+    /// `name` is `be` in `body`. With `type`, `be` is checked against it, and `name` has it.
     Let {
         name: String,
         be: Box<Expr>,
         #[serde(rename = "in")]
         body: Box<Expr>,
+        #[serde(rename = "type", default, skip_serializing_if = "Option::is_none")]
+        ty: Option<Type>,
     },
     If {
         cond: Box<Expr>,
@@ -88,12 +91,15 @@ pub enum Expr {
     },
     /// `acc` starts as `init` and becomes `body` once per item of `over`, in order, with `item` bound to that item.
     /// The only iteration there is: it runs once per item of a list it is given, so evaluation always terminates.
+    /// With `type`, the accumulator has it, and `init` and `body` are checked against it.
     Fold {
         over: Box<Expr>,
         init: Box<Expr>,
         acc: String,
         item: String,
         body: Box<Expr>,
+        #[serde(rename = "type", default, skip_serializing_if = "Option::is_none")]
+        ty: Option<Type>,
     },
 }
 
