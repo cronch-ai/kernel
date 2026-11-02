@@ -335,12 +335,16 @@ struct Update {
 }
 
 impl Update {
-    /// The grant state after the change. One that fails to evaluate leaves it as it was.
+    /// The grant state after the change: the fields it gives replace those the grant has, and the others stay. One
+    /// that fails to evaluate leaves it as it was.
     fn apply(&self, grant: &mut Value) {
         let mut vars = self.vars.clone();
         vars.push(("grant", LValue::trusted(grant)));
         if let Some(next) = contract(&self.expr, vars) {
-            *grant = next.value();
+            match (grant, next.value()) {
+                (Value::Object(fields), Value::Object(changed)) => fields.extend(changed),
+                (grant, next) => *grant = next,
+            }
         }
     }
 }

@@ -105,8 +105,14 @@ fn shell() -> Value {
                 "ret": list(vec![]),
                 "onResult": answered,
             }
-        }
+        },
+        "grant": { "Record": { "allow": { "List": argv_list() }, "once": { "List": argv_list() } } },
     })
+}
+
+/// An argv's type.
+fn argv_list() -> Value {
+    json!({ "List": "String" })
 }
 
 fn files() -> Value {
@@ -135,7 +141,8 @@ fn files() -> Value {
                 "pre": op("and", vec![within, not_planning]),
                 "footprint": rec(vec![("writes", path("args", &["path"]))]),
             }
-        }
+        },
+        "grant": { "Record": { "mode": "String" } },
     })
 }
 
@@ -161,9 +168,11 @@ fn drivers() -> Value {
         "channels": {
             "drive": { "type": { "Record": { "op": "String" } } },
             "model": { "type": { "Record": { "op": "String" } }, "label": ["model"] },
-            "mode": { "type": "String", "onMsg": rec(vec![("mode", var("value")), ("allow", path("grant", &["allow"])), ("once", path("grant", &["once"]))]) },
+            // A trusted message changes the mode, and leaves the rest of the grant as it was.
+            "mode": { "type": "String", "onMsg": rec(vec![("mode", var("value"))]) },
             "spoof": { "type": "String", "label": ["model"], "onMsg": rec(vec![("mode", var("value"))]) },
-        }
+        },
+        "grant": { "Record": { "mode": "String" } },
     })
 }
 
@@ -482,4 +491,22 @@ fn capabilities_declare_their_part_of_the_grant_state() {
         json!({ "op": "init", "harness": harness, "interface": counter, "grant": { "ticks": 0 } }),
     );
     assert_eq!(ready["kind"], "ready");
+}
+
+#[test]
+fn an_update_changes_only_the_fields_it_gives() {
+    // The mode channel's part is `mode`; the shell's `allow` and `once` stay as they were.
+    let (system, _) = deliver_all(system(installed()), vec![msg("mode", json!("plan"))]);
+    assert_eq!(
+        system["root"]["grant"],
+        json!({ "allow": [["npm", "test"]], "once": [], "mode": "plan" })
+    );
+
+    // An update that gives a field no capability declares is refused when the interface is checked.
+    let mut stray = drivers();
+    stray["channels"]["mode"]["onMsg"] = rec(vec![("moed", var("value"))]);
+    let out = call(json!({ "op": "install", "capabilities": [{ "capability": stray }] }));
+    let problems =
+        call(json!({ "op": "checkInterface", "interface": out["interface"] }))["problems"].clone();
+    assert_eq!(problems[0]["kind"], "part", "{problems}");
 }

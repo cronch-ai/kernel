@@ -148,7 +148,7 @@ export type LValue =
 /** `⟨A, S, s₀, δ⟩`. `step` is over `state` and `input`, and gives `{ state, actions }`. */
 export interface Harness {
   readonly arg: Type;
-  /** What a run halts with; a halt outside it fails the step. Absent: `Any`. */
+  /** What a run halts with; a halt outside it fails the step. Absent: `Json`. */
   readonly result?: Type;
   /**
    * The children it may spawn, by name. A `spawn` action with `name` starts only a harness with that signature,
@@ -180,9 +180,9 @@ export interface Operation {
   readonly effect?: boolean;
   /** Over `args`: what the call may touch, recorded on the trace. */
   readonly footprint?: Expr;
-  /** Over `args` and `grant`: the next grant state, when the call is performed. */
+  /** Over `args` and `grant`: the fields of the grant state it changes, when the call is performed. */
   readonly onCall?: Expr;
-  /** Over `args`, `result` and `grant`: the next grant state, when a trusted result arrives. */
+  /** Over `args`, `result` and `grant`: the fields of the grant state it changes, when a trusted result arrives. */
   readonly onResult?: Expr;
 }
 
@@ -191,14 +191,17 @@ export interface Channel {
   readonly label?: Label;
   /** Over `value`: messages that break it are withheld. */
   readonly inv?: Expr;
-  /** Over `value` and `grant`: the next grant state, on a trusted channel. */
+  /** Over `value` and `grant`: the fields of the grant state it changes, on a trusted channel. */
   readonly onMsg?: Expr;
 }
 
 export interface Interface {
   readonly operations?: Readonly<Record<string, Operation>>;
   readonly channels?: Readonly<Record<string, Channel>>;
-  /** The type of the grant state its contracts read and write; installing merges each capability's part. */
+  /**
+   * The type of the grant state its contracts read and write; installing merges each capability's part. Absent:
+   * `Json`, so contracts that read the grant must declare it.
+   */
   readonly grant?: Type;
 }
 

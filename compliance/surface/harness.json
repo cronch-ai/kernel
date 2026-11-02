@@ -5,6 +5,21 @@
       "request": {
         "capabilities": {
           "approve": {
+            "grant": {
+              "Record": {
+                "allow": {
+                  "List": "String"
+                },
+                "once": {
+                  "List": {
+                    "Record": {
+                      "action": "String",
+                      "args": "Any"
+                    }
+                  }
+                }
+              }
+            },
             "operations": {
               "ask": {
                 "input": {
@@ -168,6 +183,21 @@
             }
           },
           "notes": {
+            "grant": {
+              "Record": {
+                "allow": {
+                  "List": "String"
+                },
+                "once": {
+                  "List": {
+                    "Record": {
+                      "action": "String",
+                      "args": "Any"
+                    }
+                  }
+                }
+              }
+            },
             "operations": {
               "append": {
                 "effect": true,
@@ -364,6 +394,7 @@
                 }
               }
             },
+            "result": "Any",
             "state": {
               "Record": {
                 "arg": "String",
@@ -4418,6 +4449,21 @@
       "request": {
         "capabilities": {
           "approve": {
+            "grant": {
+              "Record": {
+                "allow": {
+                  "List": "String"
+                },
+                "once": {
+                  "List": {
+                    "Record": {
+                      "action": "String",
+                      "args": "Any"
+                    }
+                  }
+                }
+              }
+            },
             "operations": {
               "ask": {
                 "input": {
@@ -4581,6 +4627,21 @@
             }
           },
           "notes": {
+            "grant": {
+              "Record": {
+                "allow": {
+                  "List": "String"
+                },
+                "once": {
+                  "List": {
+                    "Record": {
+                      "action": "String",
+                      "args": "Any"
+                    }
+                  }
+                }
+              }
+            },
             "operations": {
               "append": {
                 "effect": true,

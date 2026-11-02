@@ -376,7 +376,7 @@
       "response": {
         "ok": true,
         "result": {
-          "excluded": ["failed.child", "failed.world", "ret.spawn"],
+          "excluded": [],
           "initiation": false,
           "kind": "obligation",
           "reads": [
@@ -410,6 +410,16 @@
                           "cases": {
                             "cancelled": {
                               "Record": {}
+                            },
+                            "child": {
+                              "Record": {
+                                "error": "Json"
+                              }
+                            },
+                            "world": {
+                              "Record": {
+                                "detail": "Json"
+                              }
                             }
                           },
                           "tag": "kind"
@@ -424,6 +434,19 @@
                       "op": "String"
                     }
                   },
+                  "ret": {
+                    "Variant": {
+                      "cases": {
+                        "spawn": {
+                          "Record": {
+                            "call": "Int",
+                            "value": "Json"
+                          }
+                        }
+                      },
+                      "tag": "op"
+                    }
+                  },
                   "start": {
                     "Record": {
                       "value": "Int"
@@ -434,7 +457,7 @@
               }
             }
           ],
-          "text": "; Consecution: sat exactly where the invariant holds of a state and fails after one step.\n; A model is a counterexample to induction for the kernel to check; unsat is not a verdict.\n; Inputs left out, whose types have no sort: failed.child, failed.world, ret.spawn.\n(set-option :produce-models true)\n(set-logic ALL)\n\n; Records and variants.\n; A variant with the cases ok, waiting.\n(declare-datatype |variant:fda1d360| ((|variant:fda1d360#ok| (|variant:fda1d360#ok.value| Int)) (|variant:fda1d360#waiting|)))\n; {slot: <kind: ok: {value: Int} | waiting: {}>}\n(declare-datatype |record:a473073e| ((|record:a473073e| (|record:a473073e.slot| |variant:fda1d360|))))\n; A variant with the cases cancelled.\n(declare-datatype |variant:e5c32e86| ((|variant:e5c32e86#cancelled|)))\n; A variant with the cases failed, refused, start.\n(declare-datatype |variant:fa1fccf3| ((|variant:fa1fccf3#failed| (|variant:fa1fccf3#failed.call| Int) (|variant:fa1fccf3#failed.error| |variant:e5c32e86|) (|variant:fa1fccf3#failed.op| String)) (|variant:fa1fccf3#refused| (|variant:fa1fccf3#refused.call| Int) (|variant:fa1fccf3#refused.op| String)) (|variant:fa1fccf3#start| (|variant:fa1fccf3#start.value| Int))))\n\n; Definitions.\n; The invariant, of a state.\n(define-fun |def:invariant| ((|v:state| |record:a473073e|)) Bool (= (ite ((_ is |variant:fda1d360#ok|) (|record:a473073e.slot| |v:state|)) \"ok\" \"waiting\") \"ok\"))\n; The state the step gives.\n(define-fun |def:next| ((|v:state| |record:a473073e|) (|v:input| |variant:fa1fccf3|)) |record:a473073e| (let ((|v:n| 1)) (let ((|v:next| (|record:a473073e| (|variant:fda1d360#ok| |v:n|)))) |v:next|)))\n\n; A counterexample to induction.\n(declare-const |q:state| |record:a473073e|)\n(declare-const |q:input| |variant:fa1fccf3|)\n(assert (|def:invariant| |q:state|))\n(assert (not (|def:invariant| (|def:next| |q:state| |q:input|))))\n(check-sat)\n(get-value (|q:state| |q:input|))\n"
+          "text": "; Consecution: sat exactly where the invariant holds of a state and fails after one step.\n; A model is a counterexample to induction for the kernel to check; unsat is not a verdict.\n(set-option :produce-models true)\n(set-logic ALL)\n\n; Records and variants.\n; JSON values: a record is a chain of fields.\n(declare-datatypes ((|json:Json| 0) (|json:Fields| 0)) (((|json:null|) (|json:bool| (|json:bool.v| Bool)) (|json:number| (|json:number.v| Float64)) (|json:string| (|json:string.v| String)) (|json:list| (|json:list.v| (Seq |json:Json|))) (|json:record| (|json:record.v| |json:Fields|))) ((|json:end|) (|json:field| (|json:field.key| String) (|json:field.value| |json:Json|) (|json:field.rest| |json:Fields|)))))\n; Whether a record has a field, and its value (null if it has none).\n(define-funs-rec ((|json:has| ((f |json:Fields|) (k String)) Bool) (|json:get| ((f |json:Fields|) (k String)) |json:Json|)) ((ite ((_ is |json:field|) f) (or (= (|json:field.key| f) k) (|json:has| (|json:field.rest| f) k)) false) (ite ((_ is |json:field|) f) (ite (= (|json:field.key| f) k) (|json:field.value| f) (|json:get| (|json:field.rest| f) k)) |json:null|)))\n; Whether a term is a value the kernel could hold: finite numbers, and each record's keys once.\n(define-funs-rec ((|json:ok| ((j |json:Json|)) Bool) (|json:ok.items| ((s (Seq |json:Json|))) Bool) (|json:ok.fields| ((f |json:Fields|)) Bool)) ((and (ite ((_ is |json:number|) j) (not (or (fp.isNaN (|json:number.v| j)) (fp.isInfinite (|json:number.v| j)))) true) (ite ((_ is |json:list|) j) (|json:ok.items| (|json:list.v| j)) true) (ite ((_ is |json:record|) j) (|json:ok.fields| (|json:record.v| j)) true)) (ite (= (seq.len s) 0) true (and (|json:ok| (seq.nth s 0)) (|json:ok.items| (seq.extract s 1 (- (seq.len s) 1))))) (ite ((_ is |json:field|) f) (and (|json:ok| (|json:field.value| f)) (not (|json:has| (|json:field.rest| f) (|json:field.key| f))) (|json:ok.fields| (|json:field.rest| f))) true)))\n; A variant with the cases ok, waiting.\n(declare-datatype |variant:fda1d360| ((|variant:fda1d360#ok| (|variant:fda1d360#ok.value| Int)) (|variant:fda1d360#waiting|)))\n; {slot: <kind: ok: {value: Int} | waiting: {}>}\n(declare-datatype |record:a473073e| ((|record:a473073e| (|record:a473073e.slot| |variant:fda1d360|))))\n; A variant with the cases cancelled, child, world.\n(declare-datatype |variant:7ec60edd| ((|variant:7ec60edd#cancelled|) (|variant:7ec60edd#child| (|variant:7ec60edd#child.error| |json:Json|)) (|variant:7ec60edd#world| (|variant:7ec60edd#world.detail| |json:Json|))))\n; A variant with the cases spawn.\n(declare-datatype |variant:c33f62c4| ((|variant:c33f62c4#spawn| (|variant:c33f62c4#spawn.call| Int) (|variant:c33f62c4#spawn.value| |json:Json|))))\n; A variant with the cases failed, refused, ret, start.\n(declare-datatype |variant:bd31626d| ((|variant:bd31626d#failed| (|variant:bd31626d#failed.call| Int) (|variant:bd31626d#failed.error| |variant:7ec60edd|) (|variant:bd31626d#failed.op| String)) (|variant:bd31626d#refused| (|variant:bd31626d#refused.call| Int) (|variant:bd31626d#refused.op| String)) (|variant:bd31626d#ret| (|variant:bd31626d#ret.| |variant:c33f62c4|)) (|variant:bd31626d#start| (|variant:bd31626d#start.value| Int))))\n\n; Definitions.\n; The invariant, of a state.\n(define-fun |def:invariant| ((|v:state| |record:a473073e|)) Bool (= (ite ((_ is |variant:fda1d360#ok|) (|record:a473073e.slot| |v:state|)) \"ok\" \"waiting\") \"ok\"))\n; The state the step gives.\n(define-fun |def:next| ((|v:state| |record:a473073e|) (|v:input| |variant:bd31626d|)) |record:a473073e| (let ((|v:n| 1)) (let ((|v:next| (|record:a473073e| (|variant:fda1d360#ok| |v:n|)))) |v:next|)))\n\n; A counterexample to induction.\n(declare-const |q:state| |record:a473073e|)\n(declare-const |q:input| |variant:bd31626d|)\n(assert (and (=> ((_ is |variant:bd31626d#failed|) |q:input|) (and (=> ((_ is |variant:7ec60edd#child|) (|variant:bd31626d#failed.error| |q:input|)) (|json:ok| (|variant:7ec60edd#child.error| (|variant:bd31626d#failed.error| |q:input|)))) (=> ((_ is |variant:7ec60edd#world|) (|variant:bd31626d#failed.error| |q:input|)) (|json:ok| (|variant:7ec60edd#world.detail| (|variant:bd31626d#failed.error| |q:input|)))))) (=> ((_ is |variant:bd31626d#ret|) |q:input|) (=> ((_ is |variant:c33f62c4#spawn|) (|variant:bd31626d#ret.| |q:input|)) (|json:ok| (|variant:c33f62c4#spawn.value| (|variant:bd31626d#ret.| |q:input|)))))))\n(assert (|def:invariant| |q:state|))\n(assert (not (|def:invariant| (|def:next| |q:state| |q:input|))))\n(check-sat)\n(get-value (|q:state| |q:input|))\n"
         }
       }
     }

@@ -99,7 +99,7 @@ fn the_input_type_follows_the_interface() {
     );
     assert_eq!(
         cases["ret"]["Variant"]["cases"]["spawn"]["Record"]["value"],
-        "Any"
+        "Json"
     );
     assert_eq!(
         cases["msg"]["Variant"]["cases"]["user"]["Record"]["value"],
