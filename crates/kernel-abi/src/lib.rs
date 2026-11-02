@@ -23,6 +23,6 @@ pub unsafe extern "C" fn cronch_free(ptr: *mut u8, len: usize) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn cronch_call(ptr: *mut u8, len: usize) -> u64 {
     let request = unsafe { Box::from_raw(std::ptr::slice_from_raw_parts_mut(ptr, len)) };
-    let (out, out_len) = into_raw(kernel::api::call(&request).into_boxed_slice());
+    let (out, out_len) = into_raw(surface::api::call(&request).into_boxed_slice());
     ((out as u64) << 32) | out_len as u64
 }

@@ -22,12 +22,15 @@ const call = (request) => {
   return decoded.value;
 };
 
-const dir = new URL("../../compliance/cases/", import.meta.url);
-for (const file of (await readdir(dir)).filter((f) => f.endsWith(".json")).sort()) {
-  const vector = JSON.parse(await readFile(new URL(file, dir), "utf8"));
-  test(`compliance: ${file}`, () => {
-    vector.exchanges.forEach(({ request, response }, i) => {
-      assert.deepEqual(call(request), response, `exchange ${i}`);
+// The kernel's own vectors, and elaboration's, which the same module answers.
+for (const set of ["cases", "surface"]) {
+  const dir = new URL(`../../compliance/${set}/`, import.meta.url);
+  for (const file of (await readdir(dir)).filter((f) => f.endsWith(".json")).sort()) {
+    const vector = JSON.parse(await readFile(new URL(file, dir), "utf8"));
+    test(`compliance: ${set}/${file}`, () => {
+      vector.exchanges.forEach(({ request, response }, i) => {
+        assert.deepEqual(call(request), response, `exchange ${i}`);
+      });
     });
-  });
+  }
 }

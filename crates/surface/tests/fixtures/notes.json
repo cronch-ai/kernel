@@ -1,0 +1,164 @@
+{
+  "operations": {
+    "append": {
+      "input": {
+        "Record": {
+          "text": "String"
+        }
+      },
+      "output": "String",
+      "effect": true,
+      "pre": {
+        "e": "op",
+        "op": "or",
+        "args": [
+          {
+            "e": "op",
+            "op": "contains",
+            "args": [
+              {
+                "e": "get",
+                "of": {
+                  "e": "var",
+                  "name": "grant"
+                },
+                "field": "allow"
+              },
+              {
+                "e": "lit",
+                "v": "notes.append"
+              }
+            ]
+          },
+          {
+            "e": "op",
+            "op": "contains",
+            "args": [
+              {
+                "e": "get",
+                "of": {
+                  "e": "var",
+                  "name": "grant"
+                },
+                "field": "once"
+              },
+              {
+                "e": "record",
+                "fields": {
+                  "action": {
+                    "e": "lit",
+                    "v": "notes.append"
+                  },
+                  "args": {
+                    "e": "var",
+                    "name": "args"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "onCall": {
+        "e": "record",
+        "fields": {
+          "allow": {
+            "e": "get",
+            "of": {
+              "e": "var",
+              "name": "grant"
+            },
+            "field": "allow"
+          },
+          "once": {
+            "e": "fold",
+            "over": {
+              "e": "get",
+              "of": {
+                "e": "var",
+                "name": "grant"
+              },
+              "field": "once"
+            },
+            "init": {
+              "e": "list",
+              "items": []
+            },
+            "acc": "kept",
+            "item": "x",
+            "body": {
+              "e": "if",
+              "cond": {
+                "e": "op",
+                "op": "eq",
+                "args": [
+                  {
+                    "e": "var",
+                    "name": "x"
+                  },
+                  {
+                    "e": "record",
+                    "fields": {
+                      "action": {
+                        "e": "lit",
+                        "v": "notes.append"
+                      },
+                      "args": {
+                        "e": "var",
+                        "name": "args"
+                      }
+                    }
+                  }
+                ]
+              },
+              "then": {
+                "e": "var",
+                "name": "kept"
+              },
+              "else": {
+                "e": "op",
+                "op": "append",
+                "args": [
+                  {
+                    "e": "var",
+                    "name": "kept"
+                  },
+                  {
+                    "e": "var",
+                    "name": "x"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "footprint": {
+        "e": "record",
+        "fields": {
+          "appends": {
+            "e": "lit",
+            "v": "notes"
+          }
+        }
+      }
+    },
+    "read": {
+      "input": {
+        "Record": {}
+      },
+      "output": {
+        "List": "String"
+      },
+      "ret": {
+        "e": "list",
+        "items": [
+          {
+            "e": "lit",
+            "v": "notes"
+          }
+        ]
+      }
+    }
+  }
+}

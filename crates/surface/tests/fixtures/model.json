@@ -1,0 +1,28 @@
+{
+  "operations": {
+    "generate": {
+      "input": {
+        "Record": {
+          "messages": {
+            "List": {
+              "Record": {
+                "role": "String",
+                "content": "String"
+              }
+            }
+          }
+        }
+      },
+      "output": "String",
+      "ret": {
+        "e": "list",
+        "items": [
+          {
+            "e": "lit",
+            "v": "model"
+          }
+        ]
+      }
+    }
+  }
+}

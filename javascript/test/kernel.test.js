@@ -182,3 +182,38 @@ test("throws on requests it doesn't understand", () => {
     KernelError,
   );
 });
+
+test("elaborates a harness from source and runs it", () => {
+  const twice = { input: { Record: { n: "Int" } }, output: "Int" };
+  const capabilities = { math: { operations: { double: twice } } };
+  const source = [
+    "harness quad(n: Int) -> Int",
+    'uses m = "math"',
+    "a = m.double(n: n)",
+    "b = m.double(n: a)",
+    "return b",
+  ].join("\n");
+  const elaborated = kernel.elaborate(source, capabilities);
+  assert.equal(elaborated.kind, "elaborated", JSON.stringify(elaborated));
+  assert.deepEqual(elaborated.uses, [{ name: "m", capability: "math" }]);
+
+  const installed = kernel.install([{ prefix: "m", capability: capabilities.math }]);
+  const ready = kernel.init({ harness: elaborated.harness, interface: installed.interface });
+  let { system } = ready;
+  for (const input of [
+    { kind: "start", value: 3 },
+    { kind: "ret", call: 0, value: 6 },
+    { kind: "ret", call: 1, value: 12 },
+  ]) {
+    ({ system } = kernel.deliver(system, { input }));
+  }
+  assert.deepEqual(system.root.outcome, { kind: "halted", value: 12 });
+
+  const broken = kernel.elaborate(source.replace("n: a", "n: c"), capabilities);
+  assert.equal(broken.kind, "problems");
+  assert.deepEqual(broken.problems[0], {
+    kind: "unknownName",
+    name: "c",
+    span: { start: { line: 4, column: 17 }, end: { line: 4, column: 18 } },
+  });
+});

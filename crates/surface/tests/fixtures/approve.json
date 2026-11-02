@@ -1,0 +1,135 @@
+{
+  "operations": {
+    "ask": {
+      "input": {
+        "Record": {
+          "action": "String",
+          "args": "Any"
+        }
+      },
+      "output": "String",
+      "post": {
+        "e": "op",
+        "op": "contains",
+        "args": [
+          {
+            "e": "lit",
+            "v": ["once", "always", "deny"]
+          },
+          {
+            "e": "var",
+            "name": "result"
+          }
+        ]
+      },
+      "ret": {
+        "e": "list",
+        "items": []
+      },
+      "onResult": {
+        "e": "if",
+        "cond": {
+          "e": "op",
+          "op": "eq",
+          "args": [
+            {
+              "e": "var",
+              "name": "result"
+            },
+            {
+              "e": "lit",
+              "v": "always"
+            }
+          ]
+        },
+        "then": {
+          "e": "record",
+          "fields": {
+            "allow": {
+              "e": "op",
+              "op": "append",
+              "args": [
+                {
+                  "e": "get",
+                  "of": {
+                    "e": "var",
+                    "name": "grant"
+                  },
+                  "field": "allow"
+                },
+                {
+                  "e": "get",
+                  "of": {
+                    "e": "var",
+                    "name": "args"
+                  },
+                  "field": "action"
+                }
+              ]
+            },
+            "once": {
+              "e": "get",
+              "of": {
+                "e": "var",
+                "name": "grant"
+              },
+              "field": "once"
+            }
+          }
+        },
+        "else": {
+          "e": "if",
+          "cond": {
+            "e": "op",
+            "op": "eq",
+            "args": [
+              {
+                "e": "var",
+                "name": "result"
+              },
+              {
+                "e": "lit",
+                "v": "once"
+              }
+            ]
+          },
+          "then": {
+            "e": "record",
+            "fields": {
+              "allow": {
+                "e": "get",
+                "of": {
+                  "e": "var",
+                  "name": "grant"
+                },
+                "field": "allow"
+              },
+              "once": {
+                "e": "op",
+                "op": "append",
+                "args": [
+                  {
+                    "e": "get",
+                    "of": {
+                      "e": "var",
+                      "name": "grant"
+                    },
+                    "field": "once"
+                  },
+                  {
+                    "e": "var",
+                    "name": "args"
+                  }
+                ]
+              }
+            }
+          },
+          "else": {
+            "e": "var",
+            "name": "grant"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,178 @@
+{
+  "name": "no-effect-without-approval",
+  "always": {
+    "f": "implies",
+    "if": {
+      "f": "and",
+      "of": [
+        {
+          "f": "atom",
+          "holds": {
+            "e": "op",
+            "op": "eq",
+            "args": [
+              {
+                "e": "get",
+                "of": {
+                  "e": "var",
+                  "name": "event"
+                },
+                "field": "kind"
+              },
+              {
+                "e": "lit",
+                "v": "out"
+              }
+            ]
+          }
+        },
+        {
+          "f": "atom",
+          "holds": {
+            "e": "op",
+            "op": "eq",
+            "args": [
+              {
+                "e": "get",
+                "of": {
+                  "e": "var",
+                  "name": "event"
+                },
+                "field": "performed"
+              },
+              {
+                "e": "lit",
+                "v": true
+              }
+            ]
+          }
+        },
+        {
+          "f": "atom",
+          "holds": {
+            "e": "op",
+            "op": "eq",
+            "args": [
+              {
+                "e": "get",
+                "of": {
+                  "e": "var",
+                  "name": "event"
+                },
+                "field": "effect"
+              },
+              {
+                "e": "lit",
+                "v": true
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "then": {
+      "f": "once",
+      "of": {
+        "f": "and",
+        "of": [
+          {
+            "f": "atom",
+            "holds": {
+              "e": "op",
+              "op": "eq",
+              "args": [
+                {
+                  "e": "get",
+                  "of": {
+                    "e": "var",
+                    "name": "event"
+                  },
+                  "field": "kind"
+                },
+                {
+                  "e": "lit",
+                  "v": "in"
+                }
+              ]
+            }
+          },
+          {
+            "f": "atom",
+            "holds": {
+              "e": "op",
+              "op": "eq",
+              "args": [
+                {
+                  "e": "get",
+                  "of": {
+                    "e": "get",
+                    "of": {
+                      "e": "var",
+                      "name": "event"
+                    },
+                    "field": "input"
+                  },
+                  "field": "kind"
+                },
+                {
+                  "e": "lit",
+                  "v": "ret"
+                }
+              ]
+            }
+          },
+          {
+            "f": "atom",
+            "holds": {
+              "e": "op",
+              "op": "eq",
+              "args": [
+                {
+                  "e": "get",
+                  "of": {
+                    "e": "get",
+                    "of": {
+                      "e": "var",
+                      "name": "event"
+                    },
+                    "field": "input"
+                  },
+                  "field": "op"
+                },
+                {
+                  "e": "lit",
+                  "v": "approve.ask"
+                }
+              ]
+            }
+          },
+          {
+            "f": "atom",
+            "holds": {
+              "e": "op",
+              "op": "contains",
+              "args": [
+                {
+                  "e": "lit",
+                  "v": ["once", "always"]
+                },
+                {
+                  "e": "get",
+                  "of": {
+                    "e": "get",
+                    "of": {
+                      "e": "var",
+                      "name": "event"
+                    },
+                    "field": "input"
+                  },
+                  "field": "value"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  }
+}

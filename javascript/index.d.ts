@@ -197,6 +197,54 @@ export type HarnessProblem =
       readonly got: Type;
     };
 
+// Elaboration (`crates/surface`).
+
+/** A place in a source: line and column, both from 1, the column in characters. */
+export interface Pos {
+  readonly line: number;
+  readonly column: number;
+}
+
+/** The source from `start` up to, not including, `end`. */
+export interface Span {
+  readonly start: Pos;
+  readonly end: Pos;
+}
+
+/** A capability a harness uses, and the prefix it is installed under for every run of the harness. */
+export interface Binding {
+  readonly name: string;
+  readonly capability: string;
+}
+
+export type SourceProblem = { readonly span: Span } & (
+  | { readonly kind: "syntax"; readonly expected: string; readonly found: string }
+  | { readonly kind: "duplicate"; readonly name: string }
+  | { readonly kind: "unknownName"; readonly name: string }
+  | { readonly kind: "unknownType"; readonly name: string }
+  | { readonly kind: "recursiveType"; readonly name: string }
+  | { readonly kind: "noReturn" }
+  | { readonly kind: "notAValue"; readonly name: string }
+  | { readonly kind: "unknownFunction"; readonly name: string }
+  | { readonly kind: "unknownCapability"; readonly name: string; readonly capability: string }
+  | { readonly kind: "unknownOperation"; readonly op: string }
+  | { readonly kind: "notYet"; readonly feature: string }
+  | { readonly kind: "nestedCall"; readonly op: string }
+  | { readonly kind: "argument"; readonly expected: string }
+  | { readonly kind: "guardOnValue"; readonly node: string }
+  | { readonly kind: "cycle"; readonly nodes: readonly string[] }
+  | { readonly kind: "mayBeSkipped"; readonly node: string; readonly via: string }
+  | { readonly kind: "uncovered"; readonly node: string; readonly outcome: string }
+  | { readonly kind: "noSuchOutcome"; readonly outcome: string }
+  | { readonly kind: "mixedPatterns" }
+  | { readonly kind: "noDefault" }
+  | { readonly kind: "otherwiseReadsNode"; readonly node: string }
+  | { readonly kind: "type"; readonly problem: Problem }
+  | { readonly kind: "mismatch"; readonly expected: Type; readonly got: Type }
+  /** The kernel rejected the elaborated term: a bug in the elaborator, not the source. */
+  | { readonly kind: "internal"; readonly problems: readonly HarnessProblem[] }
+);
+
 // Runs (`crates/kernel/src/run.rs`).
 
 export type WorldInput =
@@ -576,6 +624,17 @@ export interface Kernel {
         readonly kind: "refused";
         readonly error: { readonly kind: "invariant" | "state" | "input" | "notHeld" | "step" };
       };
+  /** A harness from source, against the contracts of the capabilities its `uses` header names, by identifier. */
+  elaborate(
+    source: string,
+    capabilities: Readonly<Record<string, Interface>>,
+  ):
+    | {
+        readonly kind: "elaborated";
+        readonly harness: Harness;
+        readonly uses: readonly Binding[];
+      }
+    | { readonly kind: "problems"; readonly problems: readonly SourceProblem[] };
   key(kind: Kind, object: unknown): string;
   smtlib(
     definitions: readonly Definition[],

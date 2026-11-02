@@ -1,0 +1,316 @@
+{
+  "arg": "String",
+  "state": {
+    "Record": {
+      "draft": "String"
+    }
+  },
+  "init": {
+    "draft": ""
+  },
+  "step": {
+    "e": "match",
+    "of": {
+      "e": "var",
+      "name": "input"
+    },
+    "cases": {
+      "start": {
+        "bind": "s",
+        "body": {
+          "e": "record",
+          "fields": {
+            "state": {
+              "e": "var",
+              "name": "state"
+            },
+            "actions": {
+              "e": "list",
+              "items": [
+                {
+                  "e": "record",
+                  "fields": {
+                    "kind": {
+                      "e": "lit",
+                      "v": "call"
+                    },
+                    "op": {
+                      "e": "lit",
+                      "v": "model.generate"
+                    },
+                    "args": {
+                      "e": "record",
+                      "fields": {
+                        "messages": {
+                          "e": "list",
+                          "items": [
+                            {
+                              "e": "record",
+                              "fields": {
+                                "role": {
+                                  "e": "lit",
+                                  "v": "user"
+                                },
+                                "content": {
+                                  "e": "get",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "s"
+                                  },
+                                  "field": "value"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      "ret": {
+        "bind": "r",
+        "body": {
+          "e": "match",
+          "of": {
+            "e": "var",
+            "name": "r"
+          },
+          "on": "op",
+          "cases": {
+            "model.generate": {
+              "bind": "m",
+              "body": {
+                "e": "record",
+                "fields": {
+                  "state": {
+                    "e": "record",
+                    "fields": {
+                      "draft": {
+                        "e": "get",
+                        "of": {
+                          "e": "var",
+                          "name": "m"
+                        },
+                        "field": "value"
+                      }
+                    }
+                  },
+                  "actions": {
+                    "e": "list",
+                    "items": [
+                      {
+                        "e": "record",
+                        "fields": {
+                          "kind": {
+                            "e": "lit",
+                            "v": "call"
+                          },
+                          "op": {
+                            "e": "lit",
+                            "v": "approve.ask"
+                          },
+                          "args": {
+                            "e": "record",
+                            "fields": {
+                              "action": {
+                                "e": "lit",
+                                "v": "notes.append"
+                              },
+                              "args": {
+                                "e": "record",
+                                "fields": {
+                                  "text": {
+                                    "e": "get",
+                                    "of": {
+                                      "e": "var",
+                                      "name": "m"
+                                    },
+                                    "field": "value"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            "approve.ask": {
+              "bind": "a",
+              "body": {
+                "e": "if",
+                "cond": {
+                  "e": "op",
+                  "op": "eq",
+                  "args": [
+                    {
+                      "e": "get",
+                      "of": {
+                        "e": "var",
+                        "name": "a"
+                      },
+                      "field": "value"
+                    },
+                    {
+                      "e": "lit",
+                      "v": "deny"
+                    }
+                  ]
+                },
+                "then": {
+                  "e": "record",
+                  "fields": {
+                    "state": {
+                      "e": "var",
+                      "name": "state"
+                    },
+                    "actions": {
+                      "e": "list",
+                      "items": [
+                        {
+                          "e": "record",
+                          "fields": {
+                            "kind": {
+                              "e": "lit",
+                              "v": "halt"
+                            },
+                            "value": {
+                              "e": "lit",
+                              "v": "denied"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                "else": {
+                  "e": "record",
+                  "fields": {
+                    "state": {
+                      "e": "var",
+                      "name": "state"
+                    },
+                    "actions": {
+                      "e": "list",
+                      "items": [
+                        {
+                          "e": "record",
+                          "fields": {
+                            "kind": {
+                              "e": "lit",
+                              "v": "call"
+                            },
+                            "op": {
+                              "e": "lit",
+                              "v": "notes.append"
+                            },
+                            "args": {
+                              "e": "record",
+                              "fields": {
+                                "text": {
+                                  "e": "get",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "state"
+                                  },
+                                  "field": "draft"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            },
+            "notes.append": {
+              "bind": "n",
+              "body": {
+                "e": "record",
+                "fields": {
+                  "state": {
+                    "e": "var",
+                    "name": "state"
+                  },
+                  "actions": {
+                    "e": "list",
+                    "items": [
+                      {
+                        "e": "record",
+                        "fields": {
+                          "kind": {
+                            "e": "lit",
+                            "v": "halt"
+                          },
+                          "value": {
+                            "e": "get",
+                            "of": {
+                              "e": "var",
+                              "name": "n"
+                            },
+                            "field": "value"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "otherwise": {
+            "e": "record",
+            "fields": {
+              "state": {
+                "e": "var",
+                "name": "state"
+              },
+              "actions": {
+                "e": "list",
+                "items": []
+              }
+            }
+          }
+        }
+      }
+    },
+    "otherwise": {
+      "e": "record",
+      "fields": {
+        "state": {
+          "e": "var",
+          "name": "state"
+        },
+        "actions": {
+          "e": "list",
+          "items": [
+            {
+              "e": "record",
+              "fields": {
+                "kind": {
+                  "e": "lit",
+                  "v": "halt"
+                },
+                "value": {
+                  "e": "lit",
+                  "v": "stopped"
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}
