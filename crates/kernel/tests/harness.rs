@@ -275,3 +275,48 @@ fn labels_flow_from_inputs_into_state_and_calls() {
     let (_, events) = deliver_all(system, vec![ret(0, json!(10))]);
     assert_eq!(events[0]["label"], json!(["user"]));
 }
+
+/// On a `net.fetch` result: send a fixed body, then one that depends on whether the page said "go".
+fn reacts_to_fetch() -> Value {
+    let send = |body: Value| {
+        call_action(
+            "net.send",
+            rec(vec![
+                ("url", lit(json!("https://example.com"))),
+                ("body", body),
+            ]),
+        )
+    };
+    let fixed = send(lit(json!("arrived")));
+    let chosen = if_(
+        eq(path("input", &["value"]), lit(json!("go"))),
+        send(lit(json!("went"))),
+        send(lit(json!("stayed"))),
+    );
+    let decided = step(var("state"), vec![fixed, chosen]);
+    json!({
+        "arg": { "Record": {} }, "state": { "Record": {} }, "init": {},
+        "step": on(
+            vec![
+                ("start", step(var("state"), vec![call_action("net.fetch", rec(vec![("url", lit(json!("https://example.com/page")))]))])),
+                ("ret", decided),
+            ],
+            step(var("state"), vec![]),
+        ),
+    })
+}
+
+#[test]
+fn only_what_arrived_carries_its_sources() {
+    let system = init(reacts_to_fetch(), common::demo::interface());
+    let (_, events) = deliver_all(system, vec![start(json!({})), ret(0, json!("go"))]);
+    let sends: Vec<&Value> = events
+        .iter()
+        .filter(|e| e["kind"] == "out" && e["action"]["op"] == "net.send")
+        .collect();
+    assert_eq!(sends.len(), 2);
+    // Which call the result answers is the interpreter's: reacting to its arrival adds no label...
+    assert_eq!(sends[0]["labels"]["args"]["body"], json!([]));
+    // ...but deciding on what it says does.
+    assert_eq!(sends[1]["labels"]["args"]["body"], json!(["web"]));
+}

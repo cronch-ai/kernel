@@ -134,20 +134,11 @@ fn approved_note_runs_as_the_hand_written_harness_does() {
         vec![start(json!("a haiku")), ret(0, json!("draft")), failed(1)],
     ];
     for inputs in scenarios {
-        let (mut source, calls) = run(&out["harness"], &interface, &inputs);
+        let (source, calls) = run(&out["harness"], &interface, &inputs);
         let (hand_written, expected) = run(&fixture("approved-note"), &interface, &inputs);
         assert_eq!(calls, expected, "after {inputs:?}");
-        // The whole input of a step is labelled with its result's sources, so the slot kinds a step writes after the
-        // model's result carry `model`, and so does anything decided on them later. The hand-written harness keeps no
-        // such state. Labels only ever over-approximate, so this is lost precision, not lost safety.
-        let mut hand_written = hand_written;
-        let label = |outcome: &mut Value| outcome.as_object_mut().and_then(|o| o.remove("label"));
-        let (source_label, hand_written_label) = (label(&mut source), label(&mut hand_written));
-        assert_eq!(source_label, Some(json!(["model"])), "after {inputs:?}");
-        assert!(
-            hand_written_label.is_none() || hand_written_label == source_label,
-            "after {inputs:?}"
-        );
+        // Labels included: which call a result answers is the interpreter's, so the slot kinds the elaborated harness
+        // keeps don't carry the model's label, and it decides as the hand-written one does.
         assert_eq!(source, hand_written, "after {inputs:?}");
     }
     let (outcome, calls) = run(

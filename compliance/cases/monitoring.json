@@ -1341,10 +1341,10 @@
               "labels": {
                 "args": {
                   "body": ["web"],
-                  "url": ["web"]
+                  "url": []
                 },
-                "kind": ["web"],
-                "op": ["web"]
+                "kind": [],
+                "op": []
               },
               "origin": [],
               "performed": true,
@@ -1598,12 +1598,10 @@
                         },
                         "url": {
                           "scalar": {
-                            "label": ["web"],
                             "value": "https://example.com"
                           }
                         }
-                      },
-                      "label": ["web"]
+                      }
                     }
                   },
                   "call": 1,
@@ -1615,8 +1613,7 @@
               "started": true,
               "state": {
                 "record": {
-                  "fields": {},
-                  "label": ["web"]
+                  "fields": {}
                 }
               }
             }
@@ -1817,10 +1814,10 @@
             "labels": {
               "args": {
                 "body": ["web"],
-                "url": ["web"]
+                "url": []
               },
-              "kind": ["web"],
-              "op": ["web"]
+              "kind": [],
+              "op": []
             },
             "origin": [],
             "performed": true,
@@ -2084,10 +2081,10 @@
             "labels": {
               "args": {
                 "body": ["web"],
-                "url": ["web"]
+                "url": []
               },
-              "kind": ["web"],
-              "op": ["web"]
+              "kind": [],
+              "op": []
             },
             "origin": [],
             "performed": true,
@@ -2460,10 +2457,10 @@
             "labels": {
               "args": {
                 "body": ["web"],
-                "url": ["web"]
+                "url": []
               },
-              "kind": ["web"],
-              "op": ["web"]
+              "kind": [],
+              "op": []
             },
             "origin": [],
             "performed": true,
@@ -2850,10 +2847,10 @@
             "labels": {
               "args": {
                 "body": ["web"],
-                "url": ["web"]
+                "url": []
               },
-              "kind": ["web"],
-              "op": ["web"]
+              "kind": [],
+              "op": []
             },
             "origin": [],
             "performed": true,
