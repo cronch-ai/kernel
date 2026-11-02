@@ -23,7 +23,7 @@ The surface language takes that shape and gives it the kernel's semantics:
 - **What runs is still the pure `δ`.** The elaborator turns the graph into `δ`'s state machine:
   - The state holds one slot per call node: waiting, running, returned, failed, refused or skipped.
   - Each step records the result it was given. It then starts, in dependency order, every call whose dependencies have settled.
-  - The run halts once everything `return` reads has settled.
+  - The run halts once every slot has settled, so a call nothing reads still runs.
 
 The graph suits the kernel better than sequential code would:
 
@@ -45,7 +45,7 @@ Everything the kernel proves is about the elaborated `Expr`, which is the term t
    - The alternative was to give `δ` the next identifier as a third variable. That changes the step rule, the SMT-LIB export and every proof for one convenience.
    - If the counter ever disagreed with the interpreter, a result would land in the wrong slot. That breaks the author's intent, not a contract: preconditions are still checked at every call.
 5. **No source object in the kernel yet.** The harness's key is the key of the elaborated term. `elaborate` returns a source map with it, and the platform stores the source next to the harness it registers. Elaboration is deterministic for a given elaborator version, so anyone with the source and the same `@cronch/kernel` can recompute the term.
-6. **Node slots are part of the language, not the elaborator.** The `nodes` field of the generated state, and each slot's cases, are defined here. Properties and invariants may read them and mean the same thing whatever else the elaborator generates. The call counter and anything else the elaborator adds stay out of reach.
+6. **Node slots are part of the language, not the elaborator.** The `nodes` field of the generated state, and each slot's fields, are defined here. Properties and invariants may read them and mean the same thing whatever else the elaborator generates. The call counter and anything else the elaborator adds stay out of reach.
 7. **The harness names its capabilities.** Capabilities have identifiers: a platform capability's is a short string (`notes`), and a user's sandboxed module's is a content key that nobody should have to type. `uses` binds a readable name to each one, and that name is the prefix the capability is installed under. A run no longer picks prefixes; the harness does.
    - The body only ever says `search.query(...)`, never a key. A model writes readable names, which it is good at. The identifiers sit in the `uses` header, which the platform can write from its catalog of the owner's capabilities.
    - `elaborate` takes the contract of each identifier the header names, installs them under their names with the kernel's `install`, and types the harness against the result. It returns the header's bindings with the term, and the platform installs exactly those for every run of the harness.
@@ -91,9 +91,9 @@ property no_effect_without_approval:
 - **Reading a node:**
   - Its name, used as a value, is what it returned.
   - A node that reads a skipped node is skipped too.
-  - A failed or refused node read this way ends the run through `otherwise`.
-  - `match node { ok(v) => ..., failed(e) => ..., refused => ..., skipped => ... }` reads its outcome instead. A node read only through `match` can fail without ending the run.
-- **`return expr`**, once per harness, is `halt(expr)`, emitted once everything `expr` reads has settled. `return` may not read, as a value, a node that can be skipped (one with a guard, or that reads such a node). It must `match` it.
+  - `match node { ok(v) => ..., failed(e) => ..., refused => ..., skipped => ... }` reads its outcome instead. It must cover `ok`, and `skipped` if the node can be skipped, or have a `_` arm.
+  - A call node that fails or is refused ends the run through `otherwise`, unless every read of it is a `match` with arms for both, or a `_`. A node nothing reads ends the run too, since nothing handles its failure.
+- **`return expr`**, once per harness, is `halt(expr)`, emitted once every slot has settled. `return` may not read, as a value, a node that can be skipped (one with a guard, or that reads such a node). It must `match` it.
 - **`otherwise return expr`** is what a failure or refusal read as a value halts with. Without it, the run halts with `{"failed": name}`. `expr` can't read nodes.
 - **Types:** `String`, `Int`, `Float`, `Bool`, `Any`, `List[T]`, records as `{field: T}`, and named record and variant types declared with `type`. A `|` of tagged records is a variant. The names are the kernel's.
 - **Expressions** are the pure fragment, mapped one-to-one onto `Expr`:
@@ -137,16 +137,17 @@ property no_effect_without_approval:
 - **The generated state** is a record:
   - `arg`, the start value;
   - `next`, the call counter;
-  - `nodes`, a record with one slot per call node. A slot is a variant: `waiting`, `running {call}`, `ok {value}`, `failed {error}`, `refused` or `skipped`, with `value` at the operation's output type.
-- **The generated `δ`** is one pass:
+  - `nodes`, a record with one slot per call node. A slot is a record `{kind, call, value, error}`. `kind` is `waiting`, `running`, `ok`, `failed`, `refused` or `skipped`, and says which of the other fields mean anything. `value` is at the operation's output type.
+  - A slot is a record rather than a variant because the kernel has no expression that builds a value at a variant type: a record literal never conforms to one. `value` is carried from slot to slot, never rebuilt from a literal, so it keeps its type in every branch.
+- **The generated `δ`** is one pass. A message, or the end of a stream nothing reads, changes nothing.
   1. **Record:** `start` stores `arg`. `ret`, `failed` or `refused` for call `k` settles the slot running `k`. A result for a call no slot is running (only possible after a cancel) changes nothing.
-  2. **Schedule:** for each waiting call node, in a topological order, whose dependencies have all settled:
-     - if a dependency read as a value failed or was refused, halt through `otherwise`;
-     - if one was skipped, or the guard is false, mark the slot `skipped`;
+  2. **Fail:** if a node whose failure isn't handled has failed or been refused, halt through `otherwise`.
+  3. **Schedule:** for each waiting call node, in a topological order, whose dependencies have all settled:
+     - if one read as a value was skipped, or the guard is false, mark the slot `skipped`;
      - otherwise emit a `call` with identifier `next`, mark the slot `running`, and add one to `next`.
 
      Each node is a `Let` over the record the previous one produced, so nodes settled in this pass are seen by the nodes after them. Pure nodes are `Let`s over the slots they read, so the pass needs no `fold`.
-  3. **Return:** if everything `return` reads has settled, emit `halt` with its value.
+  4. **Return:** if every slot has settled, emit `halt` with `return`'s value.
 - **Checking:** the kernel checks the generated harness (`checkHarness`) and each property, as for hand-written terms. A problem there is an elaborator bug, and is reported as one.
 
 ## Pieces
@@ -177,4 +178,7 @@ All in this repo except S4. Each is a PR with compliance vectors, and S1 to S3 t
    `loop` is the likeliest. It is postponed past v0.4.0; until then, a host that needs a loop starts a run per turn.
 2. **Failure by default.** A node that fails, read as a value, ends the run through `otherwise`. That is the least surprising default for a total `δ`, and declaring `otherwise` keeps the policy in the harness rather than the language. Whether a harness should also be able to say "retry" is left until a real one needs it.
 3. **Versions.** A binding names one identifier, and a module's key pins its exact code. A platform capability's identifier pins nothing, so a contract can change under a registered harness. Whether identifiers should carry versions, as cronch-gleam's `{id, version}` references did, is the platform's call, and the kernel needs no change either way.
-4. **Surface for models.** Each construct is something a model can get wrong. The graph form has fewer of them than Python did, but it's less familiar. Measure how often models write valid harnesses before adding sugar.
+4. **Labels on control state.** The interpreter labels a step's whole input, `kind`, `call` and `op` included, with its result's sources. So a step taken on the model's result runs under the label `model`, and so does every slot it writes. A later step decides what to do from those slots, so its actions and its halt carry `model` too. A hand-written harness that keeps no control state doesn't have this problem. In S1's `approved-note`, the denied run halts with `"denied"` labelled `model`, where the hand-written one's is trusted.
+   - Labels only ever over-approximate, so this loses precision, not safety. But a property about information flow, such as "no untrusted data reaches a send", could be refuted for an elaborated harness and hold for the hand-written one.
+   - The fix is in the kernel: treat the interpreter's own fields of an input (`kind`, `call`, `op`) as trusted, and label only `value` and `error`. Whether _that_ a result arrived, and when, is information about the untrusted source is the question to decide first.
+5. **Surface for models.** Each construct is something a model can get wrong. The graph form has fewer of them than Python did, but it's less familiar. Measure how often models write valid harnesses before adding sugar.
