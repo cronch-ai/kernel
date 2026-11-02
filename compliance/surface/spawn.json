@@ -2629,7 +2629,7 @@
           }
         },
         "op": "elaborate",
-        "source": "harness parent(xs: List[Int]) -> Any\nuses m = \"math\"\nuses doubler = harness \"registered:doubler\"\ndoubled = for x in xs: m.double(n: x)\ntotal = fold doubled from 0 with (sum, d) => sum + d\nagain = spawn doubler(total) only m.double\nreturn again\n"
+        "source": "harness parent(xs: List[Int]) -> Json\nuses m = \"math\"\nuses doubler = harness \"registered:doubler\"\ndoubled = for x in xs: m.double(n: x)\ntotal = fold doubled from 0 with (sum, d) => sum + d\nagain = spawn doubler(total) only m.double\nreturn again\n"
       },
       "response": {
         "ok": true,
@@ -2657,7 +2657,6 @@
                 }
               }
             },
-            "result": "Any",
             "spawns": {
               "doubler": {
                 "arg": "Int",
@@ -2973,6 +2972,14 @@
                                           "e": "var",
                                           "name": "@r"
                                         }
+                                      }
+                                    }
+                                  },
+                                  "type": {
+                                    "Record": {
+                                      "i": "Int",
+                                      "out": {
+                                        "List": "String"
                                       }
                                     }
                                   }
@@ -3582,6 +3589,14 @@
                                         }
                                       }
                                     }
+                                  },
+                                  "type": {
+                                    "Record": {
+                                      "i": "Int",
+                                      "out": {
+                                        "List": "String"
+                                      }
+                                    }
                                   }
                                 }
                               },
@@ -4189,6 +4204,14 @@
                                               }
                                             }
                                           }
+                                        },
+                                        "type": {
+                                          "Record": {
+                                            "i": "Int",
+                                            "out": {
+                                              "List": "String"
+                                            }
+                                          }
                                         }
                                       }
                                     },
@@ -4435,6 +4458,14 @@
                                                             "e": "var",
                                                             "name": "@r"
                                                           }
+                                                        }
+                                                      }
+                                                    },
+                                                    "type": {
+                                                      "Record": {
+                                                        "i": "Int",
+                                                        "out": {
+                                                          "List": "Int"
                                                         }
                                                       }
                                                     }
@@ -5000,6 +5031,9 @@
                                                         "over": {
                                                           "e": "var",
                                                           "name": "@items"
+                                                        },
+                                                        "type": {
+                                                          "List": "String"
                                                         }
                                                       },
                                                       "kind": {
@@ -5058,6 +5092,9 @@
                                                         "over": {
                                                           "e": "var",
                                                           "name": "@items"
+                                                        },
+                                                        "type": {
+                                                          "List": "Int"
                                                         }
                                                       }
                                                     }
@@ -7074,7 +7111,7 @@
                                         },
                                         "halt": {
                                           "Record": {
-                                            "value": "Any"
+                                            "value": "Json"
                                           }
                                         },
                                         "spawn": {
@@ -7151,7 +7188,7 @@
                                       },
                                       "halt": {
                                         "Record": {
-                                          "value": "Any"
+                                          "value": "Json"
                                         }
                                       },
                                       "spawn": {
@@ -7228,7 +7265,7 @@
                                     },
                                     "halt": {
                                       "Record": {
-                                        "value": "Any"
+                                        "value": "Json"
                                       }
                                     },
                                     "spawn": {
@@ -7385,7 +7422,7 @@
                             },
                             "halt": {
                               "Record": {
-                                "value": "Any"
+                                "value": "Json"
                               }
                             },
                             "spawn": {

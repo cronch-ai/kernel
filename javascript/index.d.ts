@@ -2,15 +2,16 @@
 
 export type Value = null | boolean | number | string | Value[] | { [field: string]: Value };
 
-/** A structural type. `Int` conforms to `Float`, wider records to narrower ones, and `Any` both ways. */
+/** A structural type. `Int` conforms to `Float`, wider records to narrower ones, and every type to `Json`. */
 export type Type =
   | "Int"
   | "Float"
   | "String"
   | "Bool"
-  | "Any"
   /** Any JSON value. Every type conforms to it; what it holds is read only after `is` tests it. */
   | "Json"
+  /** An action the harness may take against the interface it runs against, resolved where its step is checked and run. */
+  | "Action"
   | { readonly List: Type }
   | { readonly Record: Readonly<Record<string, Type>> }
   /** A record whose `tag` field names its case, and which has that case's type. */
@@ -109,6 +110,8 @@ export type Problem =
   | { readonly kind: "mismatch"; readonly at: Path; readonly expected: Type; readonly got: Type }
   | { readonly kind: "notARecord"; readonly at: Path; readonly got: Type }
   | { readonly kind: "noSuchField"; readonly at: Path; readonly field: string; readonly of: Type }
+  /** A field only some of a variant's cases have: match first. */
+  | { readonly kind: "notEveryCase"; readonly at: Path; readonly field: string; readonly of: Type }
   | { readonly kind: "notAList"; readonly at: Path; readonly got: Type }
   | { readonly kind: "notAVariant"; readonly at: Path; readonly on: string; readonly got: Type }
   | { readonly kind: "noSuchCase"; readonly at: Path; readonly case: string }
@@ -605,7 +608,8 @@ export interface Definition {
 export type Floats = "exact" | "real";
 
 export type NoReading =
-  | { readonly kind: "any" }
+  /** A shape the checker refuses, where only checked terms are read. */
+  | { readonly kind: "unchecked" }
   | { readonly kind: "operator"; readonly op: string }
   | { readonly kind: "listConversion"; readonly from: Type; readonly to: Type }
   | { readonly kind: "equality"; readonly left: Type; readonly right: Type }
@@ -658,6 +662,8 @@ export interface Kernel {
   /** The harness's input is typed by `inputType`, and its actions by the interface's operations. */
   checkHarness(harness: Harness, iface: Interface): readonly HarnessProblem[];
   inputType(harness: Harness, iface: Interface): Type;
+  /** What `Action` is against an interface, halting with a value of `result` (default `Json`). */
+  actionType(iface: Interface, result?: Type): Type;
   checkInterface(iface: Interface): readonly HarnessProblem[];
   install(
     capabilities: readonly Installation[],
@@ -727,7 +733,6 @@ export interface Kernel {
         readonly kind: "obligation";
         readonly initiation: boolean;
         readonly text: string;
-        readonly excluded: readonly string[];
         /** The types to read a model's state and input at. */
         readonly reads: readonly [Type, Type];
       }

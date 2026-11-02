@@ -96,13 +96,11 @@ fn a_call_the_interface_lacks_is_caught_before_the_run_and_a_failed_precondition
     assert_eq!(refused["kind"], "refused");
     assert_eq!(refused["error"]["kind"], "harness");
 
-    // This step reads its start value without matching on the input's kind, so the argument is `Any` to the checker,
-    // and one of the wrong type is refused when the call is made.
+    // An argument of the wrong type for the call it is passed to is caught too.
     let mut wrong = double_harness();
     wrong["arg"] = json!("String");
-    let system = init(wrong, doubling());
-    let (_, events) = deliver_all(system, vec![start(json!("one"))]);
-    assert_eq!(events[1]["performed"], json!(false));
+    let refused = call(json!({ "op": "init", "harness": wrong, "interface": doubling() }));
+    assert_eq!(refused["error"]["kind"], "harness");
 
     // A precondition depends on the run, so a call that fails one is refused when it is made, before the world
     // moves.
@@ -169,10 +167,21 @@ fn inputs_the_environment_could_not_produce_are_withheld() {
 
 /// Start: call `a` and `b` at once. Collect results as they arrive; halt with them once both are in.
 fn both_harness() -> Value {
-    let got = op(
-        "append",
-        vec![path("state", &["got"]), path("input", &["value"])],
-    );
+    let collect = || {
+        let got = op(
+            "append",
+            vec![path("state", &["got"]), path("input", &["value"])],
+        );
+        let_(
+            "got",
+            got,
+            if_(
+                eq(op("len", vec![var("got")]), lit(json!(2))),
+                step(rec(vec![("got", var("got"))]), vec![halt(var("got"))]),
+                step(rec(vec![("got", var("got"))]), vec![]),
+            ),
+        )
+    };
     json!({
         "arg": { "Record": {} },
         "state": { "Record": { "got": { "List": "Int" } } },
@@ -183,10 +192,7 @@ fn both_harness() -> Value {
                     call_action("a", rec(vec![("n", lit(json!(1)))])),
                     call_action("b", rec(vec![("n", lit(json!(2)))])),
                 ])),
-                ("ret", let_("got", got,
-                    if_(eq(op("len", vec![var("got")]), lit(json!(2))),
-                        step(rec(vec![("got", var("got"))]), vec![halt(var("got"))]),
-                        step(rec(vec![("got", var("got"))]), vec![])))),
+                ("ret", on_op(vec![("a", collect()), ("b", collect())], step(var("state"), vec![]))),
             ],
             step(var("state"), vec![]),
         ),
@@ -225,7 +231,7 @@ fn streams_deliver_items_then_end_and_cancellation_is_a_request() {
         "step": on(
             vec![
                 ("start", step(var("state"), vec![call_action("tokens", rec(vec![]))])),
-                ("ret", step(rec(vec![("text", text)]), vec![])),
+                ("ret", on_op(vec![("tokens", step(rec(vec![("text", text)]), vec![]))], step(var("state"), vec![]))),
                 ("end", step(var("state"), vec![halt(path("state", &["text"]))])),
                 ("msg", step(var("state"), vec![cancel(lit(json!(0)))])),
             ],
@@ -267,7 +273,10 @@ fn a_step_that_fails_ends_the_run() {
         "arg": "Int",
         "state": "Int",
         "init": 0,
-        "step": step(op("idiv", vec![lit(json!(1)), path("input", &["value"])]), vec![]),
+        "step": on(
+            vec![("start", step(op("idiv", vec![lit(json!(1)), path("input", &["value"])]), vec![]))],
+            step(var("state"), vec![]),
+        ),
     });
     let system = init(harness, json!({}));
     let (system, events) = deliver_all(system, vec![start(json!(0)), start(json!(1))]);

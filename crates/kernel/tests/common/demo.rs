@@ -45,10 +45,15 @@ pub fn leaky() -> Value {
             ("start", step(var("state"), vec![fetch()])),
             (
                 "ret",
-                if_(
-                    eq(path("input", &["call"]), lit(json!(0))),
-                    step(var("state"), vec![send(path("input", &["value"]))]),
-                    step(var("state"), vec![]),
+                match_(
+                    var("input"),
+                    "op",
+                    vec![(
+                        "net.fetch",
+                        "page",
+                        step(var("state"), vec![send(path("page", &["value"]))]),
+                    )],
+                    Some(step(var("state"), vec![])),
                 ),
             ),
         ],
@@ -74,7 +79,7 @@ pub fn stubborn() -> Value {
             "msg",
             if_(
                 eq(path("input", &["channel"]), lit(json!("act"))),
-                step(var("state"), vec![dynamic(path("input", &["value"]))]),
+                acting(var("state"), dynamic(path("input", &["value"]))),
                 step(var("state"), vec![]),
             ),
         )],
@@ -89,7 +94,7 @@ pub fn obedient() -> Value {
     let on_act = if_(
         path("state", &["stopped"]),
         step(var("state"), vec![]),
-        step(var("state"), vec![dynamic(path("input", &["value"]))]),
+        acting(var("state"), dynamic(path("input", &["value"]))),
     );
     json!({
         "arg": { "Record": {} },
@@ -169,32 +174,40 @@ pub fn mistyped() -> Value {
     json!({ "name": "mistyped", "always": atom(op("gt", vec![length, lit(json!(0))])) })
 }
 
-/// Performs the action each message on `act` names, whatever it is. Ignores everything else.
+/// Performs the action each message names, if it is one of the interface's. Ignores everything else.
 pub fn actor() -> Value {
     json!({
         "arg": { "Record": {} },
         "state": { "Record": {} },
         "init": {},
         "step": on(
-            vec![("msg", step(var("state"), vec![dynamic(path("input", &["value"]))]))],
+            vec![("msg", acting(var("state"), dynamic(path("input", &["value"]))))],
             step(var("state"), vec![]),
         ),
     })
 }
 
-/// Calls `{op, args}` from its start value, then halts with the result, or "denied" or "failed".
+/// Calls `{op, args}` from its start value, then halts with the result, or "denied" if it may not make the call, or
+/// "failed".
 pub fn worker() -> Value {
     json!({
-        "arg": { "Record": { "op": "String" } },
+        "arg": { "Record": { "op": "String", "args": "Json" } },
         "state": { "Record": {} },
         "init": {},
         "step": on(
             vec![
-                ("start", step(var("state"), vec![dynamic(rec(vec![
-                    ("kind", lit(json!("call"))),
-                    ("op", path("input", &["value", "op"])),
-                    ("args", path("input", &["value", "args"])),
-                ]))])),
+                ("start", acting(var("state"), is_type(
+                    rec(vec![
+                        ("kind", lit(json!("call"))),
+                        ("op", path("input", &["value", "op"])),
+                        ("args", path("input", &["value", "args"])),
+                    ]),
+                    json!("Action"),
+                    "call",
+                    list(vec![var("call")]),
+                    // Not a call its interface has: its narrowing took it away.
+                    list(vec![halt(lit(json!("denied")))]),
+                ))),
                 ("ret", step(var("state"), vec![halt(path("input", &["value"]))])),
                 ("refused", step(var("state"), vec![halt(lit(json!("denied")))])),
             ],

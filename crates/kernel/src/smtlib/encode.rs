@@ -54,11 +54,11 @@ fn short_hash(value: &Value) -> String {
 /// A type as the comments write it.
 fn describe(ty: &Type) -> String {
     match ty {
+        Type::Action => "Action".into(),
         Type::Int => "Int".into(),
         Type::Float => "Float".into(),
         Type::String => "String".into(),
         Type::Bool => "Bool".into(),
-        Type::Any => "Any".into(),
         Type::Json => "Json".into(),
         Type::List(t) => format!("List({})", describe(t)),
         Type::Record(fields) => {
@@ -189,17 +189,19 @@ fn plain_equality(ty: &Type) -> bool {
     match ty {
         Type::Int | Type::Bool | Type::String => true,
         Type::List(t) => plain_equality(t),
-        Type::Float | Type::Any | Type::Json | Type::Record(_) | Type::Variant { .. } => false,
+        Type::Float | Type::Json | Type::Action | Type::Record(_) | Type::Variant { .. } => false,
     }
 }
 
-/// Whether `Json` appears anywhere in the type.
-fn mentions_json(ty: &Type) -> bool {
+/// Whether some term of the type's sort is no value the kernel could hold: an integer beyond what hosts carry
+/// exactly, a float that isn't finite, a `Json` term that isn't JSON.
+fn constrained(ty: &Type, floats: Floats) -> bool {
     match ty {
-        Type::Json => true,
-        Type::List(t) => mentions_json(t),
-        Type::Record(fields) => fields.values().any(mentions_json),
-        Type::Variant { cases, .. } => cases.values().any(mentions_json),
+        Type::Json | Type::Int => true,
+        Type::Float => floats == Floats::Exact,
+        Type::List(t) => constrained(t, floats),
+        Type::Record(fields) => fields.values().any(|t| constrained(t, floats)),
+        Type::Variant { cases, .. } => cases.values().any(|t| constrained(t, floats)),
         _ => false,
     }
 }
@@ -238,7 +240,7 @@ pub(super) fn case_fields(case: &Type) -> Read<Vec<(String, Type)>> {
     match case {
         Type::Record(fields) => Ok(fields.iter().map(|(f, t)| (f.clone(), t.clone())).collect()),
         Type::Variant { .. } => Ok(vec![(String::new(), case.clone())]),
-        _ => Err(NoReading::Any),
+        _ => Err(NoReading::Unchecked),
     }
 }
 
@@ -397,8 +399,8 @@ impl Encoder {
                 tag: tag.to_string(),
                 cases: cases.clone(),
             }) {
-                Type::Record(view) => view.get(field).cloned().ok_or(NoReading::Any)?,
-                _ => return Err(NoReading::Any),
+                Type::Record(view) => view.get(field).cloned().ok_or(NoReading::Unchecked)?,
+                _ => return Err(NoReading::Unchecked),
             }
         };
         let mut branches = Vec::new();
@@ -420,12 +422,12 @@ impl Encoder {
                         let (read, ty) = self.variant_field(nested, inner_tag, inner, field)?;
                         self.coerce(read, &ty, &field_ty)?
                     }
-                    _ => return Err(NoReading::Any),
+                    _ => return Err(NoReading::Unchecked),
                 }
             };
             branches.push((tester(&name, case, term.clone())?, value));
         }
-        let (_, last) = branches.pop().ok_or(NoReading::Any)?;
+        let (_, last) = branches.pop().ok_or(NoReading::Unchecked)?;
         let chained = branches
             .into_iter()
             .rev()
@@ -460,7 +462,7 @@ impl Encoder {
                 self.json = true;
                 json::sort()
             }
-            _ => Err(NoReading::Any),
+            _ => Err(NoReading::Unchecked),
         }
     }
 
@@ -470,7 +472,6 @@ impl Encoder {
             got: v.clone(),
         };
         match (ty, v) {
-            (Type::Any, _) => Err(NoReading::Any),
             (Type::Json, _) => self.json_value(v),
             (Type::Int, Value::Number(n)) => int_literal(n).ok_or_else(mismatch),
             (Type::Float, Value::Number(n)) => n
@@ -538,7 +539,7 @@ impl Encoder {
                 to: to.clone(),
             }),
             (_, Type::Json) => self.json_of(term, from),
-            _ => Err(NoReading::Any),
+            _ => Err(NoReading::Unchecked),
         }
     }
 
@@ -581,6 +582,7 @@ impl Encoder {
     fn json_of(&mut self, term: Term, from: &Type) -> Read<Term> {
         self.sort(&Type::Json)?;
         match from {
+            Type::Action => Err(NoReading::Unchecked),
             Type::Json => Ok(term),
             Type::Int | Type::Float => json::wrap("number", as_float(self.floats, term, from)),
             Type::String => json::wrap("string", term),
@@ -593,7 +595,7 @@ impl Encoder {
             Type::Record(_) | Type::Variant { .. } => {
                 let x = self.fresh();
                 let mut cases = self.json_cases(x.clone(), from)?;
-                let (_, last) = cases.pop().ok_or(NoReading::Any)?;
+                let (_, last) = cases.pop().ok_or(NoReading::Unchecked)?;
                 let keyed = |fields: BTreeMap<String, Term>| -> Read<Vec<(Term, Term)>> {
                     fields
                         .into_iter()
@@ -607,7 +609,6 @@ impl Encoder {
                 }
                 Ok(Term::bind(x, term, out))
             }
-            Type::Any => Err(NoReading::Any),
         }
     }
 
@@ -645,7 +646,7 @@ impl Encoder {
                                 Term::app(case_selector(&name, case, "")?, vec![term.clone()]);
                             self.json_cases(nested, case_ty)?
                         }
-                        _ => return Err(NoReading::Any),
+                        _ => return Err(NoReading::Unchecked),
                     };
                     for (condition, mut map) in inner {
                         map.insert(tag.clone(), json::wrap("string", Term::string(case)?)?);
@@ -654,7 +655,7 @@ impl Encoder {
                 }
                 Ok(out)
             }
-            _ => Err(NoReading::Any),
+            _ => Err(NoReading::Unchecked),
         }
     }
 
@@ -662,8 +663,8 @@ impl Encoder {
     fn json_is(&mut self, ty: &Type, j: Term) -> Read<Term> {
         let number = || json::select("number.v", j.clone());
         Ok(match ty {
+            Type::Action => return Err(NoReading::Unchecked),
             Type::Json => Term::atom("true"),
-            Type::Any => return Err(NoReading::Any),
             Type::Bool => json::tester("bool", j)?,
             Type::String => json::tester("string", j)?,
             Type::Float => json::tester("number", j)?,
@@ -742,8 +743,8 @@ impl Encoder {
     fn json_as(&mut self, ty: &Type, j: Term) -> Read<Term> {
         let number = || json::select("number.v", j.clone());
         match ty {
+            Type::Action => Err(NoReading::Unchecked),
             Type::Json => Ok(j),
-            Type::Any => Err(NoReading::Any),
             Type::Bool => json::select("bool.v", j),
             Type::String => json::select("string.v", j),
             Type::Float => number(),
@@ -799,14 +800,16 @@ impl Encoder {
         }
     }
 
-    /// What a term of `ty` must satisfy to be a value the kernel could hold, where `ty` has `Json` in it; `None` if
-    /// every term of its sort is one.
+    /// What a term of `ty` must satisfy to be a value the kernel could hold, and a host could carry; `None` if every
+    /// term of its sort is one.
     pub(super) fn well_formed(&mut self, ty: &Type, term: Term) -> Read<Option<Term>> {
-        if !mentions_json(ty) {
+        if !constrained(ty, self.floats) {
             return Ok(None);
         }
         Ok(Some(match ty {
             Type::Json => json::ok(term)?,
+            Type::Int => carried(term),
+            Type::Float => finite(term),
             Type::Record(fields) => {
                 let mut all = Vec::new();
                 for (field, t) in fields {
@@ -880,7 +883,7 @@ impl Encoder {
         at: &str,
         expected: Option<&Type>,
     ) -> Result<(Term, Type), ExportError> {
-        let Some(want) = expected.filter(|t| **t != Type::Any) else {
+        let Some(want) = expected else {
             return self.encode_inner(expr, at, None);
         };
         let here = at_body(at);
@@ -1046,9 +1049,6 @@ impl Encoder {
                         error,
                     })
                 })?;
-                if types.contains(&Type::Any) {
-                    return Err(here(NoReading::Any));
-                }
                 let reading = readings::operator(parsed)
                     .ok_or_else(|| NoReading::Operator { op: op.clone() });
                 let operands = terms.clone();
@@ -1118,11 +1118,11 @@ impl Encoder {
                     let item_at = child(at, &format!("items/{i}"));
                     encoded.push((self.expr(e, &item_at)?, item_at));
                 }
-                // An empty list literal is a `List(Any)`, which has no sort.
+                // An empty list literal, read where no list type is expected, is a `List(Json)`, as the checker reads it.
                 let element = encoded
                     .first()
                     .map(|((_, ty), _)| ty.clone())
-                    .ok_or_else(|| here(NoReading::Any))?;
+                    .unwrap_or(Type::Json);
                 let sort = self
                     .sort(&Type::List(Box::new(element.clone())))
                     .map_err(&here)?;
@@ -1155,7 +1155,7 @@ impl Encoder {
                     Type::Variant { tag, cases } => {
                         self.variant_field(term, &tag, &cases, field).map_err(here)
                     }
-                    _ => Err(here(NoReading::Any)),
+                    _ => Err(here(NoReading::Unchecked)),
                 }
             }
             Expr::Match {
@@ -1170,10 +1170,10 @@ impl Encoder {
                     cases: declared,
                 } = &ty
                 else {
-                    return Err(here(NoReading::Any));
+                    return Err(here(NoReading::Unchecked));
                 };
                 if tag != on {
-                    return Err(here(NoReading::Any));
+                    return Err(here(NoReading::Unchecked));
                 }
                 let name = self.variant(tag, declared).map_err(&here)?;
                 // The matched value is evaluated once, and every case reads it.
@@ -1219,7 +1219,7 @@ impl Encoder {
                                 self.encode(o, &body_at, expected)
                                     .map(|(t, bt)| (t, bt, body_at))
                             }
-                            None => Err(here(NoReading::Any)),
+                            None => Err(here(NoReading::Unchecked)),
                         },
                     };
                     self.guards.pop();
@@ -1229,12 +1229,13 @@ impl Encoder {
                 let mut joined = branches
                     .first()
                     .map(|b| b.2.clone())
-                    .ok_or_else(|| here(NoReading::Any))?;
+                    .ok_or_else(|| here(NoReading::Unchecked))?;
                 match expected {
                     Some(want) => joined = want.clone(),
                     None => {
                         for b in &branches[1..] {
-                            joined = join(&joined, &b.2).ok_or_else(|| here(NoReading::Any))?;
+                            joined =
+                                join(&joined, &b.2).ok_or_else(|| here(NoReading::Unchecked))?;
                         }
                     }
                 }
@@ -1249,7 +1250,7 @@ impl Encoder {
                 for condition in &mut self.defined[from..] {
                     *condition = Term::bind(x.clone(), matched.clone(), condition.clone());
                 }
-                let body = chained.ok_or_else(|| here(NoReading::Any))?;
+                let body = chained.ok_or_else(|| here(NoReading::Unchecked))?;
                 Ok((Term::bind(x, matched, body), joined))
             }
             Expr::Fold { .. } => Err(here(NoReading::Fold)),
@@ -1367,7 +1368,7 @@ impl Encoder {
             }
             Reading::Append => {
                 let Type::List(element) = ty else {
-                    return Err(NoReading::Any);
+                    return Err(NoReading::Unchecked);
                 };
                 let mut terms = terms.into_iter();
                 let (list, item) = (

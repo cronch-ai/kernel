@@ -6,15 +6,24 @@ mod common;
 use common::*;
 use serde_json::{Value, json};
 
-/// Calls `{op, args}` from its start value and from messages on the driving channels; ignores everything else.
+/// Calls `{op, args}` from its start value and from messages on the driving channels, if they name one of the
+/// interface's calls; ignores everything else.
 fn puppet() -> Value {
-    let act = step(
-        var("state"),
-        vec![call_action_dyn(
-            path("input", &["value", "op"]),
-            path("input", &["value", "args"]),
-        )],
-    );
+    let call = |of: Value| {
+        let shaped = json!({ "Record": { "op": "String", "args": "Json" } });
+        let made = rec(vec![
+            ("kind", lit(json!("call"))),
+            ("op", path("v", &["op"])),
+            ("args", path("v", &["args"])),
+        ]);
+        is_type(
+            of,
+            shaped,
+            "v",
+            acting(var("state"), dynamic(made)),
+            step(var("state"), vec![]),
+        )
+    };
     let channel = || path("input", &["channel"]);
     let driven = op(
         "or",
@@ -24,25 +33,17 @@ fn puppet() -> Value {
         ],
     );
     json!({
-        "arg": { "Record": { "op": "String" } },
+        "arg": { "Record": { "op": "String", "args": "Json" } },
         "state": { "Record": {} },
         "init": {},
         "step": on(
             vec![
-                ("start", act.clone()),
-                ("msg", if_(driven, act, step(var("state"), vec![]))),
+                ("start", call(path("input", &["value"]))),
+                ("msg", if_(driven, call(path("input", &["value"])), step(var("state"), vec![]))),
             ],
             step(var("state"), vec![]),
         ),
     })
-}
-
-fn call_action_dyn(op_name: Value, args: Value) -> Value {
-    dynamic(rec(vec![
-        ("kind", lit(json!("call"))),
-        ("op", op_name),
-        ("args", args),
-    ]))
 }
 
 fn drive(op_name: &str, args: Value) -> Value {
@@ -239,7 +240,7 @@ fn approvals_widen_the_grant_once_or_always() {
     let (system, calls) = performed(
         system,
         vec![
-            ret(1, json!("once")),
+            ret(0, json!("once")),
             run(publish.clone()),
             run(publish.clone()),
         ],
@@ -252,7 +253,7 @@ fn approvals_widen_the_grant_once_or_always() {
     let (system, calls) = performed(
         system,
         vec![
-            ret(4, json!("always")),
+            ret(3, json!("always")),
             run(publish.clone()),
             run(publish.clone()),
         ],
@@ -275,7 +276,7 @@ fn an_untrusted_answer_grants_nothing() {
         system(narrowed),
         vec![drive("shell.approve", json!({ "argv": publish }))],
     );
-    let (system, calls) = performed(system, vec![ret(1, json!("always")), run(publish)]);
+    let (system, calls) = performed(system, vec![ret(0, json!("always")), run(publish)]);
     assert_eq!(calls, [false]);
     assert_eq!(system["root"]["grant"]["allow"], json!([["npm", "test"]]));
 
@@ -335,7 +336,7 @@ fn results_carry_their_return_label_and_must_meet_their_postcondition() {
         system(installed()),
         vec![drive("net.fetch", json!({ "url": "https://example.com" }))],
     );
-    let (_, events) = deliver_all(system, vec![ret(1, json!("<html>"))]);
+    let (_, events) = deliver_all(system, vec![ret(0, json!("<html>"))]);
     assert_eq!(events[0]["label"], json!(["web"]));
 
     let counter = json!({ "operations": { "count": {
@@ -343,9 +344,9 @@ fn results_carry_their_return_label_and_must_meet_their_postcondition() {
         "post": op("ge", vec![var("result"), lit(json!(0))]),
     }}, "channels": drivers()["channels"] });
     let (system, _) = deliver_all(system_with(counter), vec![drive("count", json!({}))]);
-    let (system, events) = deliver_all(system, vec![ret(1, json!(-1))]);
+    let (system, events) = deliver_all(system, vec![ret(0, json!(-1))]);
     assert_eq!(shape(&events), ["withheld:postcondition"]);
-    let (_, events) = deliver_all(system, vec![ret(1, json!(3))]);
+    let (_, events) = deliver_all(system, vec![ret(0, json!(3))]);
     assert_eq!(shape(&events), ["in:ret"]);
 }
 
@@ -429,7 +430,8 @@ fn contracts_are_checked() {
         .map(|p| p["place"]["part"].as_str().unwrap())
         .collect();
     assert_eq!(parts, ["pre", "ret"]);
-    let refused = call(json!({ "op": "init", "harness": puppet(), "interface": interface }));
+    let idle = json!({ "arg": "Json", "state": { "Record": {} }, "init": {}, "step": step(var("state"), vec![]) });
+    let refused = call(json!({ "op": "init", "harness": idle, "interface": interface }));
     assert_eq!(refused["error"]["kind"], "interface");
 }
 
@@ -482,7 +484,7 @@ fn capabilities_declare_their_part_of_the_grant_state() {
     assert_eq!(problems[0]["place"]["part"], "onCall");
 
     // And a run can't start with a grant state of another type.
-    let harness = json!({ "arg": "Any", "state": { "Record": {} }, "init": {}, "step": step(var("state"), vec![]) });
+    let harness = json!({ "arg": "Json", "state": { "Record": {} }, "init": {}, "step": step(var("state"), vec![]) });
     let refused = call(
         json!({ "op": "init", "harness": harness, "interface": counter, "grant": { "ticks": "none" } }),
     );

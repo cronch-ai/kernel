@@ -28,7 +28,7 @@ fn interface() -> Value {
 }
 
 const APPROVED_NOTE: &str = r#"
-harness approved_note(prompt: String) -> Any
+harness approved_note(prompt: String) -> Json
 
 uses model, approve, notes
 
@@ -244,7 +244,7 @@ fn quantifiers_and_since_connect_events() {
 
 #[test]
 fn claims_are_checked_where_they_are() {
-    let header = "harness h(prompt: String) -> Any\nuses model, approve, notes\ndraft = model.generate(messages: [])\ntext = draft\nreturn draft\n";
+    let header = "harness h(prompt: String) -> Json\nuses model, approve, notes\ndraft = model.generate(messages: [])\ntext = draft\nreturn draft\n";
     let at = |claim: &str| problems(&format!("{header}{claim}\n"));
 
     let p = at("property p: called(notes.remove)");
@@ -267,7 +267,7 @@ fn claims_are_checked_where_they_are() {
     assert_eq!(p[0]["kind"], "unknownFunction");
     let p = at("invariant i: draft.kind");
     assert_eq!(p[0]["kind"], "mismatch");
-    let p = problems("harness h(n: Int) -> Any\nx = n since n\nreturn x\n");
+    let p = problems("harness h(n: Int) -> Json\nx = n since n\nreturn x\n");
     assert_eq!(p[0]["kind"], "propertyOnly");
     let p = at("property p: effect()\nproperty p: effect()");
     assert_eq!(p[0]["kind"], "duplicate");

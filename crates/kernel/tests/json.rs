@@ -174,3 +174,84 @@ fn json_in_a_state_has_an_smt_reading() {
     let read = call(json!({ "op": "readValues", "reply": twice, "types": ["Json"] }));
     assert_eq!(read["kind"], "unreadable", "{read}");
 }
+
+/// Performs what each message names, if it is an action this run may take.
+fn performer() -> Value {
+    let counted = rec(vec![(
+        "acted",
+        op("add", vec![path("state", &["acted"]), lit(json!(1))]),
+    )]);
+    let chosen = is_type(
+        path("input", &["value"]),
+        json!("Action"),
+        "a",
+        step(counted, vec![var("a")]),
+        step(var("state"), vec![]),
+    );
+    json!({
+        "arg": "Json", "state": { "Record": { "acted": "Int" } }, "init": { "acted": 0 },
+        "step": on(vec![("msg", chosen)], step(var("state"), vec![])),
+    })
+}
+
+fn tools() -> Value {
+    json!({
+        "operations": {
+            "notes.append": { "input": { "Record": { "text": "String" } }, "output": "String", "effect": true },
+            "notes.read": { "input": { "Record": {} }, "output": "String" },
+        },
+        "channels": { "pick": { "type": "Json" } },
+    })
+}
+
+#[test]
+fn action_is_what_the_interface_it_runs_against_allows() {
+    // One term, checked against each interface it runs against.
+    let problems =
+        call(json!({ "op": "checkHarness", "harness": performer(), "interface": tools() }));
+    assert_eq!(problems["problems"], json!([]));
+    let append = json!({ "kind": "call", "op": "notes.append", "args": { "text": "hi" } });
+    let (_, events) = deliver_all(
+        init(performer(), tools()),
+        vec![start(json!({})), msg("pick", append.clone())],
+    );
+    assert_eq!(events.last().unwrap()["action"], append);
+
+    // Narrowed, an append is no longer an action it may take, so the same term doesn't take it.
+    let read_only = call(json!({ "op": "narrow", "interface": tools(), "narrowings": [{ "kind": "drop", "op": "notes.append" }] }))["interface"].clone();
+    let (_, events) = deliver_all(
+        init(performer(), read_only.clone()),
+        vec![start(json!({})), msg("pick", append)],
+    );
+    assert!(events.iter().all(|e| e["kind"] == "in"), "{events:?}");
+
+    // What isn't an action at all, or calls with the wrong arguments, isn't one either.
+    let wrong = json!({ "kind": "call", "op": "notes.append", "args": { "text": 3 } });
+    let (_, events) = deliver_all(
+        init(performer(), tools()),
+        vec![
+            start(json!({})),
+            msg("pick", wrong),
+            msg("pick", json!("hello")),
+        ],
+    );
+    assert!(events.iter().all(|e| e["kind"] == "in"), "{events:?}");
+
+    // `actionType` says what `Action` is against an interface.
+    let ty = call(json!({ "op": "actionType", "interface": read_only }))["type"].clone();
+    assert_eq!(
+        ty["Variant"]["cases"]["call"]["Variant"]["cases"]
+            .as_object()
+            .unwrap()
+            .keys()
+            .collect::<Vec<_>>(),
+        ["notes.read"]
+    );
+
+    // And an obligation reads it resolved.
+    let out = call(
+        json!({ "op": "obligation", "harness": performer(), "interface": tools(),
+        "invariant": op("ge", vec![path("state", &["acted"]), lit(json!(0))]) }),
+    );
+    assert_eq!(out["kind"], "obligation", "{out}");
+}

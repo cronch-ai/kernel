@@ -13,93 +13,84 @@
             "Record": {}
           },
           "step": {
-            "cond": {
-              "args": [
-                {
-                  "e": "get",
-                  "field": "kind",
-                  "of": {
-                    "e": "var",
-                    "name": "input"
+            "cases": {
+              "start": {
+                "bind": "input",
+                "body": {
+                  "e": "record",
+                  "fields": {
+                    "actions": {
+                      "e": "list",
+                      "items": [
+                        {
+                          "e": "record",
+                          "fields": {
+                            "args": {
+                              "e": "record",
+                              "fields": {
+                                "body": {
+                                  "e": "lit",
+                                  "v": "hello"
+                                },
+                                "url": {
+                                  "e": "lit",
+                                  "v": "https://example.com"
+                                }
+                              }
+                            },
+                            "kind": {
+                              "e": "lit",
+                              "v": "call"
+                            },
+                            "op": {
+                              "e": "lit",
+                              "v": "net.send"
+                            }
+                          }
+                        },
+                        {
+                          "e": "record",
+                          "fields": {
+                            "args": {
+                              "e": "record",
+                              "fields": {
+                                "url": {
+                                  "e": "lit",
+                                  "v": "https://example.com/page"
+                                }
+                              }
+                            },
+                            "kind": {
+                              "e": "lit",
+                              "v": "call"
+                            },
+                            "op": {
+                              "e": "lit",
+                              "v": "net.fetch"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    "state": {
+                      "e": "var",
+                      "name": "state"
+                    }
                   }
-                },
-                {
-                  "e": "lit",
-                  "v": "start"
                 }
-              ],
-              "e": "op",
-              "op": "eq"
+              }
             },
-            "e": "if",
-            "else": {
+            "e": "match",
+            "of": {
+              "e": "var",
+              "name": "input"
+            },
+            "otherwise": {
               "e": "record",
               "fields": {
                 "actions": {
                   "e": "list",
                   "items": []
-                },
-                "state": {
-                  "e": "var",
-                  "name": "state"
-                }
-              }
-            },
-            "then": {
-              "e": "record",
-              "fields": {
-                "actions": {
-                  "e": "list",
-                  "items": [
-                    {
-                      "e": "record",
-                      "fields": {
-                        "args": {
-                          "e": "record",
-                          "fields": {
-                            "body": {
-                              "e": "lit",
-                              "v": "hello"
-                            },
-                            "url": {
-                              "e": "lit",
-                              "v": "https://example.com"
-                            }
-                          }
-                        },
-                        "kind": {
-                          "e": "lit",
-                          "v": "call"
-                        },
-                        "op": {
-                          "e": "lit",
-                          "v": "net.send"
-                        }
-                      }
-                    },
-                    {
-                      "e": "record",
-                      "fields": {
-                        "args": {
-                          "e": "record",
-                          "fields": {
-                            "url": {
-                              "e": "lit",
-                              "v": "https://example.com/page"
-                            }
-                          }
-                        },
-                        "kind": {
-                          "e": "lit",
-                          "v": "call"
-                        },
-                        "op": {
-                          "e": "lit",
-                          "v": "net.fetch"
-                        }
-                      }
-                    }
-                  ]
                 },
                 "state": {
                   "e": "var",
@@ -114,7 +105,7 @@
       "response": {
         "ok": true,
         "result": {
-          "key": "sha256:f8d537949c5934fac4c30ba5d1c228641a173fb0dd17c6081763a69b297cc3ae"
+          "key": "sha256:f9f4dd06b601a52ea910a47b045f9a20a280fb523843743b1f67df9eafc03c0c"
         }
       }
     },

@@ -108,7 +108,7 @@ pub enum OpEvalError {
     DivisionByZero,
     Overflow,
     NotFinite,
-    /// An operand that type-checking admitted (through `Any`) turned out not to fit.
+    /// An operand that doesn't fit: one type-checking would have refused, met in a term that wasn't checked.
     Operand {
         index: usize,
         expected: Type,
@@ -182,7 +182,7 @@ pub fn result_type(op: Op, args: &[Type]) -> Result<Type, OpTypeError> {
         }
         Op::Str => Ok(Type::String),
         Op::Len => match &args[0] {
-            Type::String | Type::List(_) | Type::Any => Ok(Type::Int),
+            Type::String | Type::List(_) => Ok(Type::Int),
             got => Err(OpTypeError::Operand {
                 index: 0,
                 expected: Type::String,
@@ -197,14 +197,13 @@ pub fn result_type(op: Op, args: &[Type]) -> Result<Type, OpTypeError> {
             }
         }
         Op::Prefix => match (&args[0], &args[1]) {
-            (Type::List(_) | Type::Any, Type::List(_) | Type::Any) => Ok(Type::Bool),
+            (Type::List(_), Type::List(_)) => Ok(Type::Bool),
             (a, b) => {
                 expect(0, a, Type::String)?;
                 expect(1, b, Type::String).map(|_| Type::Bool)
             }
         },
         Op::Append => match &args[0] {
-            Type::Any => Ok(Type::List(Box::new(Type::Any))),
             Type::List(t) => join(t, &args[1])
                 .map(|t| Type::List(Box::new(t)))
                 .ok_or_else(|| OpTypeError::Operand {
@@ -214,12 +213,12 @@ pub fn result_type(op: Op, args: &[Type]) -> Result<Type, OpTypeError> {
                 }),
             got => Err(OpTypeError::Operand {
                 index: 0,
-                expected: Type::List(Box::new(Type::Any)),
+                expected: Type::List(Box::new(Type::Json)),
                 got: got.clone(),
             }),
         },
         Op::Contains => match &args[0] {
-            Type::List(_) | Type::Any => Ok(Type::Bool),
+            Type::List(_) => Ok(Type::Bool),
             got => {
                 expect(0, got, Type::String)?;
                 expect(1, &args[1], Type::String).map(|_| Type::Bool)
@@ -306,7 +305,7 @@ fn boolean(index: usize, v: &Value) -> Result<bool, OpEvalError> {
 fn list(index: usize, v: &Value) -> Result<&Vec<Value>, OpEvalError> {
     v.as_array().ok_or_else(|| OpEvalError::Operand {
         index,
-        expected: Type::List(Box::new(Type::Any)),
+        expected: Type::List(Box::new(Type::Json)),
         got: v.clone(),
     })
 }
@@ -373,8 +372,8 @@ fn length(n: usize) -> Result<Value, OpEvalError> {
         .ok_or(OpEvalError::Overflow)
 }
 
-/// Apply the operator to operand values. Operands were type-checked, but are re-checked here: a value admitted
-/// through `Any` must still fit.
+/// Apply the operator to operand values. Operands are re-checked here, so evaluating a term nobody checked still
+/// fails cleanly.
 pub fn apply(op: Op, args: &[Value]) -> Result<Value, OpEvalError> {
     match op {
         Op::Add => arith(&args[0], &args[1], i64::checked_add, |x, y| x + y),

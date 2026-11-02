@@ -22,7 +22,7 @@ Plan for taking `Any` out of the kernel's types, agreed on 2026-11-02 while buil
 | Events                        | `property.rs`                    | A property's atoms read `event` as `Any`.                                                                                 |
 | Harnesses checked alone       | `harness.rs` (`check_harness`)   | Without an interface, a step's input is `Any`.                                                                            |
 | Contracts                     | the capabilities themselves      | `approve.ask` takes `args: Any`, the arguments of whichever action it is asked about.                                     |
-| The checker's recovery        | `check.rs`                       | After reporting a problem, the checker carries on with `Any`. This one stays: it never reaches a term that checks.        |
+| The checker's recovery        | `check.rs`                       | After reporting a problem, the checker carries on with `Any`. A3d replaces it with a binding that has no type.            |
 
 They are three kinds of thing:
 - a gap in the checker (the first three);
@@ -73,6 +73,7 @@ A2 changes the shape of `Harness`, properties and responses, so it is a breaking
 - **Decided: an undeclared child takes and gives `Json`,** so a harness may still spawn something chosen at run time, and inspects what it gives like any other `Json`.
 - SMT reads `Json` as a recursive datatype whose records are chains of fields, with recursive functions to look a field up, and `is` as the test a type's shape gives (a list of anything but `Json` has no reading: SMT-LIB has no map over sequences). A query asserts that what it quantifies over is a value the kernel could hold: finite numbers, and no key twice. Key order is left free, since solvers give up comparing strings, and nothing reads it.
 - Then `Type::Any` and the "conforms both ways" rule are deleted, and a partial field read is an error.
+- **Decided on 2026-11-02: an action chosen at run time is tested against `Action`.** `Action` is a type that stands for the action type of the interface the harness runs against. The kernel resolves it wherever the step is checked, run or read in SMT-LIB, so `if pick is Action as a then [a] else …` tests a model's tool call against whatever that interface allows. One term works under any interface and any narrowing: under `only notes.read`, a chosen `notes.append` isn't an `Action`, and the harness takes its `else`. The alternative, writing the action type out, tied each harness's term to one interface, so a narrowed child would need its own copy. `actionType` says what `Action` is against an interface.
 
 The platform's contracts change with A3: `approve.ask`'s `args` becomes `Json`, and any contract that reads `grant` declares its part (A2).
 
@@ -97,7 +98,12 @@ Each is a kernel PR with compliance vectors, and the platform follows A2 and A3 
   - **A3c:** what the interpreter makes up becomes `Json`: a world error's `detail`, a child's error, an undeclared child's result, and the defaults for a harness's `result` and an interface's `grant`. So obligations read every input, and a contract that reads the grant must declare it.
     - Found on the way: an update to the grant replaced all of it, so one capability's update erased another's part. Since A3c makes declaring parts necessary, an update now gives only the fields it changes, the interpreter merges them in, and the checker types them against those fields of the declared grant.
     - Properties keep reading events through `Any` where cases disagree, and an action chosen at run time is still bound at `Any`: both go with `Any` in A3d.
-  - **A3d:** `Any` deleted, a partial field read an error, and `null` refused but at `Json`. Breaking version, with the platform's contracts updated.
+  - **A3d:** `Any` deleted, with `Action` for actions chosen at run time. Breaking version, with the platform's contracts updated.
+    - A field of a variant is read only when every case has it; otherwise the value is matched first (`notEveryCase`). Where every case has it at types with no join, it reads as `Json`.
+    - `null`, and the items of an empty list read where no list type is expected, are `Json`.
+    - The checker's recovery after a problem is no longer `Any`: a binding that failed to check has no type, and what reads it is ill-typed without another problem being reported.
+    - Every type has an SMT sort, so an obligation no longer has inputs it leaves out, and `excluded` is gone.
+    - Properties read fields whose types disagree across events as `Json`, so comparing them works and reading into them needs `is`.
 
 ## Open questions
 

@@ -64,10 +64,8 @@ pub enum Place {
 #[derive(Serialize, Clone, Debug, PartialEq)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum NoReading {
-    /// `Any` has no sort: an unchecked shape can't be declared. Empty list literals have this type.
-    Any,
-    /// `Json`, and testing a value's type with `is`, have no reading yet.
-    Json,
+    /// A shape the checker refuses, where only checked terms are read.
+    Unchecked,
     /// An operator with no registered reading.
     Operator { op: String },
     /// A list used as a list of another element type: SMT-LIB has no map over sequences.
@@ -171,7 +169,6 @@ pub fn induction(
     input: &Type,
     invariant: &Expr,
     next: &Expr,
-    excluded: &[String],
     floats: Floats,
 ) -> Result<String, Refusal> {
     let param = |name: &str, ty: &Type| Param {
@@ -278,18 +275,12 @@ pub fn induction(
     );
     query.push(command(script::Command::CheckSat));
     query.push(command(script::Command::GetValue(vec![s, i])));
-    let mut preamble = vec![
+    let preamble = vec![
         "Consecution: sat exactly where the invariant holds of a state and fails after one step."
             .into(),
         "A model is a counterexample to induction for the kernel to check; unsat is not a verdict."
             .into(),
     ];
-    if !excluded.is_empty() {
-        preamble.push(format!(
-            "Inputs left out, whose types have no sort: {}.",
-            excluded.join(", ")
-        ));
-    }
     let script = Script {
         preamble,
         options: vec![(":produce-models", "true")],

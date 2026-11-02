@@ -6,14 +6,12 @@ use std::collections::BTreeMap;
 
 /// `actual` is acceptable where `expected` is required.
 ///
-/// * `Any` on either side conforms (gradual: unchecked shapes pass here and are reported elsewhere).
 /// * `Int` conforms to `Float`.
 /// * Lists are covariant; a record conforms when it has every expected field, each conforming (width subtyping).
 /// * Every type conforms to `Json`, and `Json` to nothing else: every value is one, but what one holds is known only
 ///   once it is tested with `is`.
 pub fn conforms(actual: &Type, expected: &Type) -> bool {
     match (actual, expected) {
-        (Type::Any, _) | (_, Type::Any) => true,
         (_, Type::Json) => true,
         (Type::Int, Type::Float) => true,
         (Type::List(a), Type::List(e)) => conforms(a, e),
@@ -33,7 +31,8 @@ pub fn conforms(actual: &Type, expected: &Type) -> bool {
     }
 }
 
-/// What every value of a variant has, as a record: its tag, and each field every case has, at their join.
+/// What every value of a variant has, as a record: its tag, and each field every case has, at their join, or `Json`
+/// where they have none.
 pub fn record_view(ty: &Type) -> Type {
     match ty {
         Type::Variant { tag, cases } => {
@@ -46,7 +45,10 @@ pub fn record_view(ty: &Type) -> Type {
                     None => fields,
                     Some(c) => c
                         .into_iter()
-                        .filter_map(|(n, t)| Some((n.clone(), join(&t, fields.get(&n)?)?)))
+                        .filter_map(|(n, t)| {
+                            let other = fields.get(&n)?;
+                            Some((n.clone(), join(&t, other).unwrap_or(Type::Json)))
+                        })
                         .collect(),
                 });
             }
@@ -58,14 +60,12 @@ pub fn record_view(ty: &Type) -> Type {
     }
 }
 
-/// The least type both conform to, if there is one other than giving up on checking.
+/// The least type both conform to, if there is one other than `Json`, which would say nothing of either.
 ///
 /// A record keeps the fields both have, each at their join, and drops a common field whose types have none: the
-/// result is still a supertype of both under width subtyping. `Any` absorbs everything; two unrelated scalars have
-/// no join.
+/// result is still a supertype of both under width subtyping. Two unrelated scalars have no join.
 pub fn join(a: &Type, b: &Type) -> Option<Type> {
     match (a, b) {
-        (Type::Any, _) | (_, Type::Any) => Some(Type::Any),
         _ if conforms(a, b) && conforms(b, a) => Some(a.clone()),
         _ if conforms(a, b) => Some(b.clone()),
         _ if conforms(b, a) => Some(a.clone()),
@@ -101,7 +101,7 @@ pub fn join(a: &Type, b: &Type) -> Option<Type> {
 /// The value inhabits the type.
 pub fn inhabits(value: &Value, ty: &Type) -> bool {
     match (ty, value) {
-        (Type::Any | Type::Json, _) => true,
+        (Type::Json, _) => true,
         (Type::Int, Value::Number(n)) => {
             n.is_i64() || n.is_u64() || n.as_f64().is_some_and(|f| f.fract() == 0.0)
         }
@@ -121,16 +121,17 @@ pub fn inhabits(value: &Value, ty: &Type) -> bool {
     }
 }
 
-/// The most precise type of a value, used for literals. Empty lists are `List(Any)`.
+/// The most precise type of a value, used for literals. `null` is only ever `Json`, and so is what an empty list
+/// holds, unless it is checked against a list type.
 pub fn of_value(value: &Value) -> Type {
     match value {
-        Value::Null => Type::Any,
+        Value::Null => Type::Json,
         Value::Bool(_) => Type::Bool,
         Value::Number(n) if n.is_i64() || n.is_u64() => Type::Int,
         Value::Number(_) => Type::Float,
         Value::String(_) => Type::String,
         Value::Array(items) => {
-            Type::List(Box::new(items.first().map(of_value).unwrap_or(Type::Any)))
+            Type::List(Box::new(items.first().map(of_value).unwrap_or(Type::Json)))
         }
         Value::Object(map) => {
             Type::Record(map.iter().map(|(k, v)| (k.clone(), of_value(v))).collect())
@@ -209,8 +210,11 @@ mod tests {
         assert!(inhabits(&json!({ "kind": "start", "value": 3 }), &input));
         assert!(!inhabits(&json!({ "kind": "start", "value": "3" }), &input));
         assert!(!inhabits(&json!({ "kind": "stop" }), &input));
-        // What every case has: the tag, and `value` at the join of Int and String, which there isn't.
-        assert_eq!(record_view(&input), rec(&[("kind", Type::String)]));
+        // What every case has: the tag, and `value`, as Json: Int and String have no join.
+        assert_eq!(
+            record_view(&input),
+            rec(&[("kind", Type::String), ("value", Type::Json)])
+        );
         assert!(conforms(&input, &rec(&[("kind", Type::String)])));
         let fewer = Type::Variant {
             tag: "kind".into(),

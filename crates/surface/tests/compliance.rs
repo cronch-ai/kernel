@@ -24,7 +24,7 @@ fn call(request: &Value) -> Value {
 type Case = (&'static str, &'static str, fn() -> Vec<Value>);
 
 const APPROVED_NOTE: &str = "\
-harness approved_note(prompt: String) -> Any
+harness approved_note(prompt: String) -> Json
 
 uses model, approve, notes
 
@@ -56,7 +56,7 @@ return draft
 ";
 
 const TURN: &str = "\
-harness turn(prompt: String) -> Any
+harness turn(prompt: String) -> Json
 uses model, fs, session
 stop   = receive said from session.user when said == \"stop\"
 chunks = model.generate(messages: [{role: \"user\", content: prompt}]) until stop
@@ -75,7 +75,7 @@ otherwise return -1
 ";
 
 const PARENT: &str = "\
-harness parent(xs: List[Int]) -> Any
+harness parent(xs: List[Int]) -> Json
 uses m = \"math\"
 uses doubler = harness \"registered:doubler\"
 doubled = for x in xs: m.double(n: x)

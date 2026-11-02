@@ -12,92 +12,83 @@
             "Record": {}
           },
           "step": {
-            "cond": {
-              "args": [
-                {
-                  "e": "get",
-                  "field": "kind",
+            "cases": {
+              "ret": {
+                "bind": "input",
+                "body": {
+                  "cases": {
+                    "net.fetch": {
+                      "bind": "page",
+                      "body": {
+                        "e": "record",
+                        "fields": {
+                          "actions": {
+                            "e": "list",
+                            "items": [
+                              {
+                                "e": "record",
+                                "fields": {
+                                  "args": {
+                                    "e": "record",
+                                    "fields": {
+                                      "body": {
+                                        "e": "get",
+                                        "field": "value",
+                                        "of": {
+                                          "e": "var",
+                                          "name": "page"
+                                        }
+                                      },
+                                      "url": {
+                                        "e": "lit",
+                                        "v": "https://example.com"
+                                      }
+                                    }
+                                  },
+                                  "kind": {
+                                    "e": "lit",
+                                    "v": "call"
+                                  },
+                                  "op": {
+                                    "e": "lit",
+                                    "v": "net.send"
+                                  }
+                                }
+                              }
+                            ]
+                          },
+                          "state": {
+                            "e": "var",
+                            "name": "state"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "e": "match",
                   "of": {
                     "e": "var",
                     "name": "input"
-                  }
-                },
-                {
-                  "e": "lit",
-                  "v": "start"
-                }
-              ],
-              "e": "op",
-              "op": "eq"
-            },
-            "e": "if",
-            "else": {
-              "cond": {
-                "args": [
-                  {
-                    "e": "get",
-                    "field": "kind",
-                    "of": {
-                      "e": "var",
-                      "name": "input"
-                    }
                   },
-                  {
-                    "e": "lit",
-                    "v": "ret"
-                  }
-                ],
-                "e": "op",
-                "op": "eq"
-              },
-              "e": "if",
-              "else": {
-                "e": "record",
-                "fields": {
-                  "actions": {
-                    "e": "list",
-                    "items": []
-                  },
-                  "state": {
-                    "e": "var",
-                    "name": "state"
-                  }
-                }
-              },
-              "then": {
-                "cond": {
-                  "args": [
-                    {
-                      "e": "get",
-                      "field": "call",
-                      "of": {
+                  "on": "op",
+                  "otherwise": {
+                    "e": "record",
+                    "fields": {
+                      "actions": {
+                        "e": "list",
+                        "items": []
+                      },
+                      "state": {
                         "e": "var",
-                        "name": "input"
+                        "name": "state"
                       }
-                    },
-                    {
-                      "e": "lit",
-                      "v": 0
-                    }
-                  ],
-                  "e": "op",
-                  "op": "eq"
-                },
-                "e": "if",
-                "else": {
-                  "e": "record",
-                  "fields": {
-                    "actions": {
-                      "e": "list",
-                      "items": []
-                    },
-                    "state": {
-                      "e": "var",
-                      "name": "state"
                     }
                   }
-                },
-                "then": {
+                }
+              },
+              "start": {
+                "bind": "input",
+                "body": {
                   "e": "record",
                   "fields": {
                     "actions": {
@@ -109,17 +100,9 @@
                             "args": {
                               "e": "record",
                               "fields": {
-                                "body": {
-                                  "e": "get",
-                                  "field": "value",
-                                  "of": {
-                                    "e": "var",
-                                    "name": "input"
-                                  }
-                                },
                                 "url": {
                                   "e": "lit",
-                                  "v": "https://example.com"
+                                  "v": "https://example.com/page"
                                 }
                               }
                             },
@@ -129,7 +112,7 @@
                             },
                             "op": {
                               "e": "lit",
-                              "v": "net.send"
+                              "v": "net.fetch"
                             }
                           }
                         }
@@ -143,35 +126,17 @@
                 }
               }
             },
-            "then": {
+            "e": "match",
+            "of": {
+              "e": "var",
+              "name": "input"
+            },
+            "otherwise": {
               "e": "record",
               "fields": {
                 "actions": {
                   "e": "list",
-                  "items": [
-                    {
-                      "e": "record",
-                      "fields": {
-                        "args": {
-                          "e": "record",
-                          "fields": {
-                            "url": {
-                              "e": "lit",
-                              "v": "https://example.com/page"
-                            }
-                          }
-                        },
-                        "kind": {
-                          "e": "lit",
-                          "v": "call"
-                        },
-                        "op": {
-                          "e": "lit",
-                          "v": "net.fetch"
-                        }
-                      }
-                    }
-                  ]
+                  "items": []
                 },
                 "state": {
                   "e": "var",
@@ -405,7 +370,7 @@
               }
             ],
             "grant": "sha256:f192c92f3aeac8e9398fb4e40a7802990f13a78467067fd77e22ea4f4c634dff",
-            "harness": "sha256:730f1acedfae2dc9a53c643de2360962677c80f8c4ab21870532313f3a410920",
+            "harness": "sha256:23d3bed24dbbbd8ea6193bc13c097690ec510eedbcb9cfc05cffa842ab37a2fa",
             "interface": "sha256:274ffd31ce52b0d63dd92c006422108acff2f175382d0f5d46aa5dfaba1beb21",
             "method": {
               "deliveries": [
@@ -431,7 +396,7 @@
             "property": "sha256:7ebaff759052c11146032c74dc68ae8f7b4519a76f795ad09d5412bc2317894c",
             "verdict": "refuted"
           },
-          "key": "sha256:d5a2ce689ea507d5e220c14bebc5970c9c26c0061abda40ff7d180447babac9f",
+          "key": "sha256:a5cc1b45ce17ec2d789eb18b3555dfa4306445cb05d5a37da7263013e6d61344",
           "kind": "evidence"
         }
       }
@@ -469,7 +434,7 @@
             }
           ],
           "grant": "sha256:f192c92f3aeac8e9398fb4e40a7802990f13a78467067fd77e22ea4f4c634dff",
-          "harness": "sha256:730f1acedfae2dc9a53c643de2360962677c80f8c4ab21870532313f3a410920",
+          "harness": "sha256:23d3bed24dbbbd8ea6193bc13c097690ec510eedbcb9cfc05cffa842ab37a2fa",
           "interface": "sha256:274ffd31ce52b0d63dd92c006422108acff2f175382d0f5d46aa5dfaba1beb21",
           "method": {
             "deliveries": [
@@ -504,92 +469,83 @@
             "Record": {}
           },
           "step": {
-            "cond": {
-              "args": [
-                {
-                  "e": "get",
-                  "field": "kind",
+            "cases": {
+              "ret": {
+                "bind": "input",
+                "body": {
+                  "cases": {
+                    "net.fetch": {
+                      "bind": "page",
+                      "body": {
+                        "e": "record",
+                        "fields": {
+                          "actions": {
+                            "e": "list",
+                            "items": [
+                              {
+                                "e": "record",
+                                "fields": {
+                                  "args": {
+                                    "e": "record",
+                                    "fields": {
+                                      "body": {
+                                        "e": "get",
+                                        "field": "value",
+                                        "of": {
+                                          "e": "var",
+                                          "name": "page"
+                                        }
+                                      },
+                                      "url": {
+                                        "e": "lit",
+                                        "v": "https://example.com"
+                                      }
+                                    }
+                                  },
+                                  "kind": {
+                                    "e": "lit",
+                                    "v": "call"
+                                  },
+                                  "op": {
+                                    "e": "lit",
+                                    "v": "net.send"
+                                  }
+                                }
+                              }
+                            ]
+                          },
+                          "state": {
+                            "e": "var",
+                            "name": "state"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "e": "match",
                   "of": {
                     "e": "var",
                     "name": "input"
-                  }
-                },
-                {
-                  "e": "lit",
-                  "v": "start"
-                }
-              ],
-              "e": "op",
-              "op": "eq"
-            },
-            "e": "if",
-            "else": {
-              "cond": {
-                "args": [
-                  {
-                    "e": "get",
-                    "field": "kind",
-                    "of": {
-                      "e": "var",
-                      "name": "input"
-                    }
                   },
-                  {
-                    "e": "lit",
-                    "v": "ret"
-                  }
-                ],
-                "e": "op",
-                "op": "eq"
-              },
-              "e": "if",
-              "else": {
-                "e": "record",
-                "fields": {
-                  "actions": {
-                    "e": "list",
-                    "items": []
-                  },
-                  "state": {
-                    "e": "var",
-                    "name": "state"
-                  }
-                }
-              },
-              "then": {
-                "cond": {
-                  "args": [
-                    {
-                      "e": "get",
-                      "field": "call",
-                      "of": {
+                  "on": "op",
+                  "otherwise": {
+                    "e": "record",
+                    "fields": {
+                      "actions": {
+                        "e": "list",
+                        "items": []
+                      },
+                      "state": {
                         "e": "var",
-                        "name": "input"
+                        "name": "state"
                       }
-                    },
-                    {
-                      "e": "lit",
-                      "v": 0
-                    }
-                  ],
-                  "e": "op",
-                  "op": "eq"
-                },
-                "e": "if",
-                "else": {
-                  "e": "record",
-                  "fields": {
-                    "actions": {
-                      "e": "list",
-                      "items": []
-                    },
-                    "state": {
-                      "e": "var",
-                      "name": "state"
                     }
                   }
-                },
-                "then": {
+                }
+              },
+              "start": {
+                "bind": "input",
+                "body": {
                   "e": "record",
                   "fields": {
                     "actions": {
@@ -601,17 +557,9 @@
                             "args": {
                               "e": "record",
                               "fields": {
-                                "body": {
-                                  "e": "get",
-                                  "field": "value",
-                                  "of": {
-                                    "e": "var",
-                                    "name": "input"
-                                  }
-                                },
                                 "url": {
                                   "e": "lit",
-                                  "v": "https://example.com"
+                                  "v": "https://example.com/page"
                                 }
                               }
                             },
@@ -621,7 +569,7 @@
                             },
                             "op": {
                               "e": "lit",
-                              "v": "net.send"
+                              "v": "net.fetch"
                             }
                           }
                         }
@@ -635,35 +583,17 @@
                 }
               }
             },
-            "then": {
+            "e": "match",
+            "of": {
+              "e": "var",
+              "name": "input"
+            },
+            "otherwise": {
               "e": "record",
               "fields": {
                 "actions": {
                   "e": "list",
-                  "items": [
-                    {
-                      "e": "record",
-                      "fields": {
-                        "args": {
-                          "e": "record",
-                          "fields": {
-                            "url": {
-                              "e": "lit",
-                              "v": "https://example.com/page"
-                            }
-                          }
-                        },
-                        "kind": {
-                          "e": "lit",
-                          "v": "call"
-                        },
-                        "op": {
-                          "e": "lit",
-                          "v": "net.fetch"
-                        }
-                      }
-                    }
-                  ]
+                  "items": []
                 },
                 "state": {
                   "e": "var",
@@ -863,93 +793,84 @@
             "Record": {}
           },
           "step": {
-            "cond": {
-              "args": [
-                {
-                  "e": "get",
-                  "field": "kind",
-                  "of": {
-                    "e": "var",
-                    "name": "input"
+            "cases": {
+              "start": {
+                "bind": "input",
+                "body": {
+                  "e": "record",
+                  "fields": {
+                    "actions": {
+                      "e": "list",
+                      "items": [
+                        {
+                          "e": "record",
+                          "fields": {
+                            "args": {
+                              "e": "record",
+                              "fields": {
+                                "body": {
+                                  "e": "lit",
+                                  "v": "hello"
+                                },
+                                "url": {
+                                  "e": "lit",
+                                  "v": "https://example.com"
+                                }
+                              }
+                            },
+                            "kind": {
+                              "e": "lit",
+                              "v": "call"
+                            },
+                            "op": {
+                              "e": "lit",
+                              "v": "net.send"
+                            }
+                          }
+                        },
+                        {
+                          "e": "record",
+                          "fields": {
+                            "args": {
+                              "e": "record",
+                              "fields": {
+                                "url": {
+                                  "e": "lit",
+                                  "v": "https://example.com/page"
+                                }
+                              }
+                            },
+                            "kind": {
+                              "e": "lit",
+                              "v": "call"
+                            },
+                            "op": {
+                              "e": "lit",
+                              "v": "net.fetch"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    "state": {
+                      "e": "var",
+                      "name": "state"
+                    }
                   }
-                },
-                {
-                  "e": "lit",
-                  "v": "start"
                 }
-              ],
-              "e": "op",
-              "op": "eq"
+              }
             },
-            "e": "if",
-            "else": {
+            "e": "match",
+            "of": {
+              "e": "var",
+              "name": "input"
+            },
+            "otherwise": {
               "e": "record",
               "fields": {
                 "actions": {
                   "e": "list",
                   "items": []
-                },
-                "state": {
-                  "e": "var",
-                  "name": "state"
-                }
-              }
-            },
-            "then": {
-              "e": "record",
-              "fields": {
-                "actions": {
-                  "e": "list",
-                  "items": [
-                    {
-                      "e": "record",
-                      "fields": {
-                        "args": {
-                          "e": "record",
-                          "fields": {
-                            "body": {
-                              "e": "lit",
-                              "v": "hello"
-                            },
-                            "url": {
-                              "e": "lit",
-                              "v": "https://example.com"
-                            }
-                          }
-                        },
-                        "kind": {
-                          "e": "lit",
-                          "v": "call"
-                        },
-                        "op": {
-                          "e": "lit",
-                          "v": "net.send"
-                        }
-                      }
-                    },
-                    {
-                      "e": "record",
-                      "fields": {
-                        "args": {
-                          "e": "record",
-                          "fields": {
-                            "url": {
-                              "e": "lit",
-                              "v": "https://example.com/page"
-                            }
-                          }
-                        },
-                        "kind": {
-                          "e": "lit",
-                          "v": "call"
-                        },
-                        "op": {
-                          "e": "lit",
-                          "v": "net.fetch"
-                        }
-                      }
-                    }
-                  ]
                 },
                 "state": {
                   "e": "var",
@@ -1180,7 +1101,7 @@
             ],
             "depth": 3,
             "grant": "sha256:f192c92f3aeac8e9398fb4e40a7802990f13a78467067fd77e22ea4f4c634dff",
-            "harness": "sha256:f8d537949c5934fac4c30ba5d1c228641a173fb0dd17c6081763a69b297cc3ae",
+            "harness": "sha256:f9f4dd06b601a52ea910a47b045f9a20a280fb523843743b1f67df9eafc03c0c",
             "interface": "sha256:274ffd31ce52b0d63dd92c006422108acff2f175382d0f5d46aa5dfaba1beb21",
             "method": {
               "alphabet": [
@@ -1212,7 +1133,7 @@
             "property": "sha256:7ebaff759052c11146032c74dc68ae8f7b4519a76f795ad09d5412bc2317894c",
             "verdict": "holdsUpTo"
           },
-          "key": "sha256:1428da53cf30e166a14467601766029394d70561b53b41e086525fd2daf43b81",
+          "key": "sha256:8d35b991c9a700e69e544bc4d407eb8197bc07b9dee2bce1fe91253bce7cc3a2",
           "kind": "evidence"
         }
       }
@@ -1228,93 +1149,84 @@
             "Record": {}
           },
           "step": {
-            "cond": {
-              "args": [
-                {
-                  "e": "get",
-                  "field": "kind",
-                  "of": {
-                    "e": "var",
-                    "name": "input"
+            "cases": {
+              "start": {
+                "bind": "input",
+                "body": {
+                  "e": "record",
+                  "fields": {
+                    "actions": {
+                      "e": "list",
+                      "items": [
+                        {
+                          "e": "record",
+                          "fields": {
+                            "args": {
+                              "e": "record",
+                              "fields": {
+                                "body": {
+                                  "e": "lit",
+                                  "v": "hello"
+                                },
+                                "url": {
+                                  "e": "lit",
+                                  "v": "https://example.com"
+                                }
+                              }
+                            },
+                            "kind": {
+                              "e": "lit",
+                              "v": "call"
+                            },
+                            "op": {
+                              "e": "lit",
+                              "v": "net.send"
+                            }
+                          }
+                        },
+                        {
+                          "e": "record",
+                          "fields": {
+                            "args": {
+                              "e": "record",
+                              "fields": {
+                                "url": {
+                                  "e": "lit",
+                                  "v": "https://example.com/page"
+                                }
+                              }
+                            },
+                            "kind": {
+                              "e": "lit",
+                              "v": "call"
+                            },
+                            "op": {
+                              "e": "lit",
+                              "v": "net.fetch"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    "state": {
+                      "e": "var",
+                      "name": "state"
+                    }
                   }
-                },
-                {
-                  "e": "lit",
-                  "v": "start"
                 }
-              ],
-              "e": "op",
-              "op": "eq"
+              }
             },
-            "e": "if",
-            "else": {
+            "e": "match",
+            "of": {
+              "e": "var",
+              "name": "input"
+            },
+            "otherwise": {
               "e": "record",
               "fields": {
                 "actions": {
                   "e": "list",
                   "items": []
-                },
-                "state": {
-                  "e": "var",
-                  "name": "state"
-                }
-              }
-            },
-            "then": {
-              "e": "record",
-              "fields": {
-                "actions": {
-                  "e": "list",
-                  "items": [
-                    {
-                      "e": "record",
-                      "fields": {
-                        "args": {
-                          "e": "record",
-                          "fields": {
-                            "body": {
-                              "e": "lit",
-                              "v": "hello"
-                            },
-                            "url": {
-                              "e": "lit",
-                              "v": "https://example.com"
-                            }
-                          }
-                        },
-                        "kind": {
-                          "e": "lit",
-                          "v": "call"
-                        },
-                        "op": {
-                          "e": "lit",
-                          "v": "net.send"
-                        }
-                      }
-                    },
-                    {
-                      "e": "record",
-                      "fields": {
-                        "args": {
-                          "e": "record",
-                          "fields": {
-                            "url": {
-                              "e": "lit",
-                              "v": "https://example.com/page"
-                            }
-                          }
-                        },
-                        "kind": {
-                          "e": "lit",
-                          "v": "call"
-                        },
-                        "op": {
-                          "e": "lit",
-                          "v": "net.fetch"
-                        }
-                      }
-                    }
-                  ]
                 },
                 "state": {
                   "e": "var",
@@ -1543,7 +1455,7 @@
               }
             ],
             "grant": "sha256:f192c92f3aeac8e9398fb4e40a7802990f13a78467067fd77e22ea4f4c634dff",
-            "harness": "sha256:f8d537949c5934fac4c30ba5d1c228641a173fb0dd17c6081763a69b297cc3ae",
+            "harness": "sha256:f9f4dd06b601a52ea910a47b045f9a20a280fb523843743b1f67df9eafc03c0c",
             "interface": "sha256:274ffd31ce52b0d63dd92c006422108acff2f175382d0f5d46aa5dfaba1beb21",
             "method": {
               "alphabet": [
@@ -1575,7 +1487,7 @@
             "property": "sha256:7ebaff759052c11146032c74dc68ae8f7b4519a76f795ad09d5412bc2317894c",
             "verdict": "holds"
           },
-          "key": "sha256:cf2f4978f7e4d397153626ab5410a7c0a938219c9a6393e5958aab79e6713417",
+          "key": "sha256:58169ed40d2db26f104a1d2bfd057158056405a5eceff77121c793061acad52a",
           "kind": "evidence"
         }
       }
@@ -1601,7 +1513,7 @@
             }
           ],
           "grant": "sha256:f192c92f3aeac8e9398fb4e40a7802990f13a78467067fd77e22ea4f4c634dff",
-          "harness": "sha256:f8d537949c5934fac4c30ba5d1c228641a173fb0dd17c6081763a69b297cc3ae",
+          "harness": "sha256:f9f4dd06b601a52ea910a47b045f9a20a280fb523843743b1f67df9eafc03c0c",
           "interface": "sha256:274ffd31ce52b0d63dd92c006422108acff2f175382d0f5d46aa5dfaba1beb21",
           "method": {
             "alphabet": [
@@ -1642,93 +1554,84 @@
             "Record": {}
           },
           "step": {
-            "cond": {
-              "args": [
-                {
-                  "e": "get",
-                  "field": "kind",
-                  "of": {
-                    "e": "var",
-                    "name": "input"
+            "cases": {
+              "start": {
+                "bind": "input",
+                "body": {
+                  "e": "record",
+                  "fields": {
+                    "actions": {
+                      "e": "list",
+                      "items": [
+                        {
+                          "e": "record",
+                          "fields": {
+                            "args": {
+                              "e": "record",
+                              "fields": {
+                                "body": {
+                                  "e": "lit",
+                                  "v": "hello"
+                                },
+                                "url": {
+                                  "e": "lit",
+                                  "v": "https://example.com"
+                                }
+                              }
+                            },
+                            "kind": {
+                              "e": "lit",
+                              "v": "call"
+                            },
+                            "op": {
+                              "e": "lit",
+                              "v": "net.send"
+                            }
+                          }
+                        },
+                        {
+                          "e": "record",
+                          "fields": {
+                            "args": {
+                              "e": "record",
+                              "fields": {
+                                "url": {
+                                  "e": "lit",
+                                  "v": "https://example.com/page"
+                                }
+                              }
+                            },
+                            "kind": {
+                              "e": "lit",
+                              "v": "call"
+                            },
+                            "op": {
+                              "e": "lit",
+                              "v": "net.fetch"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    "state": {
+                      "e": "var",
+                      "name": "state"
+                    }
                   }
-                },
-                {
-                  "e": "lit",
-                  "v": "start"
                 }
-              ],
-              "e": "op",
-              "op": "eq"
+              }
             },
-            "e": "if",
-            "else": {
+            "e": "match",
+            "of": {
+              "e": "var",
+              "name": "input"
+            },
+            "otherwise": {
               "e": "record",
               "fields": {
                 "actions": {
                   "e": "list",
                   "items": []
-                },
-                "state": {
-                  "e": "var",
-                  "name": "state"
-                }
-              }
-            },
-            "then": {
-              "e": "record",
-              "fields": {
-                "actions": {
-                  "e": "list",
-                  "items": [
-                    {
-                      "e": "record",
-                      "fields": {
-                        "args": {
-                          "e": "record",
-                          "fields": {
-                            "body": {
-                              "e": "lit",
-                              "v": "hello"
-                            },
-                            "url": {
-                              "e": "lit",
-                              "v": "https://example.com"
-                            }
-                          }
-                        },
-                        "kind": {
-                          "e": "lit",
-                          "v": "call"
-                        },
-                        "op": {
-                          "e": "lit",
-                          "v": "net.send"
-                        }
-                      }
-                    },
-                    {
-                      "e": "record",
-                      "fields": {
-                        "args": {
-                          "e": "record",
-                          "fields": {
-                            "url": {
-                              "e": "lit",
-                              "v": "https://example.com/page"
-                            }
-                          }
-                        },
-                        "kind": {
-                          "e": "lit",
-                          "v": "call"
-                        },
-                        "op": {
-                          "e": "lit",
-                          "v": "net.fetch"
-                        }
-                      }
-                    }
-                  ]
                 },
                 "state": {
                   "e": "var",

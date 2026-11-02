@@ -104,12 +104,12 @@ fn list(t: Type) -> Type {
     Type::List(Box::new(t))
 }
 
-/// The events as a variant over `kind`. A child's start value and result are its own, so they are `Any` here.
+/// The events as a variant over `kind`. A child's start value and result are its own, so they are `Json` here.
 fn exact(harness: &Harness, interface: &Interface) -> Type {
     let origin = || list(Type::Int);
     let sources = || list(Type::String);
     let mut started = harness.clone();
-    started.arg = Type::Any;
+    started.arg = Type::Json;
     let input = input_type(&started, interface);
     let calls = interface
         .operations
@@ -118,7 +118,7 @@ fn exact(harness: &Harness, interface: &Interface) -> Type {
             let mut fields = vec![("args", o.input.clone()), ("call", Type::Int)];
             if let Some(f) = &o.footprint {
                 let (ty, _) = infer(f, vec![("args".to_string(), o.input.clone())]);
-                fields.push(("footprint", ty.unwrap_or(Type::Any)));
+                fields.push(("footprint", ty.unwrap_or(Type::Json)));
             }
             (name.clone(), record(fields))
         })
@@ -130,9 +130,9 @@ fn exact(harness: &Harness, interface: &Interface) -> Type {
     let spawn = record(vec![
         ("call", Type::Int),
         ("name", Type::String),
-        ("harness", Type::Any),
-        ("arg", Type::Any),
-        ("narrow", Type::Any),
+        ("harness", Type::Json),
+        ("arg", Type::Json),
+        ("narrow", Type::Json),
     ]);
     let cancel = record(vec![("call", Type::Int)]);
     let performed = variant(
@@ -141,7 +141,7 @@ fn exact(harness: &Harness, interface: &Interface) -> Type {
             ("call", calls.clone()),
             ("spawn", spawn.clone()),
             ("cancel", cancel.clone()),
-            ("halt", record(vec![("value", Type::Any)])),
+            ("halt", record(vec![("value", Type::Json)])),
         ],
     );
     let labels = labels_of(&readable(&performed));
@@ -154,20 +154,20 @@ fn exact(harness: &Harness, interface: &Interface) -> Type {
         vec![
             (
                 "start",
-                record(vec![("value", Type::Any), ("label", sources())]),
+                record(vec![("value", Type::Json), ("label", sources())]),
             ),
             (
                 "ret",
-                record(vec![("call", Type::Int), ("value", Type::Any)]),
+                record(vec![("call", Type::Int), ("value", Type::Json)]),
             ),
             ("end", record(vec![("call", Type::Int)])),
             (
                 "failed",
-                record(vec![("call", Type::Int), ("error", Type::Any)]),
+                record(vec![("call", Type::Int), ("error", Type::Json)]),
             ),
             (
                 "msg",
-                record(vec![("channel", Type::String), ("value", Type::Any)]),
+                record(vec![("channel", Type::String), ("value", Type::Json)]),
             ),
         ],
     );
@@ -183,7 +183,7 @@ fn exact(harness: &Harness, interface: &Interface) -> Type {
             ("noSuchChannel", record(vec![("channel", Type::String)])),
             (
                 "mismatch",
-                record(vec![("expected", Type::Any), ("got", Type::Any)]),
+                record(vec![("expected", Type::Json), ("got", Type::Json)]),
             ),
             ("postcondition", record(vec![("call", Type::Int)])),
             ("invariant", record(vec![("channel", Type::String)])),
@@ -193,13 +193,13 @@ fn exact(harness: &Harness, interface: &Interface) -> Type {
     let step_error = variant(
         "kind",
         vec![
-            ("eval", record(vec![("error", Type::Any)])),
-            ("notAStep", record(vec![("got", Type::Any)])),
-            ("badAction", record(vec![("action", Type::Any)])),
+            ("eval", record(vec![("error", Type::Json)])),
+            ("notAStep", record(vec![("got", Type::Json)])),
+            ("badAction", record(vec![("action", Type::Json)])),
             ("runaway", record(vec![])),
             (
                 "result",
-                record(vec![("expected", Type::Any), ("got", Type::Any)]),
+                record(vec![("expected", Type::Json), ("got", Type::Json)]),
             ),
         ],
     );
@@ -271,7 +271,7 @@ pub fn readable(ty: &Type) -> Type {
                             fields.insert(name, merged);
                         }
                     }
-                    _ => return Type::Any,
+                    _ => return Type::Json,
                 }
             }
             Type::Record(fields)
@@ -287,7 +287,8 @@ pub fn readable(ty: &Type) -> Type {
     }
 }
 
-/// The type of a field two cases both have: a record has the fields either has.
+/// The type of a field two cases both have: a record has the fields either has, and types that disagree are
+/// `Json`, read after testing it with `is`.
 fn union(a: &Type, b: &Type) -> Type {
     match (a, b) {
         (Type::Record(x), Type::Record(y)) => {
@@ -304,14 +305,14 @@ fn union(a: &Type, b: &Type) -> Type {
         (Type::List(x), Type::List(y)) => list(union(x, y)),
         (Type::Int, Type::Float) | (Type::Float, Type::Int) => Type::Float,
         (a, b) if a == b => a.clone(),
-        _ => Type::Any,
+        _ => Type::Json,
     }
 }
 
 /// The labels of a value of `ty`, shaped like it: each scalar replaced by its sources.
 fn labels_of(ty: &Type) -> Type {
     match ty {
-        Type::Any => Type::Any,
+        Type::Json => Type::Json,
         Type::List(t) => list(labels_of(t)),
         Type::Record(fields) => Type::Record(
             fields

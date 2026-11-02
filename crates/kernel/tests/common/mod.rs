@@ -81,10 +81,25 @@ pub fn call_action(op: &str, args: Value) -> Value {
     ])
 }
 
-/// An action made at run time, from data: bound at `Any`, so the checker leaves it to the interpreter, which refuses
-/// it when it runs if it isn't one. A harness that performs whatever it is told needs nothing else until `Any` goes.
+/// A step's result, its actions computed.
+pub fn acting(state: Value, actions: Value) -> Value {
+    rec(vec![("state", state), ("actions", actions)])
+}
+
+/// The type of an action against this interface (`actionType`).
+pub fn action_type(interface: &Value) -> Value {
+    call(json!({ "op": "actionType", "interface": interface }))["type"].clone()
+}
+
+/// The actions an action made at run time gives: itself, if it is one the run may take, and none if not.
 pub fn dynamic(action: Value) -> Value {
-    json!({ "e": "let", "name": "@action", "type": "Any", "be": action, "in": var("@action") })
+    is_type(
+        action,
+        json!("Action"),
+        "@action",
+        list(vec![var("@action")]),
+        list(vec![]),
+    )
 }
 
 pub fn halt(value: Value) -> Value {
@@ -95,12 +110,24 @@ pub fn cancel(call: Value) -> Value {
     rec(vec![("kind", lit(json!("cancel"))), ("call", call)])
 }
 
-/// A dispatch on `input.kind`, with a default for every other kind.
+/// A match on `input.kind`, with a default for every other kind. In each case `input` is that case, so its fields
+/// read as they would on the input itself.
 pub fn on(cases: Vec<(&str, Value)>, otherwise: Value) -> Value {
-    cases
+    let cases = cases
         .into_iter()
-        .rev()
-        .fold(otherwise, |rest, (kind, then)| if_(is(kind), then, rest))
+        .map(|(kind, then)| (kind, "input", then))
+        .collect();
+    match_(var("input"), "kind", cases, Some(otherwise))
+}
+
+/// A match on `input.op`, inside a result's case, with a default for every other operation. In each case `input` is
+/// that case, so its `value` has the operation's output type.
+pub fn on_op(cases: Vec<(&str, Value)>, otherwise: Value) -> Value {
+    let cases = cases
+        .into_iter()
+        .map(|(o, then)| (o, "input", then))
+        .collect();
+    match_(var("input"), "op", cases, Some(otherwise))
 }
 
 pub fn init(harness: Value, interface: Value) -> Value {
@@ -206,7 +233,11 @@ pub fn match_(
         .into_iter()
         .map(|(case, bind, body)| (case.to_string(), json!({ "bind": bind, "body": body })))
         .collect();
-    let mut m = json!({ "e": "match", "of": of, "on": on, "cases": cases });
+    let mut m = json!({ "e": "match", "of": of, "cases": cases });
+    // `kind` is the default, which a term written canonically leaves out.
+    if on != "kind" {
+        m["on"] = json!(on);
+    }
     if let Some(o) = otherwise {
         m["otherwise"] = o;
     }

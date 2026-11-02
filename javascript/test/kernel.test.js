@@ -21,20 +21,28 @@ const writer = {
   state: { Record: {} },
   init: {},
   step: {
-    e: "if",
-    cond: eq(get(v("input"), "kind"), lit("start")),
-    // biome-ignore lint/suspicious/noThenProperty: an `if` expression's branch is named `then` on the wire.
-    then: step([
-      {
-        e: "record",
-        fields: {
-          kind: lit("call"),
-          op: lit("fs.write"),
-          args: { e: "record", fields: { path: get(v("input"), "value") } },
-        },
+    e: "match",
+    of: v("input"),
+    cases: {
+      start: {
+        bind: "s",
+        body: step([
+          {
+            e: "record",
+            fields: {
+              kind: lit("call"),
+              op: lit("fs.write"),
+              args: { e: "record", fields: { path: get(v("s"), "value") } },
+            },
+          },
+        ]),
       },
-    ]),
-    else: step([{ e: "record", fields: { kind: lit("halt"), value: get(v("input"), "value") } }]),
+      ret: {
+        bind: "r",
+        body: step([{ e: "record", fields: { kind: lit("halt"), value: get(v("r"), "value") } }]),
+      },
+    },
+    otherwise: step([{ e: "record", fields: { kind: lit("halt"), value: lit("refused") } }]),
   },
 };
 

@@ -41,7 +41,7 @@
 
 use crate::harness::{
     Harness, HarnessProblem, Interface, Mode, Narrowing, Operation, check_harness, check_interface,
-    narrow, spawn_op,
+    narrow, resolved_step, spawn_op,
 };
 use crate::ir::{Expr, Type};
 use crate::labeled::{self, EvalError, LValue, Label};
@@ -733,7 +733,8 @@ impl Run {
             ("state".to_string(), self.state.clone()),
             ("input".to_string(), input),
         ];
-        let result = match labeled::eval(&self.harness.step, scope) {
+        let step = resolved_step(&self.harness, &self.interface);
+        let result = match labeled::eval(&step, scope) {
             Ok(r) => r,
             Err(e) => return self.fail(origin, inbound.input, eval_error(e), events),
         };
