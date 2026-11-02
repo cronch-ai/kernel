@@ -331,3 +331,28 @@ fn only_what_arrived_carries_its_sources() {
     // ...but deciding on what it says does.
     assert_eq!(sends[1]["labels"]["args"]["body"], json!(["web"]));
 }
+
+#[test]
+fn a_failure_says_whose_it_is() {
+    let system = init(double_harness(), doubling());
+    let failure = json!({ "input": { "kind": "failed", "call": 0, "error": "down" } });
+    let (_, events) = deliver_all(system, vec![start(json!(1)), failure]);
+    let failed = events
+        .iter()
+        .find(|e| e["input"]["kind"] == "failed")
+        .unwrap();
+    // What the world said is kept as it said it, under the kind the interpreter gives it.
+    assert_eq!(
+        failed["input"]["error"],
+        json!({ "kind": "world", "detail": "down" })
+    );
+
+    // So an obligation leaves out only the cases whose detail it can't read, not every failure.
+    let ty = call(
+        json!({ "op": "inputType", "harness": double_harness(), "interface": doubling() }),
+    )["type"]
+        .clone();
+    let cases = &ty["Variant"]["cases"]["failed"]["Record"]["error"]["Variant"]["cases"];
+    assert_eq!(cases["cancelled"], json!({ "Record": {} }));
+    assert_eq!(cases["world"], json!({ "Record": { "detail": "Any" } }));
+}

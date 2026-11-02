@@ -428,7 +428,7 @@ fn input_value(input: &WorldInput, op: &str) -> Value {
         }
         WorldInput::End { call } => json!({ "kind": "end", "call": call, "op": op }),
         WorldInput::Failed { call, error } => {
-            json!({ "kind": "failed", "call": call, "op": op, "error": error })
+            json!({ "kind": "failed", "call": call, "op": op, "error": { "kind": "world", "detail": error } })
         }
         WorldInput::Msg { channel, value } => {
             json!({ "kind": "msg", "channel": channel, "value": value })
@@ -519,7 +519,7 @@ impl Run {
                     label,
                 },
                 Some(Outcome::Failed { error }) => Inbound {
-                    input: json!({ "kind": "failed", "call": c.call, "op": c.op, "error": error }),
+                    input: json!({ "kind": "failed", "call": c.call, "op": c.op, "error": { "kind": "child", "error": error } }),
                     label: c.run.seen,
                 },
                 None => unreachable!("partitioned on outcome"),
@@ -825,7 +825,7 @@ impl Run {
                         let op = self.children.remove(i).op;
                         events.push(out(Some(k), true, false, None));
                         self.queue.push_back(Inbound {
-                            input: json!({ "kind": "failed", "call": k, "op": op, "error": { "cancelled": true } }),
+                            input: json!({ "kind": "failed", "call": k, "op": op, "error": { "kind": "cancelled" } }),
                             label: Label::new(),
                         });
                     } else {

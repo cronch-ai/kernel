@@ -3736,7 +3736,7 @@
       "response": {
         "ok": true,
         "result": {
-          "excluded": ["failed", "ret.spawn"],
+          "excluded": ["failed.child", "failed.world", "ret.spawn"],
           "initiation": true,
           "kind": "obligation",
           "reads": [
@@ -3748,6 +3748,22 @@
             {
               "Variant": {
                 "cases": {
+                  "failed": {
+                    "Record": {
+                      "call": "Int",
+                      "error": {
+                        "Variant": {
+                          "cases": {
+                            "cancelled": {
+                              "Record": {}
+                            }
+                          },
+                          "tag": "kind"
+                        }
+                      },
+                      "op": "String"
+                    }
+                  },
                   "refused": {
                     "Record": {
                       "call": "Int",
@@ -3779,7 +3795,7 @@
               }
             }
           ],
-          "text": "; Consecution: sat exactly where the invariant holds of a state and fails after one step.\n; A model is a counterexample to induction for the kernel to check; unsat is not a verdict.\n; Inputs left out, whose types have no sort: failed, ret.spawn.\n(set-option :produce-models true)\n(set-logic ALL)\n\n; Records and variants.\n; {n: Int}\n(declare-datatype |record:d1a0623e| ((|record:d1a0623e| (|record:d1a0623e.n| Int))))\n; A variant with the cases count.\n(declare-datatype |variant:e84bfc6b| ((|variant:e84bfc6b#count| (|variant:e84bfc6b#count.call| Int) (|variant:e84bfc6b#count.value| Int))))\n; {}\n(declare-datatype |record:49d8b93e| ((|record:49d8b93e|)))\n; A variant with the cases refused, ret, start.\n(declare-datatype |variant:7d12b4d0| ((|variant:7d12b4d0#refused| (|variant:7d12b4d0#refused.call| Int) (|variant:7d12b4d0#refused.op| String)) (|variant:7d12b4d0#ret| (|variant:7d12b4d0#ret.| |variant:e84bfc6b|)) (|variant:7d12b4d0#start| (|variant:7d12b4d0#start.value| |record:49d8b93e|))))\n; {call: Int, value: Int}\n(declare-datatype |record:1fc44c8e| ((|record:1fc44c8e| (|record:1fc44c8e.call| Int) (|record:1fc44c8e.value| Int))))\n\n; Definitions.\n; The invariant, of a state.\n(define-fun |def:invariant| ((|v:state| |record:d1a0623e|)) Bool (>= (|record:d1a0623e.n| |v:state|) 0))\n; The state the step gives.\n(define-fun |def:next| ((|v:state| |record:d1a0623e|) (|v:input| |variant:7d12b4d0|)) |record:d1a0623e| (let ((|c:1| |v:input|)) (ite ((_ is |variant:7d12b4d0#refused|) |c:1|) |v:state| (ite ((_ is |variant:7d12b4d0#ret|) |c:1|) (let ((|v:r| (|variant:7d12b4d0#ret.| |c:1|))) (let ((|c:2| |v:r|)) (let ((|v:c| (|record:1fc44c8e| (|variant:e84bfc6b#count.call| |c:2|) (|variant:e84bfc6b#count.value| |c:2|)))) (|record:d1a0623e| (+ (|record:d1a0623e.n| |v:state|) (|record:1fc44c8e.value| |v:c|)))))) |v:state|))))\n; Where the kernel evaluates next without an error; elsewhere the function above is unconstrained.\n(define-fun |defined:next| ((|v:state| |record:d1a0623e|) (|v:input| |variant:7d12b4d0|)) Bool (let ((|c:1| |v:input|)) (let ((|v:r| (|variant:7d12b4d0#ret.| |c:1|))) (let ((|c:2| |v:r|)) (let ((|v:c| (|record:1fc44c8e| (|variant:e84bfc6b#count.call| |c:2|) (|variant:e84bfc6b#count.value| |c:2|)))) (=> (and ((_ is |variant:7d12b4d0#ret|) |c:1|) ((_ is |variant:e84bfc6b#count|) |c:2|)) (and (<= (- 9007199254740991) (+ (|record:d1a0623e.n| |v:state|) (|record:1fc44c8e.value| |v:c|))) (<= (+ (|record:d1a0623e.n| |v:state|) (|record:1fc44c8e.value| |v:c|)) 9007199254740991))))))))\n\n; A counterexample to induction.\n(declare-const |q:state| |record:d1a0623e|)\n(declare-const |q:input| |variant:7d12b4d0|)\n(assert (|def:invariant| |q:state|))\n(assert (|defined:next| |q:state| |q:input|))\n(assert (not (|def:invariant| (|def:next| |q:state| |q:input|))))\n(check-sat)\n(get-value (|q:state| |q:input|))\n"
+          "text": "; Consecution: sat exactly where the invariant holds of a state and fails after one step.\n; A model is a counterexample to induction for the kernel to check; unsat is not a verdict.\n; Inputs left out, whose types have no sort: failed.child, failed.world, ret.spawn.\n(set-option :produce-models true)\n(set-logic ALL)\n\n; Records and variants.\n; {n: Int}\n(declare-datatype |record:d1a0623e| ((|record:d1a0623e| (|record:d1a0623e.n| Int))))\n; A variant with the cases cancelled.\n(declare-datatype |variant:e5c32e86| ((|variant:e5c32e86#cancelled|)))\n; A variant with the cases count.\n(declare-datatype |variant:e84bfc6b| ((|variant:e84bfc6b#count| (|variant:e84bfc6b#count.call| Int) (|variant:e84bfc6b#count.value| Int))))\n; {}\n(declare-datatype |record:49d8b93e| ((|record:49d8b93e|)))\n; A variant with the cases failed, refused, ret, start.\n(declare-datatype |variant:36f1529d| ((|variant:36f1529d#failed| (|variant:36f1529d#failed.call| Int) (|variant:36f1529d#failed.error| |variant:e5c32e86|) (|variant:36f1529d#failed.op| String)) (|variant:36f1529d#refused| (|variant:36f1529d#refused.call| Int) (|variant:36f1529d#refused.op| String)) (|variant:36f1529d#ret| (|variant:36f1529d#ret.| |variant:e84bfc6b|)) (|variant:36f1529d#start| (|variant:36f1529d#start.value| |record:49d8b93e|))))\n; {call: Int, value: Int}\n(declare-datatype |record:1fc44c8e| ((|record:1fc44c8e| (|record:1fc44c8e.call| Int) (|record:1fc44c8e.value| Int))))\n\n; Definitions.\n; The invariant, of a state.\n(define-fun |def:invariant| ((|v:state| |record:d1a0623e|)) Bool (>= (|record:d1a0623e.n| |v:state|) 0))\n; The state the step gives.\n(define-fun |def:next| ((|v:state| |record:d1a0623e|) (|v:input| |variant:36f1529d|)) |record:d1a0623e| (let ((|c:1| |v:input|)) (ite ((_ is |variant:36f1529d#failed|) |c:1|) |v:state| (ite ((_ is |variant:36f1529d#refused|) |c:1|) |v:state| (ite ((_ is |variant:36f1529d#ret|) |c:1|) (let ((|v:r| (|variant:36f1529d#ret.| |c:1|))) (let ((|c:2| |v:r|)) (let ((|v:c| (|record:1fc44c8e| (|variant:e84bfc6b#count.call| |c:2|) (|variant:e84bfc6b#count.value| |c:2|)))) (|record:d1a0623e| (+ (|record:d1a0623e.n| |v:state|) (|record:1fc44c8e.value| |v:c|)))))) |v:state|)))))\n; Where the kernel evaluates next without an error; elsewhere the function above is unconstrained.\n(define-fun |defined:next| ((|v:state| |record:d1a0623e|) (|v:input| |variant:36f1529d|)) Bool (let ((|c:1| |v:input|)) (let ((|v:r| (|variant:36f1529d#ret.| |c:1|))) (let ((|c:2| |v:r|)) (let ((|v:c| (|record:1fc44c8e| (|variant:e84bfc6b#count.call| |c:2|) (|variant:e84bfc6b#count.value| |c:2|)))) (=> (and ((_ is |variant:36f1529d#ret|) |c:1|) ((_ is |variant:e84bfc6b#count|) |c:2|)) (and (<= (- 9007199254740991) (+ (|record:d1a0623e.n| |v:state|) (|record:1fc44c8e.value| |v:c|))) (<= (+ (|record:d1a0623e.n| |v:state|) (|record:1fc44c8e.value| |v:c|)) 9007199254740991))))))))\n\n; A counterexample to induction.\n(declare-const |q:state| |record:d1a0623e|)\n(declare-const |q:input| |variant:36f1529d|)\n(assert (|def:invariant| |q:state|))\n(assert (|defined:next| |q:state| |q:input|))\n(assert (not (|def:invariant| (|def:next| |q:state| |q:input|))))\n(check-sat)\n(get-value (|q:state| |q:input|))\n"
         }
       }
     },
