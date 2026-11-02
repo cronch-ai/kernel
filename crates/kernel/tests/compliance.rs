@@ -321,6 +321,19 @@ fn cases() -> Vec<Case> {
                 r.call(json!({ "op": "readValues", "reply": "((x (- 5)) (y true))", "types": ["Int", "Bool"] }));
             },
         ),
+        (
+            "smtlib-lists",
+            "Lists read as Json, tested and read back item by item, and the text of a record, which a solver chooses.",
+            |r| {
+                let ints = json!({ "List": "Int" });
+                let as_json = json!({ "e": "let", "name": "j", "type": "Json", "be": var("xs"), "in": var("j") });
+                r.call(json!({ "op": "smtlib", "definitions": [{ "name": "wrap", "params": [{ "name": "xs", "type": ints }], "body": as_json }] }));
+                let read = is_type(var("j"), ints.clone(), "xs", var("xs"), list(vec![]));
+                r.call(json!({ "op": "smtlib", "definitions": [{ "name": "read", "params": [{ "name": "j", "type": "Json" }], "body": read, "result": ints }] }));
+                let text = op("str", vec![var("r")]);
+                r.call(json!({ "op": "smtlib", "definitions": [{ "name": "text", "params": [{ "name": "r", "type": { "Record": { "a": "Int" } } }], "body": text }] }));
+            },
+        ),
     ]
 }
 

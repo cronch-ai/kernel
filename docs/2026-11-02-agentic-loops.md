@@ -196,7 +196,7 @@ return turn when heard == "/exit"
 - **Exhaustive search** doesn't finish for a loop. Every call takes a fresh identifier, and carried values grow (`history`).
 - **Induction** is the route for every depth. With one slot per node and a fixed set of carried values, the state of a loop has a fixed shape, so an invariant names it in a few words (`invariant bounded: turns <= 50`). An obligation reads the carried values as it reads slots.
   - A step that performs chosen actions tests them against `Action`, which the kernel resolves against the interface before encoding, so the obligation is about that interface's actions.
-  - A performed call's result is read as `Json`, whichever operation gave it. SMT-LIB has no reading of a list of anything but `Json` as `Json` (A3b), so an obligation is refused for a harness that performs against an interface where some operation returns such a list, as `notes.read` does. Until that conversion has a reading, such a harness is proved by search up to a depth and monitored.
+  - A performed call's result is read as `Json`, whichever operation gave it. Lists are read as `Json` item by item, and `str` of a value other than a string, a boolean or an integer is text a solver chooses (see [After loops](2026-11-02-after-loops.md)), so the agent loop's obligations are exported. A solver's `unsat` is still no verdict, so they are searched for counterexamples, not proved.
 - **Termination** is a liveness property, which no proof here claims. A bound is a carried counter, a stop condition that reads it, and an invariant that the counter never passes it.
 
 ## Pieces

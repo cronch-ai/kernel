@@ -615,9 +615,7 @@ export type NoReading =
   /** A shape the checker refuses, where only checked terms are read. */
   | { readonly kind: "unchecked" }
   | { readonly kind: "operator"; readonly op: string }
-  | { readonly kind: "listConversion"; readonly from: Type; readonly to: Type }
   | { readonly kind: "equality"; readonly left: Type; readonly right: Type }
-  | { readonly kind: "text"; readonly of: Type }
   | { readonly kind: "fold" }
   | { readonly kind: "label" }
   | { readonly kind: "emptyVariant" }
