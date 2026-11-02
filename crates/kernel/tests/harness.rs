@@ -352,12 +352,13 @@ fn a_failure_says_whose_it_is() {
         json!({ "kind": "world", "detail": "down" })
     );
 
-    // So an obligation leaves out only the cases whose detail it can't read, not every failure.
+    // What the world said is Json, so an obligation can read every failure.
     let ty = call(
         json!({ "op": "inputType", "harness": double_harness(), "interface": doubling() }),
     )["type"]
         .clone();
     let cases = &ty["Variant"]["cases"]["failed"]["Record"]["error"]["Variant"]["cases"];
     assert_eq!(cases["cancelled"], json!({ "Record": {} }));
-    assert_eq!(cases["world"], json!({ "Record": { "detail": "Any" } }));
+    assert_eq!(cases["world"], json!({ "Record": { "detail": "Json" } }));
+    assert_eq!(cases["child"], json!({ "Record": { "error": "Json" } }));
 }

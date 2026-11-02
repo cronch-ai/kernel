@@ -160,5 +160,20 @@
         ]
       }
     }
+  },
+  "grant": {
+    "Record": {
+      "allow": {
+        "List": "String"
+      },
+      "once": {
+        "List": {
+          "Record": {
+            "action": "String",
+            "args": "Any"
+          }
+        }
+      }
+    }
   }
 }

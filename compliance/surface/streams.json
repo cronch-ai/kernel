@@ -78,6 +78,7 @@
                 }
               }
             },
+            "result": "Any",
             "state": {
               "Record": {
                 "arg": "String",

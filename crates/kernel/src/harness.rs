@@ -20,8 +20,8 @@ use std::collections::BTreeMap;
 pub struct Harness {
     /// `A`: the type of the value a run is started with.
     pub arg: Type,
-    /// `R`: the type of the value a run halts with. A halt with a value outside it is a step failure. Absent: `Any`.
-    #[serde(default = "any", skip_serializing_if = "is_any")]
+    /// `R`: the type of the value a run halts with. A halt with a value outside it is a step failure. Absent: `Json`.
+    #[serde(default = "json", skip_serializing_if = "is_json")]
     pub result: Type,
     /// The children it may spawn, by name. A spawn that names one gets a child whose term has that signature, and
     /// its result arrives as `ret` on the operation `spawn.<name>`, at the signature's result type.
@@ -55,12 +55,12 @@ pub fn spawn_op(name: &str) -> String {
     format!("spawn.{name}")
 }
 
-fn any() -> Type {
-    Type::Any
+fn json() -> Type {
+    Type::Json
 }
 
-fn is_any(ty: &Type) -> bool {
-    *ty == Type::Any
+fn is_json(ty: &Type) -> bool {
+    *ty == Type::Json
 }
 
 /// Whether a call delivers one result, or any number of items and then an end.
@@ -140,14 +140,14 @@ pub struct Channel {
 ///
 /// `grant` is the type of the grant state its contracts read and write: a capability declares the part it uses, as
 /// a record type, and installing capabilities together merges their parts. A run's grant state must have it. Absent:
-/// `Any`.
+/// `Json`, which says nothing of it, so a capability that reads the grant must declare what it reads.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Interface {
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub operations: BTreeMap<String, Operation>,
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub channels: BTreeMap<String, Channel>,
-    #[serde(default = "any", skip_serializing_if = "is_any")]
+    #[serde(default = "json", skip_serializing_if = "is_json")]
     pub grant: Type,
 }
 
@@ -156,7 +156,7 @@ impl Default for Interface {
         Interface {
             operations: BTreeMap::new(),
             channels: BTreeMap::new(),
-            grant: Type::Any,
+            grant: Type::Json,
         }
     }
 }
@@ -165,7 +165,7 @@ impl Default for Interface {
 /// different types, which can't be both.
 fn merge_grants(a: &Type, b: &Type) -> Result<Type, String> {
     match (a, b) {
-        (Type::Any, t) | (t, Type::Any) => Ok(t.clone()),
+        (Type::Any | Type::Json, t) | (t, Type::Any | Type::Json) => Ok(t.clone()),
         (Type::Record(x), Type::Record(y)) => {
             let mut out = x.clone();
             for (field, t) in y {
@@ -376,12 +376,42 @@ fn check_part(
     }
 }
 
+/// Problems with an update to the grant state (`onCall`, `onResult`, `onMsg`). Against a declared grant, it gives a
+/// record of the fields it changes, each of its declared type, which the interpreter merges into the grant: a
+/// capability changes its own part, and leaves the others' as they are.
+fn check_update(
+    place: Place,
+    expr: &Option<Expr>,
+    vars: &[(&str, &Type)],
+    grant: &Type,
+    problems: &mut Vec<HarnessProblem>,
+) {
+    let Some(e) = expr else { return };
+    let Type::Record(declared) = grant else {
+        return check_part(place, expr, vars, Some(grant.clone()), problems);
+    };
+    let (inferred, _) = infer(e, scope(vars));
+    let changed = match inferred {
+        Some(Type::Record(fields)) if fields.keys().all(|f| declared.contains_key(f)) => fields
+            .keys()
+            .map(|f| (f.clone(), declared[f].clone()))
+            .collect(),
+        Some(got) => {
+            return problems.push(HarnessProblem::Part {
+                place,
+                expected: grant.clone(),
+                got,
+            });
+        }
+        None => declared.clone(),
+    };
+    check_part(place, expr, vars, Some(Type::Record(changed)), problems);
+}
+
 /// Problems with the expressions of an interface's contracts.
 pub fn check_interface(interface: &Interface) -> Vec<HarnessProblem> {
     let mut problems = Vec::new();
     let grant = interface.grant.clone();
-    // What gives the next grant state must give one of the grant's type.
-    let next_grant = (grant != Type::Any).then(|| grant.clone());
     let sources = Type::List(Box::new(Type::String));
     for (name, o) in &interface.operations {
         let at = |part: &str| Place::Operation {
@@ -412,15 +442,15 @@ pub fn check_interface(interface: &Interface) -> Vec<HarnessProblem> {
             p,
         );
         check_part(at("footprint"), &o.footprint, &[("args", args)], None, p);
-        check_part(
+        check_update(
             at("onCall"),
             &o.on_call,
             &[("args", args), ("grant", &grant)],
-            next_grant.clone(),
+            &grant,
             p,
         );
         let vars = [("args", args), ("result", result), ("grant", &grant)];
-        check_part(at("onResult"), &o.on_result, &vars, next_grant.clone(), p);
+        check_update(at("onResult"), &o.on_result, &vars, &grant, p);
     }
     for (name, c) in &interface.channels {
         let at = |part: &str| Place::Channel {
@@ -429,11 +459,11 @@ pub fn check_interface(interface: &Interface) -> Vec<HarnessProblem> {
         };
         let p = &mut problems;
         check_part(at("inv"), &c.inv, &[("value", &c.ty)], Some(Type::Bool), p);
-        check_part(
+        check_update(
             at("onMsg"),
             &c.on_msg,
             &[("value", &c.ty), ("grant", &grant)],
-            next_grant.clone(),
+            &grant,
             p,
         );
     }
@@ -491,7 +521,7 @@ pub fn action_type(result: &Type, interface: &Interface) -> Type {
 
 /// The type of what `δ` receives against this interface: a variant over input kinds. A result's case is itself a
 /// variant over the operation it answers (`op`), so matching on it gives the operation's output type. A declared
-/// child's result arrives on `spawn.<name>` at its signature's result type; an undeclared one's on `spawn`, as `Any`,
+/// child's result arrives on `spawn.<name>` at its signature's result type; an undeclared one's on `spawn`, as `Json`,
 /// since its harness is chosen at run time. A message's case is a variant over
 /// channels, each with its type.
 pub fn input_type(harness: &Harness, interface: &Interface) -> Type {
@@ -517,7 +547,7 @@ pub fn input_type(harness: &Harness, interface: &Interface) -> Type {
         .collect();
     results.insert(
         "spawn".to_string(),
-        record(vec![("call", Type::Int), ("value", Type::Any)]),
+        record(vec![("call", Type::Int), ("value", Type::Json)]),
     );
     for (name, signature) in &harness.spawns {
         let case = record(vec![
@@ -560,8 +590,7 @@ pub fn input_type(harness: &Harness, interface: &Interface) -> Type {
 
 /// Why a call or a child failed, a variant over `kind`: `cancelled`, made by the interpreter when a harness cancels a
 /// child; `child`, a child run that failed, with its step error; `world`, what the world said about a call it couldn't
-/// complete. What the world and a failed child say is `Any` until it can be `Json`, so an induction obligation still
-/// leaves those two cases out, but no longer the whole of a failure.
+/// complete. What the world and a failed child say is `Json`, read by testing it with `is`.
 pub fn error_type() -> Type {
     let record = |fields: Vec<(&str, Type)>| {
         Type::Record(
@@ -575,8 +604,8 @@ pub fn error_type() -> Type {
         tag: "kind".to_string(),
         cases: BTreeMap::from([
             ("cancelled".to_string(), record(vec![])),
-            ("child".to_string(), record(vec![("error", Type::Any)])),
-            ("world".to_string(), record(vec![("detail", Type::Any)])),
+            ("child".to_string(), record(vec![("error", Type::Json)])),
+            ("world".to_string(), record(vec![("detail", Type::Json)])),
         ]),
     }
 }

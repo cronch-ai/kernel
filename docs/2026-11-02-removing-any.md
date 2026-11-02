@@ -94,7 +94,9 @@ Each is a kernel PR with compliance vectors, and the platform follows A2 and A3 
 - **A3**, in four pieces:
   - **A3a:** `Json` and `is`, in the checker, the interpreter, induction and the surface language. SMT refuses both until A3b, as it refuses `Any`. Minor version.
   - **A3b:** `Json`'s SMT datatype and `is`'s predicate.
-  - **A3c:** what the interpreter makes up becomes `Json`: a world error's `detail`, a child's error, an undeclared child's argument and result, `result`, `arg` and a capability's grant when none is declared. An action chosen at run time is tested with `is` against the interface's actions.
+  - **A3c:** what the interpreter makes up becomes `Json`: a world error's `detail`, a child's error, an undeclared child's result, and the defaults for a harness's `result` and an interface's `grant`. So obligations read every input, and a contract that reads the grant must declare it.
+    - Found on the way: an update to the grant replaced all of it, so one capability's update erased another's part. Since A3c makes declaring parts necessary, an update now gives only the fields it changes, the interpreter merges them in, and the checker types them against those fields of the declared grant.
+    - Properties keep reading events through `Any` where cases disagree, and an action chosen at run time is still bound at `Any`: both go with `Any` in A3d.
   - **A3d:** `Any` deleted, a partial field read an error, and `null` refused but at `Json`. Breaking version, with the platform's contracts updated.
 
 ## Open questions
