@@ -316,6 +316,7 @@ pub enum Place {
     Step,
     Operation { name: String, part: String },
     Channel { name: String, part: String },
+    Grant,
 }
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
@@ -329,6 +330,9 @@ pub enum HarnessProblem {
     Step { expected: Type, got: Type },
     /// A declared child whose results would arrive on an operation the interface already has.
     SpawnClash { name: String },
+    /// `Call` or `Action` where the interface's own types are defined: an operation's input, or the grant. Each is
+    /// resolved from the interface's inputs, so it would contain itself.
+    SelfReference { place: Place },
     /// A contract's expression has the wrong type: a condition that isn't `Bool`, a label that isn't a list of sources.
     Part {
         place: Place,
@@ -408,48 +412,87 @@ fn check_update(
     check_part(place, expr, vars, Some(Type::Record(changed)), problems);
 }
 
-/// Problems with the expressions of an interface's contracts.
+/// Whether a type mentions `Call` or `Action`, which are resolved from the interface.
+fn resolvable(ty: &Type) -> bool {
+    match ty {
+        Type::Call | Type::Action => true,
+        Type::List(t) => resolvable(t),
+        Type::Record(fields) => fields.values().any(resolvable),
+        Type::Variant { cases, .. } => cases.values().any(resolvable),
+        _ => false,
+    }
+}
+
+/// An operation's output as the interface it is called in reads it: `Call` and `Action` resolved against that
+/// interface, for a harness whose result type is `result`.
+pub fn output_type(output: &Type, result: &Type, interface: &Interface) -> Type {
+    output.resolved(&action_type(result, interface))
+}
+
+/// Problems with the expressions of an interface's contracts. Each of an operation's contracts reads `op`, the name
+/// the operation is installed under.
 pub fn check_interface(interface: &Interface) -> Vec<HarnessProblem> {
     let mut problems = Vec::new();
     let grant = interface.grant.clone();
+    if resolvable(&grant) {
+        problems.push(HarnessProblem::SelfReference {
+            place: Place::Grant,
+        });
+    }
     let sources = Type::List(Box::new(Type::String));
+    let op = Type::String;
     for (name, o) in &interface.operations {
         let at = |part: &str| Place::Operation {
             name: name.clone(),
             part: part.to_string(),
         };
-        let (args, result) = (&o.input, &o.output);
+        if resolvable(&o.input) {
+            problems.push(HarnessProblem::SelfReference { place: at("input") });
+        }
+        let result = output_type(&o.output, &Type::Bool, interface);
+        let (args, result) = (&o.input, &result);
         let p = &mut problems;
         check_part(
             at("pre"),
             &o.pre,
-            &[("args", args), ("grant", &grant)],
+            &[("args", args), ("grant", &grant), ("op", &op)],
             Some(Type::Bool),
             p,
         );
         check_part(
             at("post"),
             &o.post,
-            &[("args", args), ("result", result)],
+            &[("args", args), ("result", result), ("op", &op)],
             Some(Type::Bool),
             p,
         );
         check_part(
             at("ret"),
             &o.ret,
-            &[("args", args)],
+            &[("args", args), ("op", &op)],
             Some(sources.clone()),
             p,
         );
-        check_part(at("footprint"), &o.footprint, &[("args", args)], None, p);
+        check_part(
+            at("footprint"),
+            &o.footprint,
+            &[("args", args), ("op", &op)],
+            None,
+            p,
+        );
         check_update(
             at("onCall"),
             &o.on_call,
-            &[("args", args), ("grant", &grant)],
+            &[("args", args), ("grant", &grant), ("op", &op)],
             &grant,
             p,
         );
-        let vars = [("args", args), ("result", result), ("grant", &grant)];
+        let vars = [
+            ("args", args),
+            ("result", result),
+            ("grant", &grant),
+            ("op", &op),
+        ];
         check_update(at("onResult"), &o.on_result, &vars, &grant, p);
     }
     for (name, c) in &interface.channels {
@@ -548,7 +591,8 @@ pub fn input_type(harness: &Harness, interface: &Interface) -> Type {
         .operations
         .iter()
         .map(|(name, o)| {
-            let case = record(vec![("call", Type::Int), ("value", o.output.clone())]);
+            let output = output_type(&o.output, &harness.result, interface);
+            let case = record(vec![("call", Type::Int), ("value", output)]);
             (name.clone(), case)
         })
         .collect();

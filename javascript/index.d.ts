@@ -12,6 +12,8 @@ export type Type =
   | "Json"
   /** An action the harness may take against the interface it runs against, resolved where its step is checked and run. */
   | "Action"
+  /** A call of one of the interface's operations: `Action` with only its `call` case. Resolved where `Action` is, and in operation outputs. */
+  | "Call"
   | { readonly List: Type }
   | { readonly Record: Readonly<Record<string, Type>> }
   /** A record whose `tag` field names its case, and which has that case's type. */
@@ -229,13 +231,16 @@ export type Narrowing =
 export type HarnessPlace =
   | { readonly in: "step" }
   | { readonly in: "operation"; readonly name: string; readonly part: string }
-  | { readonly in: "channel"; readonly name: string; readonly part: string };
+  | { readonly in: "channel"; readonly name: string; readonly part: string }
+  | { readonly in: "grant" };
 
 export type HarnessProblem =
   | { readonly kind: "expr"; readonly place: HarnessPlace; readonly problem: Problem }
   | { readonly kind: "init"; readonly expected: Type; readonly got: Value }
   | { readonly kind: "step"; readonly expected: Type; readonly got: Type }
   | { readonly kind: "spawnClash"; readonly name: string }
+  /** `Call` or `Action` in an operation's input or the grant, which would contain itself. */
+  | { readonly kind: "selfReference"; readonly place: HarnessPlace }
   | {
       readonly kind: "part";
       readonly place: HarnessPlace;

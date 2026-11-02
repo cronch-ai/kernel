@@ -41,7 +41,7 @@
 
 use crate::harness::{
     Harness, HarnessProblem, Interface, Mode, Narrowing, Operation, check_harness, check_interface,
-    narrow, resolved_step, spawn_op,
+    narrow, output_type, resolved_step, spawn_op,
 };
 use crate::ir::{Expr, Type};
 use crate::labeled::{self, EvalError, LValue, Label};
@@ -312,11 +312,16 @@ fn holds(expr: &Option<Expr>, vars: Vec<(&str, LValue)>) -> bool {
         .is_none_or(|e| contract(e, vars).is_some_and(|v| v.value() == Value::Bool(true)))
 }
 
-/// The label of what a call of this operation delivers.
-fn result_label(op: &Operation, args: &LValue) -> Option<Label> {
+/// The name an operation is installed under, as its contracts read it.
+fn named(op: &str) -> LValue {
+    LValue::trusted(&Value::String(op.to_string()))
+}
+
+/// The label of what a call of the operation `name` delivers.
+fn result_label(name: &str, op: &Operation, args: &LValue) -> Option<Label> {
     let mut label = match &op.ret {
         None => args.label(),
-        Some(e) => contract(e, vec![("args", args.clone())])?
+        Some(e) => contract(e, vec![("args", args.clone()), ("op", named(name))])?
             .value()
             .as_array()?
             .iter()
@@ -593,23 +598,34 @@ impl Run {
             WorldInput::Start { .. } => unreachable!("handled above"),
             WorldInput::Ret { call, value } => {
                 let (pending, op) = self.call(*call)?;
-                Self::typed(value, &op.output)?;
+                Self::typed(
+                    value,
+                    &output_type(&op.output, &self.harness.result, &self.interface),
+                )?;
                 let result = LValue::trusted(value);
                 if !holds(
                     &op.post,
-                    vec![("args", pending.args.clone()), ("result", result.clone())],
+                    vec![
+                        ("args", pending.args.clone()),
+                        ("result", result.clone()),
+                        ("op", named(&pending.op)),
+                    ],
                 ) {
                     return Err(Withheld::Postcondition { call: *call });
                 }
-                let label =
-                    result_label(op, &pending.args).ok_or(Withheld::ReturnLabel { call: *call })?;
+                let label = result_label(&pending.op, op, &pending.args)
+                    .ok_or(Withheld::ReturnLabel { call: *call })?;
                 let update = op
                     .on_result
                     .as_ref()
                     .filter(|_| label.is_empty())
                     .map(|e| Update {
                         expr: e.clone(),
-                        vars: vec![("args", pending.args.clone()), ("result", result)],
+                        vars: vec![
+                            ("args", pending.args.clone()),
+                            ("result", result),
+                            ("op", named(&pending.op)),
+                        ],
                     });
                 Ok(admitted(label, update))
             }
@@ -618,14 +634,14 @@ impl Run {
                 if op.mode != Mode::Stream {
                     return Err(Withheld::NotAStream { call: *call });
                 }
-                let label =
-                    result_label(op, &pending.args).ok_or(Withheld::ReturnLabel { call: *call })?;
+                let label = result_label(&pending.op, op, &pending.args)
+                    .ok_or(Withheld::ReturnLabel { call: *call })?;
                 Ok(admitted(label, None))
             }
             WorldInput::Failed { call, .. } => {
                 let (pending, op) = self.call(*call)?;
-                let label =
-                    result_label(op, &pending.args).ok_or(Withheld::ReturnLabel { call: *call })?;
+                let label = result_label(&pending.op, op, &pending.args)
+                    .ok_or(Withheld::ReturnLabel { call: *call })?;
                 Ok(admitted(label, None))
             }
             WorldInput::Msg { channel, value } => {
@@ -784,6 +800,7 @@ impl Run {
                                 vec![
                                     ("args", args.clone()),
                                     ("grant", LValue::trusted(&self.grant)),
+                                    ("op", named(&op)),
                                 ],
                             )
                     });
@@ -791,13 +808,15 @@ impl Run {
                         let footprint = o
                             .footprint
                             .as_ref()
-                            .and_then(|e| contract(e, vec![("args", args.clone())]))
+                            .and_then(|e| {
+                                contract(e, vec![("args", args.clone()), ("op", named(&op))])
+                            })
                             .map(|f| f.value());
                         events.push(out(Some(k), true, o.effect, footprint));
                         if let Some(e) = &o.on_call {
                             let update = Update {
                                 expr: e.clone(),
-                                vars: vec![("args", args.clone())],
+                                vars: vec![("args", args.clone()), ("op", named(&op))],
                             };
                             update.apply(&mut self.grant);
                             used.push((origin.to_vec(), update));

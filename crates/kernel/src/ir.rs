@@ -22,6 +22,11 @@ pub enum Type {
     /// where the step is checked, run or read in SMT-LIB. So one term tests a choice made at run time (a model's tool
     /// call) against whatever its interface allows, and a narrowed child against what its narrowing leaves.
     Action,
+    /// A call of one of the operations of the interface the harness runs against: `Action` with only its `call` case,
+    /// so a variant over `kind` whose one case is a variant over `op`, each holding that operation's `args`. It
+    /// conforms to `Action`, so a `Call` is a call action wherever one is wanted. Resolved where `Action` is, and where
+    /// an operation's output is read, so a model's chosen call is typed by whatever its interface allows.
+    Call,
     List(Box<Type>),
     Record(BTreeMap<String, Type>),
     /// A tagged union: a record whose `tag` field names its case, and which has that case's type. A case is a record
@@ -135,10 +140,21 @@ fn is_default_tag(tag: &str) -> bool {
 }
 
 impl Type {
-    /// This type with `Action` as `action`.
+    /// This type with `Action` as `action`, and `Call` as `action` with only its `call` case.
     pub fn resolved(&self, action: &Type) -> Type {
         match self {
             Type::Action => action.clone(),
+            Type::Call => match action {
+                Type::Variant { tag, cases } => Type::Variant {
+                    tag: tag.clone(),
+                    cases: cases
+                        .iter()
+                        .filter(|(case, _)| *case == "call")
+                        .map(|(case, t)| (case.clone(), t.clone()))
+                        .collect(),
+                },
+                _ => Type::Call,
+            },
             Type::List(t) => Type::List(Box::new(t.resolved(action))),
             Type::Record(fields) => Type::Record(
                 fields

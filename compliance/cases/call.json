@@ -1,0 +1,3959 @@
+{
+  "description": "A model's chosen call, typed by the interface it is made in: performed, then withheld under a narrowing that drops it; a contract reading its operation's name; Call where an interface defines its own types.",
+  "exchanges": [
+    {
+      "request": {
+        "capabilities": [
+          {
+            "capability": {
+              "operations": {
+                "choose": {
+                  "input": {
+                    "Record": {}
+                  },
+                  "output": {
+                    "Variant": {
+                      "cases": {
+                        "answer": {
+                          "Record": {
+                            "text": "String"
+                          }
+                        },
+                        "call": "Call"
+                      },
+                      "tag": "kind"
+                    }
+                  }
+                }
+              }
+            },
+            "prefix": "brain"
+          },
+          {
+            "capability": {
+              "grant": {
+                "Record": {
+                  "allow": {
+                    "List": "String"
+                  }
+                }
+              },
+              "operations": {
+                "echo": {
+                  "input": {
+                    "Record": {
+                      "text": "String"
+                    }
+                  },
+                  "output": "String",
+                  "pre": {
+                    "args": [
+                      {
+                        "e": "get",
+                        "field": "allow",
+                        "of": {
+                          "e": "var",
+                          "name": "grant"
+                        }
+                      },
+                      {
+                        "e": "var",
+                        "name": "op"
+                      }
+                    ],
+                    "e": "op",
+                    "op": "contains"
+                  }
+                }
+              }
+            },
+            "prefix": "t"
+          }
+        ],
+        "op": "install"
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "interface": {
+            "grant": {
+              "Record": {
+                "allow": {
+                  "List": "String"
+                }
+              }
+            },
+            "operations": {
+              "brain.choose": {
+                "input": {
+                  "Record": {}
+                },
+                "output": {
+                  "Variant": {
+                    "cases": {
+                      "answer": {
+                        "Record": {
+                          "text": "String"
+                        }
+                      },
+                      "call": "Call"
+                    },
+                    "tag": "kind"
+                  }
+                }
+              },
+              "t.echo": {
+                "input": {
+                  "Record": {
+                    "text": "String"
+                  }
+                },
+                "output": "String",
+                "pre": {
+                  "args": [
+                    {
+                      "e": "get",
+                      "field": "allow",
+                      "of": {
+                        "e": "var",
+                        "name": "grant"
+                      }
+                    },
+                    {
+                      "e": "var",
+                      "name": "op"
+                    }
+                  ],
+                  "e": "op",
+                  "op": "contains"
+                }
+              }
+            }
+          },
+          "kind": "installed"
+        }
+      }
+    },
+    {
+      "request": {
+        "grant": {
+          "allow": ["t.echo"]
+        },
+        "harness": {
+          "arg": "String",
+          "init": {},
+          "result": "String",
+          "state": {
+            "Record": {}
+          },
+          "step": {
+            "cases": {
+              "ret": {
+                "bind": "input",
+                "body": {
+                  "cases": {
+                    "brain.choose": {
+                      "bind": "input",
+                      "body": {
+                        "cases": {
+                          "answer": {
+                            "bind": "a",
+                            "body": {
+                              "e": "record",
+                              "fields": {
+                                "actions": {
+                                  "e": "list",
+                                  "items": [
+                                    {
+                                      "e": "record",
+                                      "fields": {
+                                        "kind": {
+                                          "e": "lit",
+                                          "v": "halt"
+                                        },
+                                        "value": {
+                                          "e": "get",
+                                          "field": "text",
+                                          "of": {
+                                            "e": "var",
+                                            "name": "a"
+                                          }
+                                        }
+                                      }
+                                    }
+                                  ]
+                                },
+                                "state": {
+                                  "e": "var",
+                                  "name": "state"
+                                }
+                              }
+                            }
+                          },
+                          "call": {
+                            "bind": "c",
+                            "body": {
+                              "e": "record",
+                              "fields": {
+                                "actions": {
+                                  "e": "list",
+                                  "items": [
+                                    {
+                                      "e": "var",
+                                      "name": "c"
+                                    }
+                                  ]
+                                },
+                                "state": {
+                                  "e": "var",
+                                  "name": "state"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "e": "match",
+                        "of": {
+                          "e": "get",
+                          "field": "value",
+                          "of": {
+                            "e": "var",
+                            "name": "input"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "e": "match",
+                  "of": {
+                    "e": "var",
+                    "name": "input"
+                  },
+                  "on": "op",
+                  "otherwise": {
+                    "e": "record",
+                    "fields": {
+                      "actions": {
+                        "e": "list",
+                        "items": [
+                          {
+                            "e": "record",
+                            "fields": {
+                              "kind": {
+                                "e": "lit",
+                                "v": "halt"
+                              },
+                              "value": {
+                                "e": "lit",
+                                "v": "done"
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      "state": {
+                        "e": "var",
+                        "name": "state"
+                      }
+                    }
+                  }
+                }
+              },
+              "start": {
+                "bind": "input",
+                "body": {
+                  "e": "record",
+                  "fields": {
+                    "actions": {
+                      "e": "list",
+                      "items": [
+                        {
+                          "e": "record",
+                          "fields": {
+                            "args": {
+                              "e": "record",
+                              "fields": {}
+                            },
+                            "kind": {
+                              "e": "lit",
+                              "v": "call"
+                            },
+                            "op": {
+                              "e": "lit",
+                              "v": "brain.choose"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    "state": {
+                      "e": "var",
+                      "name": "state"
+                    }
+                  }
+                }
+              }
+            },
+            "e": "match",
+            "of": {
+              "e": "var",
+              "name": "input"
+            },
+            "otherwise": {
+              "e": "record",
+              "fields": {
+                "actions": {
+                  "e": "list",
+                  "items": []
+                },
+                "state": {
+                  "e": "var",
+                  "name": "state"
+                }
+              }
+            }
+          }
+        },
+        "interface": {
+          "grant": {
+            "Record": {
+              "allow": {
+                "List": "String"
+              }
+            }
+          },
+          "operations": {
+            "brain.choose": {
+              "input": {
+                "Record": {}
+              },
+              "output": {
+                "Variant": {
+                  "cases": {
+                    "answer": {
+                      "Record": {
+                        "text": "String"
+                      }
+                    },
+                    "call": "Call"
+                  },
+                  "tag": "kind"
+                }
+              }
+            },
+            "t.echo": {
+              "input": {
+                "Record": {
+                  "text": "String"
+                }
+              },
+              "output": "String",
+              "pre": {
+                "args": [
+                  {
+                    "e": "get",
+                    "field": "allow",
+                    "of": {
+                      "e": "var",
+                      "name": "grant"
+                    }
+                  },
+                  {
+                    "e": "var",
+                    "name": "op"
+                  }
+                ],
+                "e": "op",
+                "op": "contains"
+              }
+            }
+          }
+        },
+        "op": "init"
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "kind": "ready",
+          "system": {
+            "root": {
+              "grant": {
+                "allow": ["t.echo"]
+              },
+              "harness": {
+                "arg": "String",
+                "init": {},
+                "result": "String",
+                "state": {
+                  "Record": {}
+                },
+                "step": {
+                  "cases": {
+                    "ret": {
+                      "bind": "input",
+                      "body": {
+                        "cases": {
+                          "brain.choose": {
+                            "bind": "input",
+                            "body": {
+                              "cases": {
+                                "answer": {
+                                  "bind": "a",
+                                  "body": {
+                                    "e": "record",
+                                    "fields": {
+                                      "actions": {
+                                        "e": "list",
+                                        "items": [
+                                          {
+                                            "e": "record",
+                                            "fields": {
+                                              "kind": {
+                                                "e": "lit",
+                                                "v": "halt"
+                                              },
+                                              "value": {
+                                                "e": "get",
+                                                "field": "text",
+                                                "of": {
+                                                  "e": "var",
+                                                  "name": "a"
+                                                }
+                                              }
+                                            }
+                                          }
+                                        ]
+                                      },
+                                      "state": {
+                                        "e": "var",
+                                        "name": "state"
+                                      }
+                                    }
+                                  }
+                                },
+                                "call": {
+                                  "bind": "c",
+                                  "body": {
+                                    "e": "record",
+                                    "fields": {
+                                      "actions": {
+                                        "e": "list",
+                                        "items": [
+                                          {
+                                            "e": "var",
+                                            "name": "c"
+                                          }
+                                        ]
+                                      },
+                                      "state": {
+                                        "e": "var",
+                                        "name": "state"
+                                      }
+                                    }
+                                  }
+                                }
+                              },
+                              "e": "match",
+                              "of": {
+                                "e": "get",
+                                "field": "value",
+                                "of": {
+                                  "e": "var",
+                                  "name": "input"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "e": "match",
+                        "of": {
+                          "e": "var",
+                          "name": "input"
+                        },
+                        "on": "op",
+                        "otherwise": {
+                          "e": "record",
+                          "fields": {
+                            "actions": {
+                              "e": "list",
+                              "items": [
+                                {
+                                  "e": "record",
+                                  "fields": {
+                                    "kind": {
+                                      "e": "lit",
+                                      "v": "halt"
+                                    },
+                                    "value": {
+                                      "e": "lit",
+                                      "v": "done"
+                                    }
+                                  }
+                                }
+                              ]
+                            },
+                            "state": {
+                              "e": "var",
+                              "name": "state"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "start": {
+                      "bind": "input",
+                      "body": {
+                        "e": "record",
+                        "fields": {
+                          "actions": {
+                            "e": "list",
+                            "items": [
+                              {
+                                "e": "record",
+                                "fields": {
+                                  "args": {
+                                    "e": "record",
+                                    "fields": {}
+                                  },
+                                  "kind": {
+                                    "e": "lit",
+                                    "v": "call"
+                                  },
+                                  "op": {
+                                    "e": "lit",
+                                    "v": "brain.choose"
+                                  }
+                                }
+                              }
+                            ]
+                          },
+                          "state": {
+                            "e": "var",
+                            "name": "state"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "e": "match",
+                  "of": {
+                    "e": "var",
+                    "name": "input"
+                  },
+                  "otherwise": {
+                    "e": "record",
+                    "fields": {
+                      "actions": {
+                        "e": "list",
+                        "items": []
+                      },
+                      "state": {
+                        "e": "var",
+                        "name": "state"
+                      }
+                    }
+                  }
+                }
+              },
+              "interface": {
+                "grant": {
+                  "Record": {
+                    "allow": {
+                      "List": "String"
+                    }
+                  }
+                },
+                "operations": {
+                  "brain.choose": {
+                    "input": {
+                      "Record": {}
+                    },
+                    "output": {
+                      "Variant": {
+                        "cases": {
+                          "answer": {
+                            "Record": {
+                              "text": "String"
+                            }
+                          },
+                          "call": "Call"
+                        },
+                        "tag": "kind"
+                      }
+                    }
+                  },
+                  "t.echo": {
+                    "input": {
+                      "Record": {
+                        "text": "String"
+                      }
+                    },
+                    "output": "String",
+                    "pre": {
+                      "args": [
+                        {
+                          "e": "get",
+                          "field": "allow",
+                          "of": {
+                            "e": "var",
+                            "name": "grant"
+                          }
+                        },
+                        {
+                          "e": "var",
+                          "name": "op"
+                        }
+                      ],
+                      "e": "op",
+                      "op": "contains"
+                    }
+                  }
+                }
+              },
+              "next": 0,
+              "pending": [],
+              "queue": [],
+              "started": false,
+              "state": {
+                "record": {
+                  "fields": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "delivery": {
+          "input": {
+            "kind": "start",
+            "value": "go"
+          }
+        },
+        "op": "deliver",
+        "system": {
+          "root": {
+            "grant": {
+              "allow": ["t.echo"]
+            },
+            "harness": {
+              "arg": "String",
+              "init": {},
+              "result": "String",
+              "state": {
+                "Record": {}
+              },
+              "step": {
+                "cases": {
+                  "ret": {
+                    "bind": "input",
+                    "body": {
+                      "cases": {
+                        "brain.choose": {
+                          "bind": "input",
+                          "body": {
+                            "cases": {
+                              "answer": {
+                                "bind": "a",
+                                "body": {
+                                  "e": "record",
+                                  "fields": {
+                                    "actions": {
+                                      "e": "list",
+                                      "items": [
+                                        {
+                                          "e": "record",
+                                          "fields": {
+                                            "kind": {
+                                              "e": "lit",
+                                              "v": "halt"
+                                            },
+                                            "value": {
+                                              "e": "get",
+                                              "field": "text",
+                                              "of": {
+                                                "e": "var",
+                                                "name": "a"
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    },
+                                    "state": {
+                                      "e": "var",
+                                      "name": "state"
+                                    }
+                                  }
+                                }
+                              },
+                              "call": {
+                                "bind": "c",
+                                "body": {
+                                  "e": "record",
+                                  "fields": {
+                                    "actions": {
+                                      "e": "list",
+                                      "items": [
+                                        {
+                                          "e": "var",
+                                          "name": "c"
+                                        }
+                                      ]
+                                    },
+                                    "state": {
+                                      "e": "var",
+                                      "name": "state"
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            "e": "match",
+                            "of": {
+                              "e": "get",
+                              "field": "value",
+                              "of": {
+                                "e": "var",
+                                "name": "input"
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "e": "match",
+                      "of": {
+                        "e": "var",
+                        "name": "input"
+                      },
+                      "on": "op",
+                      "otherwise": {
+                        "e": "record",
+                        "fields": {
+                          "actions": {
+                            "e": "list",
+                            "items": [
+                              {
+                                "e": "record",
+                                "fields": {
+                                  "kind": {
+                                    "e": "lit",
+                                    "v": "halt"
+                                  },
+                                  "value": {
+                                    "e": "lit",
+                                    "v": "done"
+                                  }
+                                }
+                              }
+                            ]
+                          },
+                          "state": {
+                            "e": "var",
+                            "name": "state"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "start": {
+                    "bind": "input",
+                    "body": {
+                      "e": "record",
+                      "fields": {
+                        "actions": {
+                          "e": "list",
+                          "items": [
+                            {
+                              "e": "record",
+                              "fields": {
+                                "args": {
+                                  "e": "record",
+                                  "fields": {}
+                                },
+                                "kind": {
+                                  "e": "lit",
+                                  "v": "call"
+                                },
+                                "op": {
+                                  "e": "lit",
+                                  "v": "brain.choose"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        "state": {
+                          "e": "var",
+                          "name": "state"
+                        }
+                      }
+                    }
+                  }
+                },
+                "e": "match",
+                "of": {
+                  "e": "var",
+                  "name": "input"
+                },
+                "otherwise": {
+                  "e": "record",
+                  "fields": {
+                    "actions": {
+                      "e": "list",
+                      "items": []
+                    },
+                    "state": {
+                      "e": "var",
+                      "name": "state"
+                    }
+                  }
+                }
+              }
+            },
+            "interface": {
+              "grant": {
+                "Record": {
+                  "allow": {
+                    "List": "String"
+                  }
+                }
+              },
+              "operations": {
+                "brain.choose": {
+                  "input": {
+                    "Record": {}
+                  },
+                  "output": {
+                    "Variant": {
+                      "cases": {
+                        "answer": {
+                          "Record": {
+                            "text": "String"
+                          }
+                        },
+                        "call": "Call"
+                      },
+                      "tag": "kind"
+                    }
+                  }
+                },
+                "t.echo": {
+                  "input": {
+                    "Record": {
+                      "text": "String"
+                    }
+                  },
+                  "output": "String",
+                  "pre": {
+                    "args": [
+                      {
+                        "e": "get",
+                        "field": "allow",
+                        "of": {
+                          "e": "var",
+                          "name": "grant"
+                        }
+                      },
+                      {
+                        "e": "var",
+                        "name": "op"
+                      }
+                    ],
+                    "e": "op",
+                    "op": "contains"
+                  }
+                }
+              }
+            },
+            "next": 0,
+            "pending": [],
+            "queue": [],
+            "started": false,
+            "state": {
+              "record": {
+                "fields": {}
+              }
+            }
+          }
+        }
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "events": [
+            {
+              "input": {
+                "kind": "start",
+                "value": "go"
+              },
+              "kind": "in",
+              "origin": [],
+              "state": {}
+            },
+            {
+              "action": {
+                "args": {},
+                "kind": "call",
+                "op": "brain.choose"
+              },
+              "call": 0,
+              "kind": "out",
+              "labels": {
+                "args": {},
+                "kind": [],
+                "op": []
+              },
+              "origin": [],
+              "performed": true,
+              "state": {}
+            }
+          ],
+          "system": {
+            "root": {
+              "grant": {
+                "allow": ["t.echo"]
+              },
+              "harness": {
+                "arg": "String",
+                "init": {},
+                "result": "String",
+                "state": {
+                  "Record": {}
+                },
+                "step": {
+                  "cases": {
+                    "ret": {
+                      "bind": "input",
+                      "body": {
+                        "cases": {
+                          "brain.choose": {
+                            "bind": "input",
+                            "body": {
+                              "cases": {
+                                "answer": {
+                                  "bind": "a",
+                                  "body": {
+                                    "e": "record",
+                                    "fields": {
+                                      "actions": {
+                                        "e": "list",
+                                        "items": [
+                                          {
+                                            "e": "record",
+                                            "fields": {
+                                              "kind": {
+                                                "e": "lit",
+                                                "v": "halt"
+                                              },
+                                              "value": {
+                                                "e": "get",
+                                                "field": "text",
+                                                "of": {
+                                                  "e": "var",
+                                                  "name": "a"
+                                                }
+                                              }
+                                            }
+                                          }
+                                        ]
+                                      },
+                                      "state": {
+                                        "e": "var",
+                                        "name": "state"
+                                      }
+                                    }
+                                  }
+                                },
+                                "call": {
+                                  "bind": "c",
+                                  "body": {
+                                    "e": "record",
+                                    "fields": {
+                                      "actions": {
+                                        "e": "list",
+                                        "items": [
+                                          {
+                                            "e": "var",
+                                            "name": "c"
+                                          }
+                                        ]
+                                      },
+                                      "state": {
+                                        "e": "var",
+                                        "name": "state"
+                                      }
+                                    }
+                                  }
+                                }
+                              },
+                              "e": "match",
+                              "of": {
+                                "e": "get",
+                                "field": "value",
+                                "of": {
+                                  "e": "var",
+                                  "name": "input"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "e": "match",
+                        "of": {
+                          "e": "var",
+                          "name": "input"
+                        },
+                        "on": "op",
+                        "otherwise": {
+                          "e": "record",
+                          "fields": {
+                            "actions": {
+                              "e": "list",
+                              "items": [
+                                {
+                                  "e": "record",
+                                  "fields": {
+                                    "kind": {
+                                      "e": "lit",
+                                      "v": "halt"
+                                    },
+                                    "value": {
+                                      "e": "lit",
+                                      "v": "done"
+                                    }
+                                  }
+                                }
+                              ]
+                            },
+                            "state": {
+                              "e": "var",
+                              "name": "state"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "start": {
+                      "bind": "input",
+                      "body": {
+                        "e": "record",
+                        "fields": {
+                          "actions": {
+                            "e": "list",
+                            "items": [
+                              {
+                                "e": "record",
+                                "fields": {
+                                  "args": {
+                                    "e": "record",
+                                    "fields": {}
+                                  },
+                                  "kind": {
+                                    "e": "lit",
+                                    "v": "call"
+                                  },
+                                  "op": {
+                                    "e": "lit",
+                                    "v": "brain.choose"
+                                  }
+                                }
+                              }
+                            ]
+                          },
+                          "state": {
+                            "e": "var",
+                            "name": "state"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "e": "match",
+                  "of": {
+                    "e": "var",
+                    "name": "input"
+                  },
+                  "otherwise": {
+                    "e": "record",
+                    "fields": {
+                      "actions": {
+                        "e": "list",
+                        "items": []
+                      },
+                      "state": {
+                        "e": "var",
+                        "name": "state"
+                      }
+                    }
+                  }
+                }
+              },
+              "interface": {
+                "grant": {
+                  "Record": {
+                    "allow": {
+                      "List": "String"
+                    }
+                  }
+                },
+                "operations": {
+                  "brain.choose": {
+                    "input": {
+                      "Record": {}
+                    },
+                    "output": {
+                      "Variant": {
+                        "cases": {
+                          "answer": {
+                            "Record": {
+                              "text": "String"
+                            }
+                          },
+                          "call": "Call"
+                        },
+                        "tag": "kind"
+                      }
+                    }
+                  },
+                  "t.echo": {
+                    "input": {
+                      "Record": {
+                        "text": "String"
+                      }
+                    },
+                    "output": "String",
+                    "pre": {
+                      "args": [
+                        {
+                          "e": "get",
+                          "field": "allow",
+                          "of": {
+                            "e": "var",
+                            "name": "grant"
+                          }
+                        },
+                        {
+                          "e": "var",
+                          "name": "op"
+                        }
+                      ],
+                      "e": "op",
+                      "op": "contains"
+                    }
+                  }
+                }
+              },
+              "next": 1,
+              "pending": [
+                {
+                  "args": {
+                    "record": {
+                      "fields": {}
+                    }
+                  },
+                  "call": 0,
+                  "op": "brain.choose"
+                }
+              ],
+              "queue": [],
+              "started": true,
+              "state": {
+                "record": {
+                  "fields": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "delivery": {
+          "input": {
+            "call": 0,
+            "kind": "ret",
+            "value": {
+              "args": {
+                "text": "hi"
+              },
+              "kind": "call",
+              "op": "t.echo"
+            }
+          }
+        },
+        "op": "deliver",
+        "system": {
+          "root": {
+            "grant": {
+              "allow": ["t.echo"]
+            },
+            "harness": {
+              "arg": "String",
+              "init": {},
+              "result": "String",
+              "state": {
+                "Record": {}
+              },
+              "step": {
+                "cases": {
+                  "ret": {
+                    "bind": "input",
+                    "body": {
+                      "cases": {
+                        "brain.choose": {
+                          "bind": "input",
+                          "body": {
+                            "cases": {
+                              "answer": {
+                                "bind": "a",
+                                "body": {
+                                  "e": "record",
+                                  "fields": {
+                                    "actions": {
+                                      "e": "list",
+                                      "items": [
+                                        {
+                                          "e": "record",
+                                          "fields": {
+                                            "kind": {
+                                              "e": "lit",
+                                              "v": "halt"
+                                            },
+                                            "value": {
+                                              "e": "get",
+                                              "field": "text",
+                                              "of": {
+                                                "e": "var",
+                                                "name": "a"
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    },
+                                    "state": {
+                                      "e": "var",
+                                      "name": "state"
+                                    }
+                                  }
+                                }
+                              },
+                              "call": {
+                                "bind": "c",
+                                "body": {
+                                  "e": "record",
+                                  "fields": {
+                                    "actions": {
+                                      "e": "list",
+                                      "items": [
+                                        {
+                                          "e": "var",
+                                          "name": "c"
+                                        }
+                                      ]
+                                    },
+                                    "state": {
+                                      "e": "var",
+                                      "name": "state"
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            "e": "match",
+                            "of": {
+                              "e": "get",
+                              "field": "value",
+                              "of": {
+                                "e": "var",
+                                "name": "input"
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "e": "match",
+                      "of": {
+                        "e": "var",
+                        "name": "input"
+                      },
+                      "on": "op",
+                      "otherwise": {
+                        "e": "record",
+                        "fields": {
+                          "actions": {
+                            "e": "list",
+                            "items": [
+                              {
+                                "e": "record",
+                                "fields": {
+                                  "kind": {
+                                    "e": "lit",
+                                    "v": "halt"
+                                  },
+                                  "value": {
+                                    "e": "lit",
+                                    "v": "done"
+                                  }
+                                }
+                              }
+                            ]
+                          },
+                          "state": {
+                            "e": "var",
+                            "name": "state"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "start": {
+                    "bind": "input",
+                    "body": {
+                      "e": "record",
+                      "fields": {
+                        "actions": {
+                          "e": "list",
+                          "items": [
+                            {
+                              "e": "record",
+                              "fields": {
+                                "args": {
+                                  "e": "record",
+                                  "fields": {}
+                                },
+                                "kind": {
+                                  "e": "lit",
+                                  "v": "call"
+                                },
+                                "op": {
+                                  "e": "lit",
+                                  "v": "brain.choose"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        "state": {
+                          "e": "var",
+                          "name": "state"
+                        }
+                      }
+                    }
+                  }
+                },
+                "e": "match",
+                "of": {
+                  "e": "var",
+                  "name": "input"
+                },
+                "otherwise": {
+                  "e": "record",
+                  "fields": {
+                    "actions": {
+                      "e": "list",
+                      "items": []
+                    },
+                    "state": {
+                      "e": "var",
+                      "name": "state"
+                    }
+                  }
+                }
+              }
+            },
+            "interface": {
+              "grant": {
+                "Record": {
+                  "allow": {
+                    "List": "String"
+                  }
+                }
+              },
+              "operations": {
+                "brain.choose": {
+                  "input": {
+                    "Record": {}
+                  },
+                  "output": {
+                    "Variant": {
+                      "cases": {
+                        "answer": {
+                          "Record": {
+                            "text": "String"
+                          }
+                        },
+                        "call": "Call"
+                      },
+                      "tag": "kind"
+                    }
+                  }
+                },
+                "t.echo": {
+                  "input": {
+                    "Record": {
+                      "text": "String"
+                    }
+                  },
+                  "output": "String",
+                  "pre": {
+                    "args": [
+                      {
+                        "e": "get",
+                        "field": "allow",
+                        "of": {
+                          "e": "var",
+                          "name": "grant"
+                        }
+                      },
+                      {
+                        "e": "var",
+                        "name": "op"
+                      }
+                    ],
+                    "e": "op",
+                    "op": "contains"
+                  }
+                }
+              }
+            },
+            "next": 1,
+            "pending": [
+              {
+                "args": {
+                  "record": {
+                    "fields": {}
+                  }
+                },
+                "call": 0,
+                "op": "brain.choose"
+              }
+            ],
+            "queue": [],
+            "started": true,
+            "state": {
+              "record": {
+                "fields": {}
+              }
+            }
+          }
+        }
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "events": [
+            {
+              "input": {
+                "call": 0,
+                "kind": "ret",
+                "op": "brain.choose",
+                "value": {
+                  "args": {
+                    "text": "hi"
+                  },
+                  "kind": "call",
+                  "op": "t.echo"
+                }
+              },
+              "kind": "in",
+              "origin": [],
+              "state": {}
+            },
+            {
+              "action": {
+                "args": {
+                  "text": "hi"
+                },
+                "kind": "call",
+                "op": "t.echo"
+              },
+              "call": 1,
+              "kind": "out",
+              "labels": {
+                "args": {
+                  "text": []
+                },
+                "kind": [],
+                "op": []
+              },
+              "origin": [],
+              "performed": true,
+              "state": {}
+            }
+          ],
+          "system": {
+            "root": {
+              "grant": {
+                "allow": ["t.echo"]
+              },
+              "harness": {
+                "arg": "String",
+                "init": {},
+                "result": "String",
+                "state": {
+                  "Record": {}
+                },
+                "step": {
+                  "cases": {
+                    "ret": {
+                      "bind": "input",
+                      "body": {
+                        "cases": {
+                          "brain.choose": {
+                            "bind": "input",
+                            "body": {
+                              "cases": {
+                                "answer": {
+                                  "bind": "a",
+                                  "body": {
+                                    "e": "record",
+                                    "fields": {
+                                      "actions": {
+                                        "e": "list",
+                                        "items": [
+                                          {
+                                            "e": "record",
+                                            "fields": {
+                                              "kind": {
+                                                "e": "lit",
+                                                "v": "halt"
+                                              },
+                                              "value": {
+                                                "e": "get",
+                                                "field": "text",
+                                                "of": {
+                                                  "e": "var",
+                                                  "name": "a"
+                                                }
+                                              }
+                                            }
+                                          }
+                                        ]
+                                      },
+                                      "state": {
+                                        "e": "var",
+                                        "name": "state"
+                                      }
+                                    }
+                                  }
+                                },
+                                "call": {
+                                  "bind": "c",
+                                  "body": {
+                                    "e": "record",
+                                    "fields": {
+                                      "actions": {
+                                        "e": "list",
+                                        "items": [
+                                          {
+                                            "e": "var",
+                                            "name": "c"
+                                          }
+                                        ]
+                                      },
+                                      "state": {
+                                        "e": "var",
+                                        "name": "state"
+                                      }
+                                    }
+                                  }
+                                }
+                              },
+                              "e": "match",
+                              "of": {
+                                "e": "get",
+                                "field": "value",
+                                "of": {
+                                  "e": "var",
+                                  "name": "input"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "e": "match",
+                        "of": {
+                          "e": "var",
+                          "name": "input"
+                        },
+                        "on": "op",
+                        "otherwise": {
+                          "e": "record",
+                          "fields": {
+                            "actions": {
+                              "e": "list",
+                              "items": [
+                                {
+                                  "e": "record",
+                                  "fields": {
+                                    "kind": {
+                                      "e": "lit",
+                                      "v": "halt"
+                                    },
+                                    "value": {
+                                      "e": "lit",
+                                      "v": "done"
+                                    }
+                                  }
+                                }
+                              ]
+                            },
+                            "state": {
+                              "e": "var",
+                              "name": "state"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "start": {
+                      "bind": "input",
+                      "body": {
+                        "e": "record",
+                        "fields": {
+                          "actions": {
+                            "e": "list",
+                            "items": [
+                              {
+                                "e": "record",
+                                "fields": {
+                                  "args": {
+                                    "e": "record",
+                                    "fields": {}
+                                  },
+                                  "kind": {
+                                    "e": "lit",
+                                    "v": "call"
+                                  },
+                                  "op": {
+                                    "e": "lit",
+                                    "v": "brain.choose"
+                                  }
+                                }
+                              }
+                            ]
+                          },
+                          "state": {
+                            "e": "var",
+                            "name": "state"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "e": "match",
+                  "of": {
+                    "e": "var",
+                    "name": "input"
+                  },
+                  "otherwise": {
+                    "e": "record",
+                    "fields": {
+                      "actions": {
+                        "e": "list",
+                        "items": []
+                      },
+                      "state": {
+                        "e": "var",
+                        "name": "state"
+                      }
+                    }
+                  }
+                }
+              },
+              "interface": {
+                "grant": {
+                  "Record": {
+                    "allow": {
+                      "List": "String"
+                    }
+                  }
+                },
+                "operations": {
+                  "brain.choose": {
+                    "input": {
+                      "Record": {}
+                    },
+                    "output": {
+                      "Variant": {
+                        "cases": {
+                          "answer": {
+                            "Record": {
+                              "text": "String"
+                            }
+                          },
+                          "call": "Call"
+                        },
+                        "tag": "kind"
+                      }
+                    }
+                  },
+                  "t.echo": {
+                    "input": {
+                      "Record": {
+                        "text": "String"
+                      }
+                    },
+                    "output": "String",
+                    "pre": {
+                      "args": [
+                        {
+                          "e": "get",
+                          "field": "allow",
+                          "of": {
+                            "e": "var",
+                            "name": "grant"
+                          }
+                        },
+                        {
+                          "e": "var",
+                          "name": "op"
+                        }
+                      ],
+                      "e": "op",
+                      "op": "contains"
+                    }
+                  }
+                }
+              },
+              "next": 2,
+              "pending": [
+                {
+                  "args": {
+                    "record": {
+                      "fields": {
+                        "text": {
+                          "scalar": {
+                            "value": "hi"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "call": 1,
+                  "op": "t.echo"
+                }
+              ],
+              "queue": [],
+              "started": true,
+              "state": {
+                "record": {
+                  "fields": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "delivery": {
+          "input": {
+            "call": 1,
+            "kind": "ret",
+            "value": "hi"
+          }
+        },
+        "op": "deliver",
+        "system": {
+          "root": {
+            "grant": {
+              "allow": ["t.echo"]
+            },
+            "harness": {
+              "arg": "String",
+              "init": {},
+              "result": "String",
+              "state": {
+                "Record": {}
+              },
+              "step": {
+                "cases": {
+                  "ret": {
+                    "bind": "input",
+                    "body": {
+                      "cases": {
+                        "brain.choose": {
+                          "bind": "input",
+                          "body": {
+                            "cases": {
+                              "answer": {
+                                "bind": "a",
+                                "body": {
+                                  "e": "record",
+                                  "fields": {
+                                    "actions": {
+                                      "e": "list",
+                                      "items": [
+                                        {
+                                          "e": "record",
+                                          "fields": {
+                                            "kind": {
+                                              "e": "lit",
+                                              "v": "halt"
+                                            },
+                                            "value": {
+                                              "e": "get",
+                                              "field": "text",
+                                              "of": {
+                                                "e": "var",
+                                                "name": "a"
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    },
+                                    "state": {
+                                      "e": "var",
+                                      "name": "state"
+                                    }
+                                  }
+                                }
+                              },
+                              "call": {
+                                "bind": "c",
+                                "body": {
+                                  "e": "record",
+                                  "fields": {
+                                    "actions": {
+                                      "e": "list",
+                                      "items": [
+                                        {
+                                          "e": "var",
+                                          "name": "c"
+                                        }
+                                      ]
+                                    },
+                                    "state": {
+                                      "e": "var",
+                                      "name": "state"
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            "e": "match",
+                            "of": {
+                              "e": "get",
+                              "field": "value",
+                              "of": {
+                                "e": "var",
+                                "name": "input"
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "e": "match",
+                      "of": {
+                        "e": "var",
+                        "name": "input"
+                      },
+                      "on": "op",
+                      "otherwise": {
+                        "e": "record",
+                        "fields": {
+                          "actions": {
+                            "e": "list",
+                            "items": [
+                              {
+                                "e": "record",
+                                "fields": {
+                                  "kind": {
+                                    "e": "lit",
+                                    "v": "halt"
+                                  },
+                                  "value": {
+                                    "e": "lit",
+                                    "v": "done"
+                                  }
+                                }
+                              }
+                            ]
+                          },
+                          "state": {
+                            "e": "var",
+                            "name": "state"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "start": {
+                    "bind": "input",
+                    "body": {
+                      "e": "record",
+                      "fields": {
+                        "actions": {
+                          "e": "list",
+                          "items": [
+                            {
+                              "e": "record",
+                              "fields": {
+                                "args": {
+                                  "e": "record",
+                                  "fields": {}
+                                },
+                                "kind": {
+                                  "e": "lit",
+                                  "v": "call"
+                                },
+                                "op": {
+                                  "e": "lit",
+                                  "v": "brain.choose"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        "state": {
+                          "e": "var",
+                          "name": "state"
+                        }
+                      }
+                    }
+                  }
+                },
+                "e": "match",
+                "of": {
+                  "e": "var",
+                  "name": "input"
+                },
+                "otherwise": {
+                  "e": "record",
+                  "fields": {
+                    "actions": {
+                      "e": "list",
+                      "items": []
+                    },
+                    "state": {
+                      "e": "var",
+                      "name": "state"
+                    }
+                  }
+                }
+              }
+            },
+            "interface": {
+              "grant": {
+                "Record": {
+                  "allow": {
+                    "List": "String"
+                  }
+                }
+              },
+              "operations": {
+                "brain.choose": {
+                  "input": {
+                    "Record": {}
+                  },
+                  "output": {
+                    "Variant": {
+                      "cases": {
+                        "answer": {
+                          "Record": {
+                            "text": "String"
+                          }
+                        },
+                        "call": "Call"
+                      },
+                      "tag": "kind"
+                    }
+                  }
+                },
+                "t.echo": {
+                  "input": {
+                    "Record": {
+                      "text": "String"
+                    }
+                  },
+                  "output": "String",
+                  "pre": {
+                    "args": [
+                      {
+                        "e": "get",
+                        "field": "allow",
+                        "of": {
+                          "e": "var",
+                          "name": "grant"
+                        }
+                      },
+                      {
+                        "e": "var",
+                        "name": "op"
+                      }
+                    ],
+                    "e": "op",
+                    "op": "contains"
+                  }
+                }
+              }
+            },
+            "next": 2,
+            "pending": [
+              {
+                "args": {
+                  "record": {
+                    "fields": {
+                      "text": {
+                        "scalar": {
+                          "value": "hi"
+                        }
+                      }
+                    }
+                  }
+                },
+                "call": 1,
+                "op": "t.echo"
+              }
+            ],
+            "queue": [],
+            "started": true,
+            "state": {
+              "record": {
+                "fields": {}
+              }
+            }
+          }
+        }
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "events": [
+            {
+              "input": {
+                "call": 1,
+                "kind": "ret",
+                "op": "t.echo",
+                "value": "hi"
+              },
+              "kind": "in",
+              "origin": [],
+              "state": {}
+            },
+            {
+              "action": {
+                "kind": "halt",
+                "value": "done"
+              },
+              "kind": "out",
+              "labels": {
+                "kind": [],
+                "value": []
+              },
+              "origin": [],
+              "performed": true,
+              "state": {}
+            }
+          ],
+          "system": {
+            "root": {
+              "grant": {
+                "allow": ["t.echo"]
+              },
+              "harness": {
+                "arg": "String",
+                "init": {},
+                "result": "String",
+                "state": {
+                  "Record": {}
+                },
+                "step": {
+                  "cases": {
+                    "ret": {
+                      "bind": "input",
+                      "body": {
+                        "cases": {
+                          "brain.choose": {
+                            "bind": "input",
+                            "body": {
+                              "cases": {
+                                "answer": {
+                                  "bind": "a",
+                                  "body": {
+                                    "e": "record",
+                                    "fields": {
+                                      "actions": {
+                                        "e": "list",
+                                        "items": [
+                                          {
+                                            "e": "record",
+                                            "fields": {
+                                              "kind": {
+                                                "e": "lit",
+                                                "v": "halt"
+                                              },
+                                              "value": {
+                                                "e": "get",
+                                                "field": "text",
+                                                "of": {
+                                                  "e": "var",
+                                                  "name": "a"
+                                                }
+                                              }
+                                            }
+                                          }
+                                        ]
+                                      },
+                                      "state": {
+                                        "e": "var",
+                                        "name": "state"
+                                      }
+                                    }
+                                  }
+                                },
+                                "call": {
+                                  "bind": "c",
+                                  "body": {
+                                    "e": "record",
+                                    "fields": {
+                                      "actions": {
+                                        "e": "list",
+                                        "items": [
+                                          {
+                                            "e": "var",
+                                            "name": "c"
+                                          }
+                                        ]
+                                      },
+                                      "state": {
+                                        "e": "var",
+                                        "name": "state"
+                                      }
+                                    }
+                                  }
+                                }
+                              },
+                              "e": "match",
+                              "of": {
+                                "e": "get",
+                                "field": "value",
+                                "of": {
+                                  "e": "var",
+                                  "name": "input"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "e": "match",
+                        "of": {
+                          "e": "var",
+                          "name": "input"
+                        },
+                        "on": "op",
+                        "otherwise": {
+                          "e": "record",
+                          "fields": {
+                            "actions": {
+                              "e": "list",
+                              "items": [
+                                {
+                                  "e": "record",
+                                  "fields": {
+                                    "kind": {
+                                      "e": "lit",
+                                      "v": "halt"
+                                    },
+                                    "value": {
+                                      "e": "lit",
+                                      "v": "done"
+                                    }
+                                  }
+                                }
+                              ]
+                            },
+                            "state": {
+                              "e": "var",
+                              "name": "state"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "start": {
+                      "bind": "input",
+                      "body": {
+                        "e": "record",
+                        "fields": {
+                          "actions": {
+                            "e": "list",
+                            "items": [
+                              {
+                                "e": "record",
+                                "fields": {
+                                  "args": {
+                                    "e": "record",
+                                    "fields": {}
+                                  },
+                                  "kind": {
+                                    "e": "lit",
+                                    "v": "call"
+                                  },
+                                  "op": {
+                                    "e": "lit",
+                                    "v": "brain.choose"
+                                  }
+                                }
+                              }
+                            ]
+                          },
+                          "state": {
+                            "e": "var",
+                            "name": "state"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "e": "match",
+                  "of": {
+                    "e": "var",
+                    "name": "input"
+                  },
+                  "otherwise": {
+                    "e": "record",
+                    "fields": {
+                      "actions": {
+                        "e": "list",
+                        "items": []
+                      },
+                      "state": {
+                        "e": "var",
+                        "name": "state"
+                      }
+                    }
+                  }
+                }
+              },
+              "interface": {
+                "grant": {
+                  "Record": {
+                    "allow": {
+                      "List": "String"
+                    }
+                  }
+                },
+                "operations": {
+                  "brain.choose": {
+                    "input": {
+                      "Record": {}
+                    },
+                    "output": {
+                      "Variant": {
+                        "cases": {
+                          "answer": {
+                            "Record": {
+                              "text": "String"
+                            }
+                          },
+                          "call": "Call"
+                        },
+                        "tag": "kind"
+                      }
+                    }
+                  },
+                  "t.echo": {
+                    "input": {
+                      "Record": {
+                        "text": "String"
+                      }
+                    },
+                    "output": "String",
+                    "pre": {
+                      "args": [
+                        {
+                          "e": "get",
+                          "field": "allow",
+                          "of": {
+                            "e": "var",
+                            "name": "grant"
+                          }
+                        },
+                        {
+                          "e": "var",
+                          "name": "op"
+                        }
+                      ],
+                      "e": "op",
+                      "op": "contains"
+                    }
+                  }
+                }
+              },
+              "next": 2,
+              "outcome": {
+                "kind": "halted",
+                "value": "done"
+              },
+              "pending": [],
+              "queue": [],
+              "started": true,
+              "state": {
+                "record": {
+                  "fields": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "interface": {
+          "grant": {
+            "Record": {
+              "allow": {
+                "List": "String"
+              }
+            }
+          },
+          "operations": {
+            "brain.choose": {
+              "input": {
+                "Record": {}
+              },
+              "output": {
+                "Variant": {
+                  "cases": {
+                    "answer": {
+                      "Record": {
+                        "text": "String"
+                      }
+                    },
+                    "call": "Call"
+                  },
+                  "tag": "kind"
+                }
+              }
+            },
+            "t.echo": {
+              "input": {
+                "Record": {
+                  "text": "String"
+                }
+              },
+              "output": "String",
+              "pre": {
+                "args": [
+                  {
+                    "e": "get",
+                    "field": "allow",
+                    "of": {
+                      "e": "var",
+                      "name": "grant"
+                    }
+                  },
+                  {
+                    "e": "var",
+                    "name": "op"
+                  }
+                ],
+                "e": "op",
+                "op": "contains"
+              }
+            }
+          }
+        },
+        "narrowings": [
+          {
+            "kind": "drop",
+            "op": "t.echo"
+          }
+        ],
+        "op": "narrow"
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "interface": {
+            "grant": {
+              "Record": {
+                "allow": {
+                  "List": "String"
+                }
+              }
+            },
+            "operations": {
+              "brain.choose": {
+                "input": {
+                  "Record": {}
+                },
+                "output": {
+                  "Variant": {
+                    "cases": {
+                      "answer": {
+                        "Record": {
+                          "text": "String"
+                        }
+                      },
+                      "call": "Call"
+                    },
+                    "tag": "kind"
+                  }
+                }
+              }
+            }
+          },
+          "kind": "narrowed"
+        }
+      }
+    },
+    {
+      "request": {
+        "grant": {
+          "allow": []
+        },
+        "harness": {
+          "arg": "String",
+          "init": {},
+          "result": "String",
+          "state": {
+            "Record": {}
+          },
+          "step": {
+            "cases": {
+              "ret": {
+                "bind": "input",
+                "body": {
+                  "cases": {
+                    "brain.choose": {
+                      "bind": "input",
+                      "body": {
+                        "cases": {
+                          "answer": {
+                            "bind": "a",
+                            "body": {
+                              "e": "record",
+                              "fields": {
+                                "actions": {
+                                  "e": "list",
+                                  "items": [
+                                    {
+                                      "e": "record",
+                                      "fields": {
+                                        "kind": {
+                                          "e": "lit",
+                                          "v": "halt"
+                                        },
+                                        "value": {
+                                          "e": "get",
+                                          "field": "text",
+                                          "of": {
+                                            "e": "var",
+                                            "name": "a"
+                                          }
+                                        }
+                                      }
+                                    }
+                                  ]
+                                },
+                                "state": {
+                                  "e": "var",
+                                  "name": "state"
+                                }
+                              }
+                            }
+                          },
+                          "call": {
+                            "bind": "c",
+                            "body": {
+                              "e": "record",
+                              "fields": {
+                                "actions": {
+                                  "e": "list",
+                                  "items": [
+                                    {
+                                      "e": "var",
+                                      "name": "c"
+                                    }
+                                  ]
+                                },
+                                "state": {
+                                  "e": "var",
+                                  "name": "state"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "e": "match",
+                        "of": {
+                          "e": "get",
+                          "field": "value",
+                          "of": {
+                            "e": "var",
+                            "name": "input"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "e": "match",
+                  "of": {
+                    "e": "var",
+                    "name": "input"
+                  },
+                  "on": "op",
+                  "otherwise": {
+                    "e": "record",
+                    "fields": {
+                      "actions": {
+                        "e": "list",
+                        "items": [
+                          {
+                            "e": "record",
+                            "fields": {
+                              "kind": {
+                                "e": "lit",
+                                "v": "halt"
+                              },
+                              "value": {
+                                "e": "lit",
+                                "v": "done"
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      "state": {
+                        "e": "var",
+                        "name": "state"
+                      }
+                    }
+                  }
+                }
+              },
+              "start": {
+                "bind": "input",
+                "body": {
+                  "e": "record",
+                  "fields": {
+                    "actions": {
+                      "e": "list",
+                      "items": [
+                        {
+                          "e": "record",
+                          "fields": {
+                            "args": {
+                              "e": "record",
+                              "fields": {}
+                            },
+                            "kind": {
+                              "e": "lit",
+                              "v": "call"
+                            },
+                            "op": {
+                              "e": "lit",
+                              "v": "brain.choose"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    "state": {
+                      "e": "var",
+                      "name": "state"
+                    }
+                  }
+                }
+              }
+            },
+            "e": "match",
+            "of": {
+              "e": "var",
+              "name": "input"
+            },
+            "otherwise": {
+              "e": "record",
+              "fields": {
+                "actions": {
+                  "e": "list",
+                  "items": []
+                },
+                "state": {
+                  "e": "var",
+                  "name": "state"
+                }
+              }
+            }
+          }
+        },
+        "interface": {
+          "grant": {
+            "Record": {
+              "allow": {
+                "List": "String"
+              }
+            }
+          },
+          "operations": {
+            "brain.choose": {
+              "input": {
+                "Record": {}
+              },
+              "output": {
+                "Variant": {
+                  "cases": {
+                    "answer": {
+                      "Record": {
+                        "text": "String"
+                      }
+                    },
+                    "call": "Call"
+                  },
+                  "tag": "kind"
+                }
+              }
+            }
+          }
+        },
+        "op": "init"
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "kind": "ready",
+          "system": {
+            "root": {
+              "grant": {
+                "allow": []
+              },
+              "harness": {
+                "arg": "String",
+                "init": {},
+                "result": "String",
+                "state": {
+                  "Record": {}
+                },
+                "step": {
+                  "cases": {
+                    "ret": {
+                      "bind": "input",
+                      "body": {
+                        "cases": {
+                          "brain.choose": {
+                            "bind": "input",
+                            "body": {
+                              "cases": {
+                                "answer": {
+                                  "bind": "a",
+                                  "body": {
+                                    "e": "record",
+                                    "fields": {
+                                      "actions": {
+                                        "e": "list",
+                                        "items": [
+                                          {
+                                            "e": "record",
+                                            "fields": {
+                                              "kind": {
+                                                "e": "lit",
+                                                "v": "halt"
+                                              },
+                                              "value": {
+                                                "e": "get",
+                                                "field": "text",
+                                                "of": {
+                                                  "e": "var",
+                                                  "name": "a"
+                                                }
+                                              }
+                                            }
+                                          }
+                                        ]
+                                      },
+                                      "state": {
+                                        "e": "var",
+                                        "name": "state"
+                                      }
+                                    }
+                                  }
+                                },
+                                "call": {
+                                  "bind": "c",
+                                  "body": {
+                                    "e": "record",
+                                    "fields": {
+                                      "actions": {
+                                        "e": "list",
+                                        "items": [
+                                          {
+                                            "e": "var",
+                                            "name": "c"
+                                          }
+                                        ]
+                                      },
+                                      "state": {
+                                        "e": "var",
+                                        "name": "state"
+                                      }
+                                    }
+                                  }
+                                }
+                              },
+                              "e": "match",
+                              "of": {
+                                "e": "get",
+                                "field": "value",
+                                "of": {
+                                  "e": "var",
+                                  "name": "input"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "e": "match",
+                        "of": {
+                          "e": "var",
+                          "name": "input"
+                        },
+                        "on": "op",
+                        "otherwise": {
+                          "e": "record",
+                          "fields": {
+                            "actions": {
+                              "e": "list",
+                              "items": [
+                                {
+                                  "e": "record",
+                                  "fields": {
+                                    "kind": {
+                                      "e": "lit",
+                                      "v": "halt"
+                                    },
+                                    "value": {
+                                      "e": "lit",
+                                      "v": "done"
+                                    }
+                                  }
+                                }
+                              ]
+                            },
+                            "state": {
+                              "e": "var",
+                              "name": "state"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "start": {
+                      "bind": "input",
+                      "body": {
+                        "e": "record",
+                        "fields": {
+                          "actions": {
+                            "e": "list",
+                            "items": [
+                              {
+                                "e": "record",
+                                "fields": {
+                                  "args": {
+                                    "e": "record",
+                                    "fields": {}
+                                  },
+                                  "kind": {
+                                    "e": "lit",
+                                    "v": "call"
+                                  },
+                                  "op": {
+                                    "e": "lit",
+                                    "v": "brain.choose"
+                                  }
+                                }
+                              }
+                            ]
+                          },
+                          "state": {
+                            "e": "var",
+                            "name": "state"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "e": "match",
+                  "of": {
+                    "e": "var",
+                    "name": "input"
+                  },
+                  "otherwise": {
+                    "e": "record",
+                    "fields": {
+                      "actions": {
+                        "e": "list",
+                        "items": []
+                      },
+                      "state": {
+                        "e": "var",
+                        "name": "state"
+                      }
+                    }
+                  }
+                }
+              },
+              "interface": {
+                "grant": {
+                  "Record": {
+                    "allow": {
+                      "List": "String"
+                    }
+                  }
+                },
+                "operations": {
+                  "brain.choose": {
+                    "input": {
+                      "Record": {}
+                    },
+                    "output": {
+                      "Variant": {
+                        "cases": {
+                          "answer": {
+                            "Record": {
+                              "text": "String"
+                            }
+                          },
+                          "call": "Call"
+                        },
+                        "tag": "kind"
+                      }
+                    }
+                  }
+                }
+              },
+              "next": 0,
+              "pending": [],
+              "queue": [],
+              "started": false,
+              "state": {
+                "record": {
+                  "fields": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "delivery": {
+          "input": {
+            "kind": "start",
+            "value": "go"
+          }
+        },
+        "op": "deliver",
+        "system": {
+          "root": {
+            "grant": {
+              "allow": []
+            },
+            "harness": {
+              "arg": "String",
+              "init": {},
+              "result": "String",
+              "state": {
+                "Record": {}
+              },
+              "step": {
+                "cases": {
+                  "ret": {
+                    "bind": "input",
+                    "body": {
+                      "cases": {
+                        "brain.choose": {
+                          "bind": "input",
+                          "body": {
+                            "cases": {
+                              "answer": {
+                                "bind": "a",
+                                "body": {
+                                  "e": "record",
+                                  "fields": {
+                                    "actions": {
+                                      "e": "list",
+                                      "items": [
+                                        {
+                                          "e": "record",
+                                          "fields": {
+                                            "kind": {
+                                              "e": "lit",
+                                              "v": "halt"
+                                            },
+                                            "value": {
+                                              "e": "get",
+                                              "field": "text",
+                                              "of": {
+                                                "e": "var",
+                                                "name": "a"
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    },
+                                    "state": {
+                                      "e": "var",
+                                      "name": "state"
+                                    }
+                                  }
+                                }
+                              },
+                              "call": {
+                                "bind": "c",
+                                "body": {
+                                  "e": "record",
+                                  "fields": {
+                                    "actions": {
+                                      "e": "list",
+                                      "items": [
+                                        {
+                                          "e": "var",
+                                          "name": "c"
+                                        }
+                                      ]
+                                    },
+                                    "state": {
+                                      "e": "var",
+                                      "name": "state"
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            "e": "match",
+                            "of": {
+                              "e": "get",
+                              "field": "value",
+                              "of": {
+                                "e": "var",
+                                "name": "input"
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "e": "match",
+                      "of": {
+                        "e": "var",
+                        "name": "input"
+                      },
+                      "on": "op",
+                      "otherwise": {
+                        "e": "record",
+                        "fields": {
+                          "actions": {
+                            "e": "list",
+                            "items": [
+                              {
+                                "e": "record",
+                                "fields": {
+                                  "kind": {
+                                    "e": "lit",
+                                    "v": "halt"
+                                  },
+                                  "value": {
+                                    "e": "lit",
+                                    "v": "done"
+                                  }
+                                }
+                              }
+                            ]
+                          },
+                          "state": {
+                            "e": "var",
+                            "name": "state"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "start": {
+                    "bind": "input",
+                    "body": {
+                      "e": "record",
+                      "fields": {
+                        "actions": {
+                          "e": "list",
+                          "items": [
+                            {
+                              "e": "record",
+                              "fields": {
+                                "args": {
+                                  "e": "record",
+                                  "fields": {}
+                                },
+                                "kind": {
+                                  "e": "lit",
+                                  "v": "call"
+                                },
+                                "op": {
+                                  "e": "lit",
+                                  "v": "brain.choose"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        "state": {
+                          "e": "var",
+                          "name": "state"
+                        }
+                      }
+                    }
+                  }
+                },
+                "e": "match",
+                "of": {
+                  "e": "var",
+                  "name": "input"
+                },
+                "otherwise": {
+                  "e": "record",
+                  "fields": {
+                    "actions": {
+                      "e": "list",
+                      "items": []
+                    },
+                    "state": {
+                      "e": "var",
+                      "name": "state"
+                    }
+                  }
+                }
+              }
+            },
+            "interface": {
+              "grant": {
+                "Record": {
+                  "allow": {
+                    "List": "String"
+                  }
+                }
+              },
+              "operations": {
+                "brain.choose": {
+                  "input": {
+                    "Record": {}
+                  },
+                  "output": {
+                    "Variant": {
+                      "cases": {
+                        "answer": {
+                          "Record": {
+                            "text": "String"
+                          }
+                        },
+                        "call": "Call"
+                      },
+                      "tag": "kind"
+                    }
+                  }
+                }
+              }
+            },
+            "next": 0,
+            "pending": [],
+            "queue": [],
+            "started": false,
+            "state": {
+              "record": {
+                "fields": {}
+              }
+            }
+          }
+        }
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "events": [
+            {
+              "input": {
+                "kind": "start",
+                "value": "go"
+              },
+              "kind": "in",
+              "origin": [],
+              "state": {}
+            },
+            {
+              "action": {
+                "args": {},
+                "kind": "call",
+                "op": "brain.choose"
+              },
+              "call": 0,
+              "kind": "out",
+              "labels": {
+                "args": {},
+                "kind": [],
+                "op": []
+              },
+              "origin": [],
+              "performed": true,
+              "state": {}
+            }
+          ],
+          "system": {
+            "root": {
+              "grant": {
+                "allow": []
+              },
+              "harness": {
+                "arg": "String",
+                "init": {},
+                "result": "String",
+                "state": {
+                  "Record": {}
+                },
+                "step": {
+                  "cases": {
+                    "ret": {
+                      "bind": "input",
+                      "body": {
+                        "cases": {
+                          "brain.choose": {
+                            "bind": "input",
+                            "body": {
+                              "cases": {
+                                "answer": {
+                                  "bind": "a",
+                                  "body": {
+                                    "e": "record",
+                                    "fields": {
+                                      "actions": {
+                                        "e": "list",
+                                        "items": [
+                                          {
+                                            "e": "record",
+                                            "fields": {
+                                              "kind": {
+                                                "e": "lit",
+                                                "v": "halt"
+                                              },
+                                              "value": {
+                                                "e": "get",
+                                                "field": "text",
+                                                "of": {
+                                                  "e": "var",
+                                                  "name": "a"
+                                                }
+                                              }
+                                            }
+                                          }
+                                        ]
+                                      },
+                                      "state": {
+                                        "e": "var",
+                                        "name": "state"
+                                      }
+                                    }
+                                  }
+                                },
+                                "call": {
+                                  "bind": "c",
+                                  "body": {
+                                    "e": "record",
+                                    "fields": {
+                                      "actions": {
+                                        "e": "list",
+                                        "items": [
+                                          {
+                                            "e": "var",
+                                            "name": "c"
+                                          }
+                                        ]
+                                      },
+                                      "state": {
+                                        "e": "var",
+                                        "name": "state"
+                                      }
+                                    }
+                                  }
+                                }
+                              },
+                              "e": "match",
+                              "of": {
+                                "e": "get",
+                                "field": "value",
+                                "of": {
+                                  "e": "var",
+                                  "name": "input"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "e": "match",
+                        "of": {
+                          "e": "var",
+                          "name": "input"
+                        },
+                        "on": "op",
+                        "otherwise": {
+                          "e": "record",
+                          "fields": {
+                            "actions": {
+                              "e": "list",
+                              "items": [
+                                {
+                                  "e": "record",
+                                  "fields": {
+                                    "kind": {
+                                      "e": "lit",
+                                      "v": "halt"
+                                    },
+                                    "value": {
+                                      "e": "lit",
+                                      "v": "done"
+                                    }
+                                  }
+                                }
+                              ]
+                            },
+                            "state": {
+                              "e": "var",
+                              "name": "state"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "start": {
+                      "bind": "input",
+                      "body": {
+                        "e": "record",
+                        "fields": {
+                          "actions": {
+                            "e": "list",
+                            "items": [
+                              {
+                                "e": "record",
+                                "fields": {
+                                  "args": {
+                                    "e": "record",
+                                    "fields": {}
+                                  },
+                                  "kind": {
+                                    "e": "lit",
+                                    "v": "call"
+                                  },
+                                  "op": {
+                                    "e": "lit",
+                                    "v": "brain.choose"
+                                  }
+                                }
+                              }
+                            ]
+                          },
+                          "state": {
+                            "e": "var",
+                            "name": "state"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "e": "match",
+                  "of": {
+                    "e": "var",
+                    "name": "input"
+                  },
+                  "otherwise": {
+                    "e": "record",
+                    "fields": {
+                      "actions": {
+                        "e": "list",
+                        "items": []
+                      },
+                      "state": {
+                        "e": "var",
+                        "name": "state"
+                      }
+                    }
+                  }
+                }
+              },
+              "interface": {
+                "grant": {
+                  "Record": {
+                    "allow": {
+                      "List": "String"
+                    }
+                  }
+                },
+                "operations": {
+                  "brain.choose": {
+                    "input": {
+                      "Record": {}
+                    },
+                    "output": {
+                      "Variant": {
+                        "cases": {
+                          "answer": {
+                            "Record": {
+                              "text": "String"
+                            }
+                          },
+                          "call": "Call"
+                        },
+                        "tag": "kind"
+                      }
+                    }
+                  }
+                }
+              },
+              "next": 1,
+              "pending": [
+                {
+                  "args": {
+                    "record": {
+                      "fields": {}
+                    }
+                  },
+                  "call": 0,
+                  "op": "brain.choose"
+                }
+              ],
+              "queue": [],
+              "started": true,
+              "state": {
+                "record": {
+                  "fields": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "delivery": {
+          "input": {
+            "call": 0,
+            "kind": "ret",
+            "value": {
+              "args": {
+                "text": "hi"
+              },
+              "kind": "call",
+              "op": "t.echo"
+            }
+          }
+        },
+        "op": "deliver",
+        "system": {
+          "root": {
+            "grant": {
+              "allow": []
+            },
+            "harness": {
+              "arg": "String",
+              "init": {},
+              "result": "String",
+              "state": {
+                "Record": {}
+              },
+              "step": {
+                "cases": {
+                  "ret": {
+                    "bind": "input",
+                    "body": {
+                      "cases": {
+                        "brain.choose": {
+                          "bind": "input",
+                          "body": {
+                            "cases": {
+                              "answer": {
+                                "bind": "a",
+                                "body": {
+                                  "e": "record",
+                                  "fields": {
+                                    "actions": {
+                                      "e": "list",
+                                      "items": [
+                                        {
+                                          "e": "record",
+                                          "fields": {
+                                            "kind": {
+                                              "e": "lit",
+                                              "v": "halt"
+                                            },
+                                            "value": {
+                                              "e": "get",
+                                              "field": "text",
+                                              "of": {
+                                                "e": "var",
+                                                "name": "a"
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    },
+                                    "state": {
+                                      "e": "var",
+                                      "name": "state"
+                                    }
+                                  }
+                                }
+                              },
+                              "call": {
+                                "bind": "c",
+                                "body": {
+                                  "e": "record",
+                                  "fields": {
+                                    "actions": {
+                                      "e": "list",
+                                      "items": [
+                                        {
+                                          "e": "var",
+                                          "name": "c"
+                                        }
+                                      ]
+                                    },
+                                    "state": {
+                                      "e": "var",
+                                      "name": "state"
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            "e": "match",
+                            "of": {
+                              "e": "get",
+                              "field": "value",
+                              "of": {
+                                "e": "var",
+                                "name": "input"
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "e": "match",
+                      "of": {
+                        "e": "var",
+                        "name": "input"
+                      },
+                      "on": "op",
+                      "otherwise": {
+                        "e": "record",
+                        "fields": {
+                          "actions": {
+                            "e": "list",
+                            "items": [
+                              {
+                                "e": "record",
+                                "fields": {
+                                  "kind": {
+                                    "e": "lit",
+                                    "v": "halt"
+                                  },
+                                  "value": {
+                                    "e": "lit",
+                                    "v": "done"
+                                  }
+                                }
+                              }
+                            ]
+                          },
+                          "state": {
+                            "e": "var",
+                            "name": "state"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "start": {
+                    "bind": "input",
+                    "body": {
+                      "e": "record",
+                      "fields": {
+                        "actions": {
+                          "e": "list",
+                          "items": [
+                            {
+                              "e": "record",
+                              "fields": {
+                                "args": {
+                                  "e": "record",
+                                  "fields": {}
+                                },
+                                "kind": {
+                                  "e": "lit",
+                                  "v": "call"
+                                },
+                                "op": {
+                                  "e": "lit",
+                                  "v": "brain.choose"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        "state": {
+                          "e": "var",
+                          "name": "state"
+                        }
+                      }
+                    }
+                  }
+                },
+                "e": "match",
+                "of": {
+                  "e": "var",
+                  "name": "input"
+                },
+                "otherwise": {
+                  "e": "record",
+                  "fields": {
+                    "actions": {
+                      "e": "list",
+                      "items": []
+                    },
+                    "state": {
+                      "e": "var",
+                      "name": "state"
+                    }
+                  }
+                }
+              }
+            },
+            "interface": {
+              "grant": {
+                "Record": {
+                  "allow": {
+                    "List": "String"
+                  }
+                }
+              },
+              "operations": {
+                "brain.choose": {
+                  "input": {
+                    "Record": {}
+                  },
+                  "output": {
+                    "Variant": {
+                      "cases": {
+                        "answer": {
+                          "Record": {
+                            "text": "String"
+                          }
+                        },
+                        "call": "Call"
+                      },
+                      "tag": "kind"
+                    }
+                  }
+                }
+              }
+            },
+            "next": 1,
+            "pending": [
+              {
+                "args": {
+                  "record": {
+                    "fields": {}
+                  }
+                },
+                "call": 0,
+                "op": "brain.choose"
+              }
+            ],
+            "queue": [],
+            "started": true,
+            "state": {
+              "record": {
+                "fields": {}
+              }
+            }
+          }
+        }
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "events": [
+            {
+              "input": {
+                "call": 0,
+                "kind": "ret",
+                "value": {
+                  "args": {
+                    "text": "hi"
+                  },
+                  "kind": "call",
+                  "op": "t.echo"
+                }
+              },
+              "kind": "withheld",
+              "origin": [],
+              "reason": {
+                "expected": {
+                  "Variant": {
+                    "cases": {
+                      "answer": {
+                        "Record": {
+                          "text": "String"
+                        }
+                      },
+                      "call": {
+                        "Variant": {
+                          "cases": {
+                            "call": {
+                              "Variant": {
+                                "cases": {
+                                  "brain.choose": {
+                                    "Record": {
+                                      "args": {
+                                        "Record": {}
+                                      }
+                                    }
+                                  }
+                                },
+                                "tag": "op"
+                              }
+                            }
+                          },
+                          "tag": "kind"
+                        }
+                      }
+                    },
+                    "tag": "kind"
+                  }
+                },
+                "got": {
+                  "args": {
+                    "text": "hi"
+                  },
+                  "kind": "call",
+                  "op": "t.echo"
+                },
+                "kind": "mismatch"
+              }
+            }
+          ],
+          "system": {
+            "root": {
+              "grant": {
+                "allow": []
+              },
+              "harness": {
+                "arg": "String",
+                "init": {},
+                "result": "String",
+                "state": {
+                  "Record": {}
+                },
+                "step": {
+                  "cases": {
+                    "ret": {
+                      "bind": "input",
+                      "body": {
+                        "cases": {
+                          "brain.choose": {
+                            "bind": "input",
+                            "body": {
+                              "cases": {
+                                "answer": {
+                                  "bind": "a",
+                                  "body": {
+                                    "e": "record",
+                                    "fields": {
+                                      "actions": {
+                                        "e": "list",
+                                        "items": [
+                                          {
+                                            "e": "record",
+                                            "fields": {
+                                              "kind": {
+                                                "e": "lit",
+                                                "v": "halt"
+                                              },
+                                              "value": {
+                                                "e": "get",
+                                                "field": "text",
+                                                "of": {
+                                                  "e": "var",
+                                                  "name": "a"
+                                                }
+                                              }
+                                            }
+                                          }
+                                        ]
+                                      },
+                                      "state": {
+                                        "e": "var",
+                                        "name": "state"
+                                      }
+                                    }
+                                  }
+                                },
+                                "call": {
+                                  "bind": "c",
+                                  "body": {
+                                    "e": "record",
+                                    "fields": {
+                                      "actions": {
+                                        "e": "list",
+                                        "items": [
+                                          {
+                                            "e": "var",
+                                            "name": "c"
+                                          }
+                                        ]
+                                      },
+                                      "state": {
+                                        "e": "var",
+                                        "name": "state"
+                                      }
+                                    }
+                                  }
+                                }
+                              },
+                              "e": "match",
+                              "of": {
+                                "e": "get",
+                                "field": "value",
+                                "of": {
+                                  "e": "var",
+                                  "name": "input"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "e": "match",
+                        "of": {
+                          "e": "var",
+                          "name": "input"
+                        },
+                        "on": "op",
+                        "otherwise": {
+                          "e": "record",
+                          "fields": {
+                            "actions": {
+                              "e": "list",
+                              "items": [
+                                {
+                                  "e": "record",
+                                  "fields": {
+                                    "kind": {
+                                      "e": "lit",
+                                      "v": "halt"
+                                    },
+                                    "value": {
+                                      "e": "lit",
+                                      "v": "done"
+                                    }
+                                  }
+                                }
+                              ]
+                            },
+                            "state": {
+                              "e": "var",
+                              "name": "state"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "start": {
+                      "bind": "input",
+                      "body": {
+                        "e": "record",
+                        "fields": {
+                          "actions": {
+                            "e": "list",
+                            "items": [
+                              {
+                                "e": "record",
+                                "fields": {
+                                  "args": {
+                                    "e": "record",
+                                    "fields": {}
+                                  },
+                                  "kind": {
+                                    "e": "lit",
+                                    "v": "call"
+                                  },
+                                  "op": {
+                                    "e": "lit",
+                                    "v": "brain.choose"
+                                  }
+                                }
+                              }
+                            ]
+                          },
+                          "state": {
+                            "e": "var",
+                            "name": "state"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "e": "match",
+                  "of": {
+                    "e": "var",
+                    "name": "input"
+                  },
+                  "otherwise": {
+                    "e": "record",
+                    "fields": {
+                      "actions": {
+                        "e": "list",
+                        "items": []
+                      },
+                      "state": {
+                        "e": "var",
+                        "name": "state"
+                      }
+                    }
+                  }
+                }
+              },
+              "interface": {
+                "grant": {
+                  "Record": {
+                    "allow": {
+                      "List": "String"
+                    }
+                  }
+                },
+                "operations": {
+                  "brain.choose": {
+                    "input": {
+                      "Record": {}
+                    },
+                    "output": {
+                      "Variant": {
+                        "cases": {
+                          "answer": {
+                            "Record": {
+                              "text": "String"
+                            }
+                          },
+                          "call": "Call"
+                        },
+                        "tag": "kind"
+                      }
+                    }
+                  }
+                }
+              },
+              "next": 1,
+              "pending": [
+                {
+                  "args": {
+                    "record": {
+                      "fields": {}
+                    }
+                  },
+                  "call": 0,
+                  "op": "brain.choose"
+                }
+              ],
+              "queue": [],
+              "started": true,
+              "state": {
+                "record": {
+                  "fields": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "capabilities": [
+          {
+            "capability": {
+              "operations": {
+                "approve": {
+                  "input": {
+                    "Record": {
+                      "call": "Call"
+                    }
+                  },
+                  "output": "Bool"
+                }
+              }
+            },
+            "prefix": "x"
+          }
+        ],
+        "op": "install"
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "interface": {
+            "operations": {
+              "x.approve": {
+                "input": {
+                  "Record": {
+                    "call": "Call"
+                  }
+                },
+                "output": "Bool"
+              }
+            }
+          },
+          "kind": "installed"
+        }
+      }
+    },
+    {
+      "request": {
+        "interface": {
+          "operations": {
+            "x.approve": {
+              "input": {
+                "Record": {
+                  "call": "Call"
+                }
+              },
+              "output": "Bool"
+            }
+          }
+        },
+        "op": "checkInterface"
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "problems": [
+            {
+              "kind": "selfReference",
+              "place": {
+                "in": "operation",
+                "name": "x.approve",
+                "part": "input"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
