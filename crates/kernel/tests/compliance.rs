@@ -322,6 +322,72 @@ fn cases() -> Vec<Case> {
             },
         ),
         (
+            "call",
+            "A model's chosen call, typed by the interface it is made in: performed, then withheld under a narrowing that drops it; a contract reading its operation's name; Call where an interface defines its own types.",
+            |r| {
+                let answer = json!({ "Variant": { "tag": "kind", "cases": {
+                    "answer": { "Record": { "text": "String" } }, "call": "Call",
+                }}});
+                let installed = r.call(json!({ "op": "install", "capabilities": [
+                    { "prefix": "brain", "capability": { "operations": {
+                        "choose": { "input": { "Record": {} }, "output": answer },
+                    }}},
+                    { "prefix": "t", "capability": {
+                        "operations": { "echo": {
+                            "input": { "Record": { "text": "String" } }, "output": "String",
+                            "pre": op("contains", vec![path("grant", &["allow"]), var("op")]),
+                        }},
+                        "grant": { "Record": { "allow": { "List": "String" } } },
+                    }},
+                ]}));
+                let iface = installed["interface"].clone();
+                let choice = match_(
+                    path("input", &["value"]),
+                    "kind",
+                    vec![
+                        ("call", "c", acting(var("state"), list(vec![var("c")]))),
+                        (
+                            "answer",
+                            "a",
+                            step(var("state"), vec![halt(path("a", &["text"]))]),
+                        ),
+                    ],
+                    None,
+                );
+                let chooser = json!({
+                    "arg": "String", "result": "String", "state": { "Record": {} }, "init": {},
+                    "step": on(
+                        vec![
+                            ("start", step(var("state"), vec![call_action("brain.choose", rec(vec![]))])),
+                            ("ret", on_op(vec![("brain.choose", choice)], step(var("state"), vec![halt(lit(json!("done")))]))),
+                        ],
+                        step(var("state"), vec![]),
+                    ),
+                });
+                let echo = json!({ "kind": "call", "op": "t.echo", "args": { "text": "hi" } });
+                let system = r.init(
+                    chooser.clone(),
+                    iface.clone(),
+                    json!({ "allow": ["t.echo"] }),
+                );
+                let (system, _) = r.deliver(system, start(json!("go")));
+                let (system, _) = r.deliver(system, ret(0, echo.clone()));
+                r.deliver(system, ret(1, json!("hi")));
+                let narrowed = r.call(json!({ "op": "narrow", "interface": iface, "narrowings": [{ "kind": "drop", "op": "t.echo" }] }));
+                let system = r.init(
+                    chooser,
+                    narrowed["interface"].clone(),
+                    json!({ "allow": [] }),
+                );
+                let (system, _) = r.deliver(system, start(json!("go")));
+                r.deliver(system, ret(0, echo));
+                let looping = r.call(json!({ "op": "install", "capabilities": [{ "prefix": "x", "capability": { "operations": {
+                    "approve": { "input": { "Record": { "call": "Call" } }, "output": "Bool" },
+                }}}]}));
+                r.call(json!({ "op": "checkInterface", "interface": looping["interface"] }));
+            },
+        ),
+        (
             "smtlib-lists",
             "Lists read as Json, tested and read back item by item, and the text of a record, which a solver chooses.",
             |r| {

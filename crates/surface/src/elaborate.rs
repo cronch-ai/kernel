@@ -287,7 +287,7 @@ fn default_value(ty: &Type) -> Value {
         Type::Float => json!(0.0),
         Type::String => json!(""),
         Type::Bool => json!(false),
-        Type::Json | Type::Action => Value::Null,
+        Type::Json | Type::Action | Type::Call => Value::Null,
         Type::List(_) => json!([]),
         Type::Record(fields) => Value::Object(
             fields
@@ -404,8 +404,10 @@ impl<'a> Cx<'a> {
         let file = self.file;
         let mut declared: BTreeMap<String, &TypeExpr> = BTreeMap::new();
         for (name, ty) in &file.types {
-            let builtin = ["String", "Int", "Float", "Bool", "Json", "Action", "List"]
-                .contains(&name.text.as_str());
+            let builtin = [
+                "String", "Int", "Float", "Bool", "Json", "Action", "Call", "List",
+            ]
+            .contains(&name.text.as_str());
             if builtin || declared.insert(name.text.clone(), ty).is_some() {
                 self.report(
                     name.span,
@@ -453,6 +455,7 @@ impl<'a> Cx<'a> {
             "Bool" => return Type::Bool,
             "Json" => return Type::Json,
             "Action" => return Type::Action,
+            "Call" => return Type::Call,
             _ => {}
         }
         if let Some(t) = resolved.get(name) {

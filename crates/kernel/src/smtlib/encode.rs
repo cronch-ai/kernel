@@ -55,6 +55,7 @@ fn short_hash(value: &Value) -> String {
 fn describe(ty: &Type) -> String {
     match ty {
         Type::Action => "Action".into(),
+        Type::Call => "Call".into(),
         Type::Int => "Int".into(),
         Type::Float => "Float".into(),
         Type::String => "String".into(),
@@ -189,7 +190,12 @@ fn plain_equality(ty: &Type) -> bool {
     match ty {
         Type::Int | Type::Bool | Type::String => true,
         Type::List(t) => plain_equality(t),
-        Type::Float | Type::Json | Type::Action | Type::Record(_) | Type::Variant { .. } => false,
+        Type::Float
+        | Type::Json
+        | Type::Action
+        | Type::Call
+        | Type::Record(_)
+        | Type::Variant { .. } => false,
     }
 }
 
@@ -731,7 +737,7 @@ impl Encoder {
     fn json_of(&mut self, term: Term, from: &Type) -> Read<Term> {
         self.sort(&Type::Json)?;
         match from {
-            Type::Action => Err(NoReading::Unchecked),
+            Type::Action | Type::Call => Err(NoReading::Unchecked),
             Type::Json => Ok(term),
             Type::Int | Type::Float => json::wrap("number", as_float(self.floats, term, from)),
             Type::String => json::wrap("string", term),
@@ -812,7 +818,7 @@ impl Encoder {
     fn json_is(&mut self, ty: &Type, j: Term) -> Read<Term> {
         let number = || json::select("number.v", j.clone());
         Ok(match ty {
-            Type::Action => return Err(NoReading::Unchecked),
+            Type::Action | Type::Call => return Err(NoReading::Unchecked),
             Type::Json => Term::atom("true"),
             Type::Bool => json::tester("bool", j)?,
             Type::String => json::tester("string", j)?,
@@ -894,7 +900,7 @@ impl Encoder {
     fn json_as(&mut self, ty: &Type, j: Term) -> Read<Term> {
         let number = || json::select("number.v", j.clone());
         match ty {
-            Type::Action => Err(NoReading::Unchecked),
+            Type::Action | Type::Call => Err(NoReading::Unchecked),
             Type::Json => Ok(j),
             Type::Bool => json::select("bool.v", j),
             Type::String => json::select("string.v", j),

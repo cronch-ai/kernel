@@ -117,7 +117,11 @@ fn exact(harness: &Harness, interface: &Interface) -> Type {
         .map(|(name, o)| {
             let mut fields = vec![("args", o.input.clone()), ("call", Type::Int)];
             if let Some(f) = &o.footprint {
-                let (ty, _) = infer(f, vec![("args".to_string(), o.input.clone())]);
+                let scope = vec![
+                    ("args".to_string(), o.input.clone()),
+                    ("op".to_string(), Type::String),
+                ];
+                let (ty, _) = infer(f, scope);
                 fields.push(("footprint", ty.unwrap_or(Type::Json)));
             }
             (name.clone(), record(fields))
