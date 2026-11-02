@@ -132,7 +132,7 @@ property no_effect_without_approval:
 
 - **`property name: φ`** gives `□φ`, with `φ` written as an expression. The body can start on the next line. `always(φ)` around the whole body says the same thing, and is refused anywhere else.
   - The connectives are `implies`, `and`, `or` and `not`. The temporal operators are `prev`, `since`, `once` and `historically`.
-  - `exists x in e: φ` and `forall x in e: φ` range over the values `e` gave at the events so far, as the kernel requires. The kernel only searches quantifier-free properties, so a quantified one is monitored, not proved.
+  - `exists x in e: φ` and `forall x in e: φ` range over the items of the lists `e` gave at the events so far, as the kernel requires, so `e` gives an empty list at an event with nothing to offer. The kernel only searches quantifier-free properties, so a quantified one is monitored, not proved.
   - Any other boolean expression is an atom over `event`.
 - **Event helpers** spell the common atoms. Each takes an operation or channel as a path from a capability (`approve.ask`) or a string. An optional condition reads what arrived:
   - `called(op, cond)`: a performed call (an `out` event), with the arguments as `args`;
@@ -141,7 +141,7 @@ property no_effect_without_approval:
   - `effect()`: a performed call that has an effect;
   - `msg(channel, cond)`: a message, as `value`.
 - **Node helpers** read the slots in the state each event carries: `ok(saved)`, `failed(saved)`, `refused(saved)`, `skipped(saved)`, `running(saved)` and `waiting(saved)`. A node's name in an atom is its slot, so `saved.value` and `saved.kind` read it. This is what decision 6 allows. Slots are read only at the root run's own steps, so an atom that reads one is false at every other event.
-- **Guards are explicit.** An atom that fails to evaluate is false as a whole. So each helper is an atom of its own, with its field reads behind `if`s, and one helper's missing field can't falsify another. That is gap 5 of the design session.
+- **Helpers are atoms.** Each helper is a `match` down to the case of the event it is about, false at any other, so a helper's condition reads a value at its operation's precise type. That closes gap 5 of the design session.
 - **`invariant name: expr`** over node slots, and the parameter, becomes an expression over the generated state, for an invariant certificate or an induction obligation. With one slot per node, the invariants worth stating are short, such as "`saved` never runs unless `decision` returned something other than `deny`".
   - A slot's `error` holds only the kind of the failure, as text, and the generated step names only the inputs the harness can use.
 

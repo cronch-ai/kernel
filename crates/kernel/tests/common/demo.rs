@@ -107,71 +107,84 @@ pub fn obedient() -> Value {
     })
 }
 
-fn performed_call() -> Value {
-    all(vec![
-        eq(ev(&["kind"]), lit(json!("out"))),
-        eq(ev(&["action", "kind"]), lit(json!("call"))),
-    ])
-}
-
 /// No untrusted data reaches the body of a send.
 pub fn no_untrusted_send() -> Value {
     json!({ "name": "noUntrustedSend", "always": implies(
-        atom(all(vec![performed_call(), eq(ev(&["action", "op"]), lit(json!("net.send")))])),
-        atom(eq(op("len", vec![ev(&["labels", "args", "body"])]), lit(json!(0)))),
+        atom(at_call("net.send", lit(json!(true)))),
+        atom(at_event("out", eq(op("len", vec![path("e", &["labels", "args", "body"])]), lit(json!(0))))),
     )})
 }
 
 fn user_says(text: &str) -> Value {
-    atom(all(vec![
-        eq(ev(&["kind"]), lit(json!("in"))),
-        eq(ev(&["input", "kind"]), lit(json!("msg"))),
-        eq(ev(&["input", "channel"]), lit(json!("user"))),
-        eq(ev(&["input", "value"]), lit(json!(text))),
-    ]))
+    atom(at_input(
+        "msg",
+        when_case(
+            var("i"),
+            "channel",
+            "user",
+            "m",
+            eq(path("m", &["value"]), lit(json!(text))),
+        ),
+    ))
 }
 
 fn user_says_other_than_stop() -> Value {
-    atom(all(vec![
-        eq(ev(&["kind"]), lit(json!("in"))),
-        eq(ev(&["input", "kind"]), lit(json!("msg"))),
-        eq(ev(&["input", "channel"]), lit(json!("user"))),
-        op("ne", vec![ev(&["input", "value"]), lit(json!("stop"))]),
-    ]))
+    atom(at_input(
+        "msg",
+        when_case(
+            var("i"),
+            "channel",
+            "user",
+            "m",
+            op("ne", vec![path("m", &["value"]), lit(json!("stop"))]),
+        ),
+    ))
 }
 
 /// No effect after the user says "stop", until they say something else.
 pub fn stop_means_stop() -> Value {
     json!({ "name": "stopMeansStop", "always": implies(
-        atom(all(vec![performed_call(), ev(&["effect"])])),
+        atom(at_any_call(path("e", &["effect"]))),
         not(since(not(user_says_other_than_stop()), user_says("stop"))),
     )})
 }
 
 /// Every result answers a call that was performed earlier.
 pub fn results_answer_calls() -> Value {
-    let is_ret = atom(all(vec![
-        eq(ev(&["kind"]), lit(json!("in"))),
-        eq(ev(&["input", "kind"]), lit(json!("ret"))),
-    ]));
-    json!({ "name": "resultsAnswerCalls", "always": implies(is_ret, exists("k", ev(&["action", "call"]), and(vec![
-        atom(eq(ev(&["input", "call"]), var("k"))),
-        once(atom(all(vec![performed_call(), eq(ev(&["action", "call"]), var("k"))]))),
+    let is_ret = atom(at_input("ret", lit(json!(true))));
+    let calls = match_(
+        var("event"),
+        "kind",
+        vec![(
+            "out",
+            "e",
+            match_(
+                path("e", &["action"]),
+                "kind",
+                vec![("call", "a", list(vec![path("a", &["call"])]))],
+                Some(list(vec![])),
+            ),
+        )],
+        Some(list(vec![])),
+    );
+    json!({ "name": "resultsAnswerCalls", "always": implies(is_ret, exists("k", calls, and(vec![
+        atom(at_input("ret", eq(path("i", &["call"]), var("k")))),
+        once(atom(at_any_call(eq(path("a", &["call"]), var("k"))))),
     ])))})
 }
 
 /// `stopMeansStop` with `effect` misspelled: without its type, the property would hold of every run.
 pub fn misspelled() -> Value {
     json!({ "name": "misspelled", "always": implies(
-        atom(all(vec![performed_call(), ev(&["efect"])])),
+        atom(at_any_call(path("e", &["efect"]))),
         not(since(not(user_says_other_than_stop()), user_says("stop"))),
     )})
 }
 
 /// A send's body used as a number.
 pub fn mistyped() -> Value {
-    let length = op("add", vec![ev(&["action", "args", "body"]), lit(json!(1))]);
-    json!({ "name": "mistyped", "always": atom(op("gt", vec![length, lit(json!(0))])) })
+    let length = op("add", vec![path("c", &["args", "body"]), lit(json!(1))]);
+    json!({ "name": "mistyped", "always": atom(at_call("net.send", op("gt", vec![length, lit(json!(0))]))) })
 }
 
 /// Performs the action each message names, if it is one of the interface's. Ignores everything else.

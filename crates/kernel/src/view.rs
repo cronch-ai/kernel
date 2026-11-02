@@ -17,12 +17,13 @@
 //! that cross between runs (a start value, a halt value, a spawn's harness, argument and narrowings), a withheld
 //! delivery's value and why it was withheld, and a step error's details.
 //!
-//! Properties are checked against `event_type`, a record of every field some event has, at the type every event that
-//! has it gives it. A property may read a field the event at hand doesn't have (that atom is then false), but not one
-//! no event has, and not at a type no event gives it.
+//! Properties are checked against `event_type`, the variant over `kind` of what each event has, so an atom reads a
+//! case's fields after `match`, and a misspelt field is a problem with the property, not a property that holds of every
+//! run. The one thing the type can't say is that a child's events have no `state`, so reading it at one fails to
+//! evaluate, and the atom is false: read it where `origin` is empty.
 
 use crate::check::infer;
-use crate::harness::{Harness, Interface, input_type};
+use crate::harness::{Harness, Interface, action_type, input_type};
 use crate::ir::Type;
 use crate::ops::text;
 use crate::run::Event;
@@ -145,7 +146,7 @@ fn flatten(labels: &mut Value, names: &[&str]) {
 
 /// What a property may read of `event` in a run of this harness against this interface.
 pub fn event_type(harness: &Harness, interface: &Interface) -> Type {
-    readable(&exact(harness, interface))
+    exact(harness, interface).resolved(&action_type(&harness.result, interface))
 }
 
 fn record(fields: Vec<(&str, Type)>) -> Type {
@@ -323,24 +324,30 @@ fn exact(harness: &Harness, interface: &Interface) -> Type {
 }
 
 /// Every field some value of `ty` has, at the type every value that has it gives it: a variant becomes the record of
-/// its cases' fields, and its tag.
-pub fn readable(ty: &Type) -> Type {
+/// its cases' fields, and its tag. A field whose cases shape it differently isn't there.
+fn readable(ty: &Type) -> Type {
     match ty {
         Type::Variant { tag, cases } => {
             let mut fields = BTreeMap::from([(tag.clone(), Type::String)]);
+            let mut disputed = Vec::new();
             for case in cases.values() {
-                match readable(case) {
-                    Type::Record(more) => {
-                        for (name, t) in more {
-                            let merged = match fields.remove(&name) {
-                                Some(existing) => union(&existing, &t),
-                                None => t,
-                            };
-                            fields.insert(name, merged);
+                if let Type::Record(more) = readable(case) {
+                    for (name, t) in more {
+                        let merged = match fields.get(&name) {
+                            Some(existing) => union(existing, &t),
+                            None => Some(t),
+                        };
+                        match merged {
+                            Some(m) => {
+                                fields.insert(name, m);
+                            }
+                            None => disputed.push(name),
                         }
                     }
-                    _ => return Type::Json,
                 }
+            }
+            for name in disputed {
+                fields.remove(&name);
             }
             Type::Record(fields)
         }
@@ -355,25 +362,26 @@ pub fn readable(ty: &Type) -> Type {
     }
 }
 
-/// The type of a field two cases both have: a record has the fields either has, and types that disagree are
-/// `Json`, read after testing it with `is`.
-fn union(a: &Type, b: &Type) -> Type {
+/// The type of a field two cases both have: a record has the fields either has. Types that disagree have none.
+fn union(a: &Type, b: &Type) -> Option<Type> {
     match (a, b) {
         (Type::Record(x), Type::Record(y)) => {
             let mut fields = x.clone();
             for (name, t) in y {
                 let merged = match fields.remove(name) {
                     Some(existing) => union(&existing, t),
-                    None => t.clone(),
+                    None => Some(t.clone()),
                 };
-                fields.insert(name.clone(), merged);
+                if let Some(m) = merged {
+                    fields.insert(name.clone(), m);
+                }
             }
-            Type::Record(fields)
+            Some(Type::Record(fields))
         }
-        (Type::List(x), Type::List(y)) => list(union(x, y)),
-        (Type::Int, Type::Float) | (Type::Float, Type::Int) => Type::Float,
-        (a, b) if a == b => a.clone(),
-        _ => Type::Json,
+        (Type::List(x), Type::List(y)) => union(x, y).map(list),
+        (Type::Int, Type::Float) | (Type::Float, Type::Int) => Some(Type::Float),
+        (a, b) if a == b => Some(a.clone()),
+        _ => None,
     }
 }
 

@@ -44,8 +44,9 @@ Most of those values aren't untyped. Their type is decided by the interface the 
    - A precondition checks `contains(grant.allow, op) or contains(grant.once, str({kind: "call", op: op, args: args}))`. With `op` given, a capability installed under any prefix names its calls as the harness does. Today the approval names `notes.append` literally, and is right only when the capability is installed under `notes`.
    - A call delivered with fields its type doesn't declare writes different text, so its one-time approval isn't found. The call is then refused, never wrongly allowed.
 9. **Properties read the exact event variant.** The view's type is the variant over `kind` the kernel already builds (`view::exact`), instead of a record of every field some event has. An atom reads a case's fields after `match`, and the rule that an atom reading a field its event lacks is false goes, along with gap 5 of the design session.
-   - The surface language's event helpers (`called`, `returned` and the rest) generate the `match`.
-   - A quantified variable has the type of the values it ranges over.
+   - The surface language's event helpers (`called`, `returned` and the rest) generate the `match`. Their conditions read a value at its operation's precise type.
+   - A quantifier's `of` gives a list at each event, empty where the event has nothing to offer, and its variable ranges over the items so far, at the list's item type. A value that exists only at some events no longer needs evaluation to fail at the others.
+   - A child's events have no `state`, which the type can't say. Reading it at one fails to evaluate, and that atom is false, so read it where `origin` is empty, as the helpers do.
 10. **SMT-LIB loses `Json`:** its datatype and axioms, and every conversion into and out of it, including the list maps of After loops (2). What stays:
     - the map that reads a `List(Int)` where a `List(Float)` is wanted;
     - text as a function a solver chooses, one per type (After loops, 2a), for `str` of a structured value.

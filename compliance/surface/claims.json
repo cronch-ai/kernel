@@ -4545,65 +4545,47 @@
                 "if": {
                   "f": "atom",
                   "holds": {
-                    "cond": {
-                      "args": [
-                        {
-                          "e": "get",
-                          "field": "kind",
-                          "of": {
-                            "e": "var",
-                            "name": "event"
-                          }
-                        },
-                        {
-                          "e": "lit",
-                          "v": "out"
-                        }
-                      ],
-                      "e": "op",
-                      "op": "eq"
-                    },
-                    "e": "if",
-                    "else": {
-                      "e": "lit",
-                      "v": false
-                    },
-                    "then": {
-                      "cond": {
-                        "args": [
-                          {
-                            "e": "get",
-                            "field": "kind",
-                            "of": {
-                              "e": "get",
-                              "field": "action",
-                              "of": {
-                                "e": "var",
-                                "name": "event"
+                    "cases": {
+                      "out": {
+                        "bind": "@e",
+                        "body": {
+                          "cases": {
+                            "call": {
+                              "bind": "@a",
+                              "body": {
+                                "e": "get",
+                                "field": "effect",
+                                "of": {
+                                  "e": "var",
+                                  "name": "@e"
+                                }
                               }
                             }
                           },
-                          {
+                          "e": "match",
+                          "of": {
+                            "e": "get",
+                            "field": "action",
+                            "of": {
+                              "e": "var",
+                              "name": "@e"
+                            }
+                          },
+                          "otherwise": {
                             "e": "lit",
-                            "v": "call"
+                            "v": false
                           }
-                        ],
-                        "e": "op",
-                        "op": "eq"
-                      },
-                      "e": "if",
-                      "else": {
-                        "e": "lit",
-                        "v": false
-                      },
-                      "then": {
-                        "e": "get",
-                        "field": "effect",
-                        "of": {
-                          "e": "var",
-                          "name": "event"
                         }
                       }
+                    },
+                    "e": "match",
+                    "of": {
+                      "e": "var",
+                      "name": "event"
+                    },
+                    "otherwise": {
+                      "e": "lit",
+                      "v": false
                     }
                   }
                 },
@@ -4612,125 +4594,91 @@
                   "of": {
                     "f": "atom",
                     "holds": {
-                      "cond": {
-                        "args": [
-                          {
-                            "e": "get",
-                            "field": "kind",
-                            "of": {
-                              "e": "var",
-                              "name": "event"
-                            }
-                          },
-                          {
-                            "e": "lit",
-                            "v": "in"
-                          }
-                        ],
-                        "e": "op",
-                        "op": "eq"
-                      },
-                      "e": "if",
-                      "else": {
-                        "e": "lit",
-                        "v": false
-                      },
-                      "then": {
-                        "cond": {
-                          "args": [
-                            {
-                              "e": "get",
-                              "field": "kind",
-                              "of": {
-                                "e": "get",
-                                "field": "input",
-                                "of": {
-                                  "e": "var",
-                                  "name": "event"
-                                }
-                              }
-                            },
-                            {
-                              "e": "lit",
-                              "v": "ret"
-                            }
-                          ],
-                          "e": "op",
-                          "op": "eq"
-                        },
-                        "e": "if",
-                        "else": {
-                          "e": "lit",
-                          "v": false
-                        },
-                        "then": {
-                          "cond": {
-                            "args": [
-                              {
-                                "e": "get",
-                                "field": "op",
-                                "of": {
-                                  "e": "get",
-                                  "field": "input",
+                      "cases": {
+                        "in": {
+                          "bind": "@e",
+                          "body": {
+                            "cases": {
+                              "ret": {
+                                "bind": "@i",
+                                "body": {
+                                  "cases": {
+                                    "approve.ask": {
+                                      "bind": "@c",
+                                      "body": {
+                                        "be": {
+                                          "e": "get",
+                                          "field": "value",
+                                          "of": {
+                                            "e": "var",
+                                            "name": "@c"
+                                          }
+                                        },
+                                        "e": "let",
+                                        "in": {
+                                          "args": [
+                                            {
+                                              "e": "list",
+                                              "items": [
+                                                {
+                                                  "e": "lit",
+                                                  "v": "once"
+                                                },
+                                                {
+                                                  "e": "lit",
+                                                  "v": "always"
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "e": "var",
+                                              "name": "value"
+                                            }
+                                          ],
+                                          "e": "op",
+                                          "op": "contains"
+                                        },
+                                        "name": "value"
+                                      }
+                                    }
+                                  },
+                                  "e": "match",
                                   "of": {
                                     "e": "var",
-                                    "name": "event"
+                                    "name": "@i"
+                                  },
+                                  "on": "op",
+                                  "otherwise": {
+                                    "e": "lit",
+                                    "v": false
                                   }
                                 }
-                              },
-                              {
-                                "e": "lit",
-                                "v": "approve.ask"
                               }
-                            ],
-                            "e": "op",
-                            "op": "eq"
-                          },
-                          "e": "if",
-                          "else": {
-                            "e": "lit",
-                            "v": false
-                          },
-                          "then": {
-                            "be": {
+                            },
+                            "e": "match",
+                            "of": {
                               "e": "get",
-                              "field": "value",
+                              "field": "input",
                               "of": {
-                                "e": "get",
-                                "field": "input",
-                                "of": {
-                                  "e": "var",
-                                  "name": "event"
-                                }
+                                "e": "var",
+                                "name": "@e"
                               }
                             },
-                            "e": "let",
-                            "in": {
-                              "args": [
-                                {
-                                  "e": "list",
-                                  "items": [
-                                    {
-                                      "e": "lit",
-                                      "v": "once"
-                                    },
-                                    {
-                                      "e": "lit",
-                                      "v": "always"
-                                    }
-                                  ]
-                                },
-                                {
-                                  "e": "var",
-                                  "name": "value"
-                                }
-                              ],
-                              "e": "op",
-                              "op": "contains"
-                            },
-                            "name": "value"
+                            "otherwise": {
+                              "e": "lit",
+                              "v": false
+                            }
                           }
                         }
+                      },
+                      "e": "match",
+                      "of": {
+                        "e": "var",
+                        "name": "event"
+                      },
+                      "otherwise": {
+                        "e": "lit",
+                        "v": false
                       }
                     }
                   }
