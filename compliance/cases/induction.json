@@ -900,8 +900,7 @@
                   "started": true,
                   "state": {
                     "record": {
-                      "fields": {},
-                      "label": ["web"]
+                      "fields": {}
                     }
                   }
                 }
@@ -1270,8 +1269,7 @@
                   "started": true,
                   "state": {
                     "record": {
-                      "fields": {},
-                      "label": ["web"]
+                      "fields": {}
                     }
                   }
                 }
@@ -2067,8 +2065,7 @@
                   "started": true,
                   "state": {
                     "record": {
-                      "fields": {},
-                      "label": ["web"]
+                      "fields": {}
                     }
                   }
                 }
@@ -2437,8 +2434,7 @@
                   "started": true,
                   "state": {
                     "record": {
-                      "fields": {},
-                      "label": ["web"]
+                      "fields": {}
                     }
                   }
                 }
@@ -3214,8 +3210,7 @@
                       "started": true,
                       "state": {
                         "record": {
-                          "fields": {},
-                          "label": ["web"]
+                          "fields": {}
                         }
                       }
                     }
@@ -3584,8 +3579,7 @@
                       "started": true,
                       "state": {
                         "record": {
-                          "fields": {},
-                          "label": ["web"]
+                          "fields": {}
                         }
                       }
                     }
@@ -3601,7 +3595,7 @@
             "property": "sha256:e14c086676f803a797f346bc88fc1ac30ade302bade53d412974affc4520ec6c",
             "verdict": "holds"
           },
-          "key": "sha256:1113f412fa89735fd4a4c846c4aaa60133dd8f0774086bf4d143acdc9ca15307",
+          "key": "sha256:240088bc0e3ecdc31cd5a9e5b8112cf3b928b1970b62e90b2c716b9a18d8be2e",
           "kind": "evidence"
         }
       }

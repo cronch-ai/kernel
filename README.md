@@ -11,7 +11,7 @@ The kernel gives agent harnesses a formal semantics. A harness is a state machin
 - **Grant state**: held by the interpreter, not the harness, one per run. Preconditions read it. Only trusted results and messages widen it, through `onResult` and `onMsg`, and they widen the run that received them and its ancestors, never its siblings. An approval allowlist is one example.
 - **Types**: structural, with records, lists and variants. A harness's input is a variant typed by its interface, which `match` reads case by case.
 - **Spawning**: a child runs against its parent's interface narrowed by combinators that can only drop, restrict or distrust. A child can never do what its parent couldn't. Cancelling the spawn revokes the child.
-- **Labels**: every value carries the untrusted sources it may depend on, including through control flow. Preconditions and properties can read them.
+- **Labels**: every value carries the untrusted sources it may depend on, including through control flow. Of an input, only what arrived (its `value`, or a failure's `error`) carries its sources: which call it answers is the interpreter's. Preconditions and properties can read them.
 - **Properties**: `□φ`, with `φ` in first-order past-time temporal logic over the events of a run. Every property is a safety property, monitored online or offline. Quantifier-free properties also have an incremental monitor (`monitorStart`, `monitorStep`) whose small state a host keeps between deliveries.
 - **Evidence**: a verdict on a property, reached by the kernel itself:
   - by replaying a counterexample;

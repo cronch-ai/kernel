@@ -20,6 +20,10 @@
 //! Cancelling a spawn revokes the child at once: the interpreter runs it, so unlike a call, there is no world to ask.
 //! A run that ends takes its children with it.
 //!
+//! Of an input, only what arrived carries its sources: its `value`, or a failure's `error`. Its kind, the call it
+//! answers, the operation and the channel are the interpreter's, so a step can react to a result's arrival without
+//! depending on whoever produced it, and only what the result says taints what is decided from it.
+//!
 //! Queued inputs are delivered before the world gets another turn. An input the environment couldn't admissibly
 //! produce (a result for a call that isn't pending, a value of the wrong type, a result that breaks its operation's
 //! postcondition) is recorded as withheld and changes nothing: the run stays a run under an admissible environment,
@@ -116,6 +120,31 @@ pub const DRAIN_LIMIT: usize = 4096;
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct System {
     pub root: Run,
+}
+
+/// An input as `δ` sees it. What arrived (`value`, or a failure's `error`) carries the sources it came from. The
+/// rest is the interpreter's own: which kind of input it is, which call it answers, of which operation, on which
+/// channel. The harness made those calls itself and chose to listen on those channels, so they tell it nothing an
+/// untrusted source chose, and a step may branch on them without depending on that source.
+fn labelled_input(input: &Value, label: &Label) -> LValue {
+    match input {
+        Value::Object(fields) => LValue::Record {
+            label: Label::new(),
+            fields: fields
+                .iter()
+                .map(|(name, v)| {
+                    let from_source = name == "value" || name == "error";
+                    let l = if from_source {
+                        label.clone()
+                    } else {
+                        Label::new()
+                    };
+                    (name.clone(), LValue::new(v, &l))
+                })
+                .collect(),
+        },
+        other => LValue::new(other, label),
+    }
 }
 
 /// What the environment delivers, and to which run. `to` is a path of spawn identifiers from the root; `[]` is the
@@ -664,7 +693,7 @@ impl Run {
             self.started = true;
         }
         self.seen.extend(inbound.label.iter().cloned());
-        let input = LValue::new(&inbound.input, &inbound.label);
+        let input = labelled_input(&inbound.input, &inbound.label);
         let scope = vec![
             ("state".to_string(), self.state.clone()),
             ("input".to_string(), input),
