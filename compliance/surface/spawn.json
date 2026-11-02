@@ -2657,6 +2657,7 @@
                 }
               }
             },
+            "result": "Any",
             "spawns": {
               "doubler": {
                 "arg": "Int",

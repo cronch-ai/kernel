@@ -12,7 +12,8 @@
 //!
 //! The query is over `δ`'s next state only: other parts of the step are projected away, which can only add steps (one
 //! whose actions would fail to evaluate), so the obligation is at least as strong as consecution. Inputs whose type
-//! has no sort (a spawned child's result, a failure's error, both `Any`) are left out, and the query says which.
+//! has no sort (one holding `Any`, such as a harness's start value declared `Any`) are left out, and the query says
+//! which. What the interpreter makes up, a spawned child's result and a failure's error, is `Json`, which has one.
 
 use crate::check::{Problem, infer};
 use crate::harness::{Harness, Interface, input_type};
