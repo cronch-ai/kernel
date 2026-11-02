@@ -108,9 +108,17 @@ fn a_child_without_the_declared_signature_is_refused() {
 
 #[test]
 fn a_halt_outside_the_result_type_fails_the_run() {
+    // A literal of the wrong type is caught before the run.
     let mut liar = increment();
     liar["step"]["cases"]["start"]["body"] = step(var("state"), vec![halt(lit(json!("five")))]);
-    let ended = outcome(liar, json!(4));
+    let refused = call(json!({ "op": "init", "harness": liar, "interface": {} }));
+    assert_eq!(refused["error"]["kind"], "harness");
+
+    // A value only the run knows is checked when it halts.
+    let mut echo = increment();
+    echo["arg"] = json!("Any");
+    echo["step"]["cases"]["start"]["body"] = step(var("state"), vec![halt(path("s", &["value"]))]);
+    let ended = outcome(echo, json!("five"));
     assert_eq!(ended["kind"], "failed");
     assert_eq!(ended["error"]["kind"], "result");
 

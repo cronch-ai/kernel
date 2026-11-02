@@ -38,11 +38,11 @@ fn puppet() -> Value {
 }
 
 fn call_action_dyn(op_name: Value, args: Value) -> Value {
-    rec(vec![
+    dynamic(rec(vec![
         ("kind", lit(json!("call"))),
         ("op", op_name),
         ("args", args),
-    ])
+    ]))
 }
 
 fn drive(op_name: &str, args: Value) -> Value {

@@ -74,7 +74,7 @@ pub fn stubborn() -> Value {
             "msg",
             if_(
                 eq(path("input", &["channel"]), lit(json!("act"))),
-                step(var("state"), vec![path("input", &["value"])]),
+                step(var("state"), vec![dynamic(path("input", &["value"]))]),
                 step(var("state"), vec![]),
             ),
         )],
@@ -89,7 +89,7 @@ pub fn obedient() -> Value {
     let on_act = if_(
         path("state", &["stopped"]),
         step(var("state"), vec![]),
-        step(var("state"), vec![path("input", &["value"])]),
+        step(var("state"), vec![dynamic(path("input", &["value"]))]),
     );
     json!({
         "arg": { "Record": {} },
@@ -163,7 +163,7 @@ pub fn actor() -> Value {
         "state": { "Record": {} },
         "init": {},
         "step": on(
-            vec![("msg", step(var("state"), vec![path("input", &["value"])]))],
+            vec![("msg", step(var("state"), vec![dynamic(path("input", &["value"]))]))],
             step(var("state"), vec![]),
         ),
     })
@@ -177,11 +177,11 @@ pub fn worker() -> Value {
         "init": {},
         "step": on(
             vec![
-                ("start", step(var("state"), vec![rec(vec![
+                ("start", step(var("state"), vec![dynamic(rec(vec![
                     ("kind", lit(json!("call"))),
                     ("op", path("input", &["value", "op"])),
                     ("args", path("input", &["value", "args"])),
-                ])])),
+                ]))])),
                 ("ret", step(var("state"), vec![halt(path("input", &["value"]))])),
                 ("refused", step(var("state"), vec![halt(lit(json!("denied")))])),
             ],

@@ -55,12 +55,21 @@
                   "e": "list",
                   "items": [
                     {
-                      "e": "get",
-                      "field": "value",
-                      "of": {
+                      "be": {
+                        "e": "get",
+                        "field": "value",
+                        "of": {
+                          "e": "var",
+                          "name": "input"
+                        }
+                      },
+                      "e": "let",
+                      "in": {
                         "e": "var",
-                        "name": "input"
-                      }
+                        "name": "@action"
+                      },
+                      "name": "@action",
+                      "type": "Any"
                     }
                   ]
                 },
@@ -464,12 +473,21 @@
                         "e": "list",
                         "items": [
                           {
-                            "e": "get",
-                            "field": "value",
-                            "of": {
+                            "be": {
+                              "e": "get",
+                              "field": "value",
+                              "of": {
+                                "e": "var",
+                                "name": "input"
+                              }
+                            },
+                            "e": "let",
+                            "in": {
                               "e": "var",
-                              "name": "input"
-                            }
+                              "name": "@action"
+                            },
+                            "name": "@action",
+                            "type": "Any"
                           }
                         ]
                       },
@@ -890,12 +908,21 @@
                       "e": "list",
                       "items": [
                         {
-                          "e": "get",
-                          "field": "value",
-                          "of": {
+                          "be": {
+                            "e": "get",
+                            "field": "value",
+                            "of": {
+                              "e": "var",
+                              "name": "input"
+                            }
+                          },
+                          "e": "let",
+                          "in": {
                             "e": "var",
-                            "name": "input"
-                          }
+                            "name": "@action"
+                          },
+                          "name": "@action",
+                          "type": "Any"
                         }
                       ]
                     },
@@ -1319,12 +1346,21 @@
                         "e": "list",
                         "items": [
                           {
-                            "e": "get",
-                            "field": "value",
-                            "of": {
+                            "be": {
+                              "e": "get",
+                              "field": "value",
+                              "of": {
+                                "e": "var",
+                                "name": "input"
+                              }
+                            },
+                            "e": "let",
+                            "in": {
                               "e": "var",
-                              "name": "input"
-                            }
+                              "name": "@action"
+                            },
+                            "name": "@action",
+                            "type": "Any"
                           }
                         ]
                       },
@@ -1752,12 +1788,21 @@
                       "e": "list",
                       "items": [
                         {
-                          "e": "get",
-                          "field": "value",
-                          "of": {
+                          "be": {
+                            "e": "get",
+                            "field": "value",
+                            "of": {
+                              "e": "var",
+                              "name": "input"
+                            }
+                          },
+                          "e": "let",
+                          "in": {
                             "e": "var",
-                            "name": "input"
-                          }
+                            "name": "@action"
+                          },
+                          "name": "@action",
+                          "type": "Any"
                         }
                       ]
                     },
@@ -2219,12 +2264,21 @@
                         "e": "list",
                         "items": [
                           {
-                            "e": "get",
-                            "field": "value",
-                            "of": {
+                            "be": {
+                              "e": "get",
+                              "field": "value",
+                              "of": {
+                                "e": "var",
+                                "name": "input"
+                              }
+                            },
+                            "e": "let",
+                            "in": {
                               "e": "var",
-                              "name": "input"
-                            }
+                              "name": "@action"
+                            },
+                            "name": "@action",
+                            "type": "Any"
                           }
                         ]
                       },
@@ -2759,37 +2813,46 @@
                         "e": "list",
                         "items": [
                           {
-                            "e": "record",
-                            "fields": {
-                              "args": {
-                                "e": "get",
-                                "field": "args",
-                                "of": {
+                            "be": {
+                              "e": "record",
+                              "fields": {
+                                "args": {
                                   "e": "get",
-                                  "field": "value",
+                                  "field": "args",
                                   "of": {
-                                    "e": "var",
-                                    "name": "input"
+                                    "e": "get",
+                                    "field": "value",
+                                    "of": {
+                                      "e": "var",
+                                      "name": "input"
+                                    }
                                   }
-                                }
-                              },
-                              "kind": {
-                                "e": "lit",
-                                "v": "call"
-                              },
-                              "op": {
-                                "e": "get",
-                                "field": "op",
-                                "of": {
+                                },
+                                "kind": {
+                                  "e": "lit",
+                                  "v": "call"
+                                },
+                                "op": {
                                   "e": "get",
-                                  "field": "value",
+                                  "field": "op",
                                   "of": {
-                                    "e": "var",
-                                    "name": "input"
+                                    "e": "get",
+                                    "field": "value",
+                                    "of": {
+                                      "e": "var",
+                                      "name": "input"
+                                    }
                                   }
                                 }
                               }
-                            }
+                            },
+                            "e": "let",
+                            "in": {
+                              "e": "var",
+                              "name": "@action"
+                            },
+                            "name": "@action",
+                            "type": "Any"
                           }
                         ]
                       },
@@ -2866,12 +2929,21 @@
                       "e": "list",
                       "items": [
                         {
-                          "e": "get",
-                          "field": "value",
-                          "of": {
+                          "be": {
+                            "e": "get",
+                            "field": "value",
+                            "of": {
+                              "e": "var",
+                              "name": "input"
+                            }
+                          },
+                          "e": "let",
+                          "in": {
                             "e": "var",
-                            "name": "input"
-                          }
+                            "name": "@action"
+                          },
+                          "name": "@action",
+                          "type": "Any"
                         }
                       ]
                     },
@@ -3406,37 +3478,46 @@
                             "e": "list",
                             "items": [
                               {
-                                "e": "record",
-                                "fields": {
-                                  "args": {
-                                    "e": "get",
-                                    "field": "args",
-                                    "of": {
+                                "be": {
+                                  "e": "record",
+                                  "fields": {
+                                    "args": {
                                       "e": "get",
-                                      "field": "value",
+                                      "field": "args",
                                       "of": {
-                                        "e": "var",
-                                        "name": "input"
+                                        "e": "get",
+                                        "field": "value",
+                                        "of": {
+                                          "e": "var",
+                                          "name": "input"
+                                        }
                                       }
-                                    }
-                                  },
-                                  "kind": {
-                                    "e": "lit",
-                                    "v": "call"
-                                  },
-                                  "op": {
-                                    "e": "get",
-                                    "field": "op",
-                                    "of": {
+                                    },
+                                    "kind": {
+                                      "e": "lit",
+                                      "v": "call"
+                                    },
+                                    "op": {
                                       "e": "get",
-                                      "field": "value",
+                                      "field": "op",
                                       "of": {
-                                        "e": "var",
-                                        "name": "input"
+                                        "e": "get",
+                                        "field": "value",
+                                        "of": {
+                                          "e": "var",
+                                          "name": "input"
+                                        }
                                       }
                                     }
                                   }
-                                }
+                                },
+                                "e": "let",
+                                "in": {
+                                  "e": "var",
+                                  "name": "@action"
+                                },
+                                "name": "@action",
+                                "type": "Any"
                               }
                             ]
                           },
@@ -3633,37 +3714,46 @@
                           "e": "list",
                           "items": [
                             {
-                              "e": "record",
-                              "fields": {
-                                "args": {
-                                  "e": "get",
-                                  "field": "args",
-                                  "of": {
+                              "be": {
+                                "e": "record",
+                                "fields": {
+                                  "args": {
                                     "e": "get",
-                                    "field": "value",
+                                    "field": "args",
                                     "of": {
-                                      "e": "var",
-                                      "name": "input"
+                                      "e": "get",
+                                      "field": "value",
+                                      "of": {
+                                        "e": "var",
+                                        "name": "input"
+                                      }
                                     }
-                                  }
-                                },
-                                "kind": {
-                                  "e": "lit",
-                                  "v": "call"
-                                },
-                                "op": {
-                                  "e": "get",
-                                  "field": "op",
-                                  "of": {
+                                  },
+                                  "kind": {
+                                    "e": "lit",
+                                    "v": "call"
+                                  },
+                                  "op": {
                                     "e": "get",
-                                    "field": "value",
+                                    "field": "op",
                                     "of": {
-                                      "e": "var",
-                                      "name": "input"
+                                      "e": "get",
+                                      "field": "value",
+                                      "of": {
+                                        "e": "var",
+                                        "name": "input"
+                                      }
                                     }
                                   }
                                 }
-                              }
+                              },
+                              "e": "let",
+                              "in": {
+                                "e": "var",
+                                "name": "@action"
+                              },
+                              "name": "@action",
+                              "type": "Any"
                             }
                           ]
                         },
@@ -3856,37 +3946,46 @@
                           "e": [],
                           "items": [
                             {
-                              "e": [],
-                              "fields": {
-                                "args": {
-                                  "e": [],
-                                  "field": [],
-                                  "of": {
+                              "be": {
+                                "e": [],
+                                "fields": {
+                                  "args": {
                                     "e": [],
                                     "field": [],
                                     "of": {
                                       "e": [],
-                                      "name": []
+                                      "field": [],
+                                      "of": {
+                                        "e": [],
+                                        "name": []
+                                      }
                                     }
-                                  }
-                                },
-                                "kind": {
-                                  "e": [],
-                                  "v": []
-                                },
-                                "op": {
-                                  "e": [],
-                                  "field": [],
-                                  "of": {
+                                  },
+                                  "kind": {
+                                    "e": [],
+                                    "v": []
+                                  },
+                                  "op": {
                                     "e": [],
                                     "field": [],
                                     "of": {
                                       "e": [],
-                                      "name": []
+                                      "field": [],
+                                      "of": {
+                                        "e": [],
+                                        "name": []
+                                      }
                                     }
                                   }
                                 }
-                              }
+                              },
+                              "e": [],
+                              "in": {
+                                "e": [],
+                                "name": []
+                              },
+                              "name": [],
+                              "type": []
                             }
                           ]
                         },
@@ -4121,37 +4220,46 @@
                               "e": "list",
                               "items": [
                                 {
-                                  "e": "record",
-                                  "fields": {
-                                    "args": {
-                                      "e": "get",
-                                      "field": "args",
-                                      "of": {
+                                  "be": {
+                                    "e": "record",
+                                    "fields": {
+                                      "args": {
                                         "e": "get",
-                                        "field": "value",
+                                        "field": "args",
                                         "of": {
-                                          "e": "var",
-                                          "name": "input"
+                                          "e": "get",
+                                          "field": "value",
+                                          "of": {
+                                            "e": "var",
+                                            "name": "input"
+                                          }
                                         }
-                                      }
-                                    },
-                                    "kind": {
-                                      "e": "lit",
-                                      "v": "call"
-                                    },
-                                    "op": {
-                                      "e": "get",
-                                      "field": "op",
-                                      "of": {
+                                      },
+                                      "kind": {
+                                        "e": "lit",
+                                        "v": "call"
+                                      },
+                                      "op": {
                                         "e": "get",
-                                        "field": "value",
+                                        "field": "op",
                                         "of": {
-                                          "e": "var",
-                                          "name": "input"
+                                          "e": "get",
+                                          "field": "value",
+                                          "of": {
+                                            "e": "var",
+                                            "name": "input"
+                                          }
                                         }
                                       }
                                     }
-                                  }
+                                  },
+                                  "e": "let",
+                                  "in": {
+                                    "e": "var",
+                                    "name": "@action"
+                                  },
+                                  "name": "@action",
+                                  "type": "Any"
                                 }
                               ]
                             },
@@ -4389,12 +4497,21 @@
                         "e": "list",
                         "items": [
                           {
-                            "e": "get",
-                            "field": "value",
-                            "of": {
+                            "be": {
+                              "e": "get",
+                              "field": "value",
+                              "of": {
+                                "e": "var",
+                                "name": "input"
+                              }
+                            },
+                            "e": "let",
+                            "in": {
                               "e": "var",
-                              "name": "input"
-                            }
+                              "name": "@action"
+                            },
+                            "name": "@action",
+                            "type": "Any"
                           }
                         ]
                       },
@@ -4938,37 +5055,46 @@
                             "e": "list",
                             "items": [
                               {
-                                "e": "record",
-                                "fields": {
-                                  "args": {
-                                    "e": "get",
-                                    "field": "args",
-                                    "of": {
+                                "be": {
+                                  "e": "record",
+                                  "fields": {
+                                    "args": {
                                       "e": "get",
-                                      "field": "value",
+                                      "field": "args",
                                       "of": {
-                                        "e": "var",
-                                        "name": "input"
+                                        "e": "get",
+                                        "field": "value",
+                                        "of": {
+                                          "e": "var",
+                                          "name": "input"
+                                        }
                                       }
-                                    }
-                                  },
-                                  "kind": {
-                                    "e": "lit",
-                                    "v": "call"
-                                  },
-                                  "op": {
-                                    "e": "get",
-                                    "field": "op",
-                                    "of": {
+                                    },
+                                    "kind": {
+                                      "e": "lit",
+                                      "v": "call"
+                                    },
+                                    "op": {
                                       "e": "get",
-                                      "field": "value",
+                                      "field": "op",
                                       "of": {
-                                        "e": "var",
-                                        "name": "input"
+                                        "e": "get",
+                                        "field": "value",
+                                        "of": {
+                                          "e": "var",
+                                          "name": "input"
+                                        }
                                       }
                                     }
                                   }
-                                }
+                                },
+                                "e": "let",
+                                "in": {
+                                  "e": "var",
+                                  "name": "@action"
+                                },
+                                "name": "@action",
+                                "type": "Any"
                               }
                             ]
                           },
@@ -5206,12 +5332,21 @@
                       "e": "list",
                       "items": [
                         {
-                          "e": "get",
-                          "field": "value",
-                          "of": {
+                          "be": {
+                            "e": "get",
+                            "field": "value",
+                            "of": {
+                              "e": "var",
+                              "name": "input"
+                            }
+                          },
+                          "e": "let",
+                          "in": {
                             "e": "var",
-                            "name": "input"
-                          }
+                            "name": "@action"
+                          },
+                          "name": "@action",
+                          "type": "Any"
                         }
                       ]
                     },
@@ -5662,12 +5797,21 @@
                         "e": "list",
                         "items": [
                           {
-                            "e": "get",
-                            "field": "value",
-                            "of": {
+                            "be": {
+                              "e": "get",
+                              "field": "value",
+                              "of": {
+                                "e": "var",
+                                "name": "input"
+                              }
+                            },
+                            "e": "let",
+                            "in": {
                               "e": "var",
-                              "name": "input"
-                            }
+                              "name": "@action"
+                            },
+                            "name": "@action",
+                            "type": "Any"
                           }
                         ]
                       },
@@ -6095,12 +6239,21 @@
                       "e": "list",
                       "items": [
                         {
-                          "e": "get",
-                          "field": "value",
-                          "of": {
+                          "be": {
+                            "e": "get",
+                            "field": "value",
+                            "of": {
+                              "e": "var",
+                              "name": "input"
+                            }
+                          },
+                          "e": "let",
+                          "in": {
                             "e": "var",
-                            "name": "input"
-                          }
+                            "name": "@action"
+                          },
+                          "name": "@action",
+                          "type": "Any"
                         }
                       ]
                     },
@@ -6553,12 +6706,21 @@
                         "e": "list",
                         "items": [
                           {
-                            "e": "get",
-                            "field": "value",
-                            "of": {
+                            "be": {
+                              "e": "get",
+                              "field": "value",
+                              "of": {
+                                "e": "var",
+                                "name": "input"
+                              }
+                            },
+                            "e": "let",
+                            "in": {
                               "e": "var",
-                              "name": "input"
-                            }
+                              "name": "@action"
+                            },
+                            "name": "@action",
+                            "type": "Any"
                           }
                         ]
                       },

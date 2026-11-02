@@ -27,8 +27,8 @@ use crate::syntax::{self, Binary, ExprKind, File, Pattern, TypeExpr, Unary};
 use crate::{Problem, What};
 use kernel::check::infer;
 use kernel::harness::{
-    Harness, Installation, Interface, Mode, Narrowing, Signature, check_harness, install, narrow,
-    spawn_op,
+    Harness, Installation, Interface, Mode, Narrowing, Signature, action_type, check_harness,
+    install, narrow, spawn_op, step_type,
 };
 use kernel::ir::{Case, Expr as K, Type};
 use kernel::property::Property;
@@ -198,6 +198,16 @@ pub(crate) fn op(name: &str, args: Vec<K>) -> K {
     K::Op {
         op: name.to_string(),
         args,
+    }
+}
+
+/// `let name: ty = be in body`: `be` is checked against `ty`, so record literals in it can be variants.
+fn typed_let(name: &str, ty: &Type, be: K, body: K) -> K {
+    K::Let {
+        ty: Some(ty.clone()),
+        name: name.to_string(),
+        be: Box::new(be),
+        body: Box::new(body),
     }
 }
 
@@ -1157,6 +1167,9 @@ struct Lowered {
 struct Plan {
     arg: Type,
     result: Type,
+    /// What a step gives, `{state, actions}`, with every action typed by the interface: the accumulators are checked
+    /// against it, so every action the generated step can give is.
+    step: Type,
     param: String,
     order: Vec<usize>,
     needs: Vec<Needs>,
@@ -1166,6 +1179,20 @@ struct Plan {
 }
 
 impl Cx<'_> {
+    /// The generated state's type: the start value, the call counter, and a slot per call or receive node.
+    fn state_type(&self, arg: &Type) -> Type {
+        let slots = self
+            .calls
+            .iter()
+            .map(|(&i, c)| (self.node_name(i).to_string(), slot_type(c)))
+            .collect();
+        Type::Record(BTreeMap::from([
+            ("arg".to_string(), arg.clone()),
+            ("next".to_string(), Type::Int),
+            ("nodes".to_string(), Type::Record(slots)),
+        ]))
+    }
+
     /// The slot of `node` in the state held by `state`.
     fn slot(&self, state: &str, node: usize) -> K {
         get(get(var(state), "nodes"), self.node_name(node))
@@ -1423,10 +1450,11 @@ impl Cx<'_> {
                 .map(|&d| self.settled("@state", d))
                 .collect());
             let moved = enter(if_(all(vec![waiting, ready]), body, var("@acc")));
-            out = let_("@acc", moved, out);
+            out = typed_let("@acc", &plan.step, moved, out);
         }
-        let_(
+        typed_let(
             "@acc",
+            &plan.step,
             step(var("@state"), get(var("@pre"), "actions")),
             out,
         )
@@ -1488,9 +1516,9 @@ impl Cx<'_> {
                 get(var("@pre"), "state"),
                 if_(stopped, moved, var("@pre")),
             );
-            out = let_("@pre", checked, out);
+            out = typed_let("@pre", &plan.step, checked, out);
         }
-        let_("@pre", step(var("@state"), list(vec![])), out)
+        typed_let("@pre", &plan.step, step(var("@state"), list(vec![])), out)
     }
 
     /// The state in `@r` after `then` is applied to each of `nodes` the input `hit`s, in turn.
@@ -1728,16 +1756,7 @@ impl Cx<'_> {
                 self.after_result(plan, lowered, self.schedule(plan, lowered)),
             ),
         );
-        let slots = self
-            .calls
-            .iter()
-            .map(|(&i, c)| (self.node_name(i).to_string(), slot_type(c)))
-            .collect();
-        let state = Type::Record(BTreeMap::from([
-            ("arg".to_string(), plan.arg.clone()),
-            ("next".to_string(), Type::Int),
-            ("nodes".to_string(), Type::Record(slots)),
-        ]));
+        let state = self.state_type(&plan.arg);
         let waiting: serde_json::Map<String, Value> = self
             .calls
             .iter()
@@ -2243,7 +2262,17 @@ pub fn elaborate(
         return Err(cx.problems);
     }
 
+    // Actions are typed by the operations the harness calls, not every one its capabilities offer, so it still
+    // checks against any narrowing that keeps those.
+    let mut used = Interface::default();
+    for c in cx.calls.values() {
+        if let Some(o) = interface.operations.get(&c.target) {
+            used.operations.insert(c.target.clone(), o.clone());
+        }
+    }
+    let step = step_type(&cx.state_type(&arg), &action_type(&result, &used));
     let plan = Plan {
+        step,
         arg,
         result: result.clone(),
         param: file.param.text.clone(),

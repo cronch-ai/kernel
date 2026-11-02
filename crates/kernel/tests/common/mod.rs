@@ -81,6 +81,12 @@ pub fn call_action(op: &str, args: Value) -> Value {
     ])
 }
 
+/// An action made at run time, from data: bound at `Any`, so the checker leaves it to the interpreter, which refuses
+/// it when it runs if it isn't one. A harness that performs whatever it is told needs nothing else until `Any` goes.
+pub fn dynamic(action: Value) -> Value {
+    json!({ "e": "let", "name": "@action", "type": "Any", "be": action, "in": var("@action") })
+}
+
 pub fn halt(value: Value) -> Value {
     rec(vec![("kind", lit(json!("halt"))), ("value", value)])
 }

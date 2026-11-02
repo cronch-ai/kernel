@@ -396,12 +396,53 @@ pub fn check_interface(interface: &Interface) -> Vec<HarnessProblem> {
     problems
 }
 
-/// What `δ` must give: the next state and the actions.
-pub fn step_type(state: &Type) -> Type {
+/// What `δ` must give: the next state and the actions, each of type `action`.
+pub fn step_type(state: &Type, action: &Type) -> Type {
     Type::Record(BTreeMap::from([
         ("state".to_string(), state.clone()),
-        ("actions".to_string(), Type::List(Box::new(Type::Any))),
+        ("actions".to_string(), Type::List(Box::new(action.clone()))),
     ]))
+}
+
+/// The type of an action `δ` may give against this interface, a variant over `kind`:
+///
+/// * `call`, a variant over `op` with a case for each of the interface's operations, holding its `args`;
+/// * `cancel`, of a call identifier;
+/// * `halt`, with a value of the harness's result type, `result`;
+/// * `spawn`, whose fields are checked when the child starts, until a spawn must name a declared child.
+///
+/// So a step that could call an operation the interface lacks, or with arguments of the wrong type, or halt with
+/// the wrong value, is caught by `checkHarness`, not refused when it runs. Preconditions are still checked at each
+/// call: they depend on the grant state and the arguments' values, which only the run has.
+pub fn action_type(result: &Type, interface: &Interface) -> Type {
+    let record = |fields: Vec<(&str, Type)>| {
+        Type::Record(
+            fields
+                .into_iter()
+                .map(|(n, t)| (n.to_string(), t))
+                .collect(),
+        )
+    };
+    let calls = interface
+        .operations
+        .iter()
+        .map(|(name, o)| (name.clone(), record(vec![("args", o.input.clone())])))
+        .collect();
+    Type::Variant {
+        tag: "kind".to_string(),
+        cases: BTreeMap::from([
+            (
+                "call".to_string(),
+                Type::Variant {
+                    tag: "op".to_string(),
+                    cases: calls,
+                },
+            ),
+            ("cancel".to_string(), record(vec![("call", Type::Int)])),
+            ("halt".to_string(), record(vec![("value", result.clone())])),
+            ("spawn".to_string(), record(vec![])),
+        ]),
+    }
 }
 
 /// The type of what `δ` receives against this interface: a variant over input kinds. A result's case is itself a
@@ -496,7 +537,8 @@ pub fn check_harness(harness: &Harness, interface: Option<&Interface>) -> Vec<Ha
         ("input".to_string(), input),
     ];
     // The step is checked against its type, so the state it builds can hold variants.
-    let (_, found) = check(&harness.step, &step_type(&harness.state), scope);
+    let action = interface.map_or(Type::Any, |i| action_type(&harness.result, i));
+    let (_, found) = check(&harness.step, &step_type(&harness.state, &action), scope);
     for problem in found {
         problems.push(match problem {
             // The step as a whole has the wrong type.
