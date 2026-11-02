@@ -106,15 +106,18 @@ fn cases() -> Vec<Case> {
         ),
         (
             "run",
-            "A run that fetches and sends, a refusal, and withheld inputs.",
+            "A run that fetches and sends, a refused call, withheld inputs, and a harness its interface can't run.",
             |r| {
                 let system = r.init(leaky(), interface(), Value::Null);
                 let (system, _) = r.deliver(system, start(json!({})));
                 let (system, _) = r.deliver(system, ret(7, json!("no such call")));
                 let (system, _) = r.deliver(system, ret(0, json!(3)));
                 r.deliver(system, ret(0, json!("page")));
-                let empty = r.init(leaky(), json!({}), Value::Null);
-                r.deliver(empty, start(json!({})));
+                let mut closed = interface();
+                closed["operations"]["net.fetch"]["pre"] = lit(json!(false));
+                let refusing = r.init(leaky(), closed, Value::Null);
+                r.deliver(refusing, start(json!({})));
+                r.call(json!({ "op": "init", "harness": leaky(), "interface": {} }));
             },
         ),
         (

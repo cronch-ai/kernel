@@ -84,8 +84,26 @@ fn a_run_calls_and_halts() {
 }
 
 #[test]
-fn a_call_the_interface_lacks_is_refused_before_the_world_moves() {
-    let system = init(double_harness(), json!({}));
+fn a_call_the_interface_lacks_is_caught_before_the_run_and_a_failed_precondition_when_it_happens() {
+    // The step can call `double`, which this interface lacks: that is a problem with the harness, found before it
+    // runs.
+    let refused = call(json!({ "op": "init", "harness": double_harness(), "interface": {} }));
+    assert_eq!(refused["kind"], "refused");
+    assert_eq!(refused["error"]["kind"], "harness");
+
+    // This step reads its start value without matching on the input's kind, so the argument is `Any` to the checker,
+    // and one of the wrong type is refused when the call is made.
+    let mut wrong = double_harness();
+    wrong["arg"] = json!("String");
+    let system = init(wrong, doubling());
+    let (_, events) = deliver_all(system, vec![start(json!("one"))]);
+    assert_eq!(events[1]["performed"], json!(false));
+
+    // A precondition depends on the run, so a call that fails one is refused when it is made, before the world
+    // moves.
+    let mut closed = doubling();
+    closed["operations"]["double"]["pre"] = lit(json!(false));
+    let system = init(double_harness(), closed);
     let (system, events) = deliver_all(system, vec![start(json!(1))]);
     assert_eq!(
         shape(&events),
@@ -97,13 +115,6 @@ fn a_call_the_interface_lacks_is_refused_before_the_world_moves() {
         json!({ "kind": "refused", "call": 0, "op": "double" })
     );
     assert_eq!(system["root"]["outcome"]["value"], "refused");
-
-    // Arguments of the wrong type are refused the same way.
-    let mut wrong = double_harness();
-    wrong["arg"] = json!("String");
-    let system = init(wrong, doubling());
-    let (_, events) = deliver_all(system, vec![start(json!("one"))]);
-    assert_eq!(events[1]["performed"], json!(false));
 }
 
 #[test]

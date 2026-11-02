@@ -23,13 +23,7 @@ fn call(request: &Value) -> Value {
 
 type Case = (&'static str, &'static str, fn() -> Vec<Value>);
 
-fn cases() -> Vec<Case> {
-    vec![(
-        "elaborate",
-        "The platform's approved-note harness elaborated from source, a source with problems, a turn that streams and can be interrupted, a fan-out whose total a spawned child doubles, and properties and invariants claimed in source.",
-        || {
-            let capabilities = json!({ "model": fixture("model"), "approve": fixture("approve"), "notes": fixture("notes") });
-            let source = "\
+const APPROVED_NOTE: &str = "\
 harness approved_note(prompt: String) -> Any
 
 uses model, approve, notes
@@ -45,20 +39,23 @@ return match saved {
 
 otherwise return \"stopped\"
 ";
-            let claims = "
+
+const CLAIMS: &str = "
 property no_effect_without_approval:
   effect() implies once(returned(approve.ask, value in [\"once\", \"always\"]))
 
 invariant saved_only_after_a_yes:
   saved.kind in [\"running\", \"ok\"] implies decision.kind == \"ok\" and decision.value != \"deny\"
 ";
-            let broken = "\
+
+const BROKEN: &str = "\
 harness broken(prompt: String) -> String
 uses model
 draft = model.generate(messages: [{role: \"user\", content: topic}])
 return draft
 ";
-            let turn = "\
+
+const TURN: &str = "\
 harness turn(prompt: String) -> Any
 uses model, fs, session
 stop   = receive said from session.user when said == \"stop\"
@@ -68,27 +65,16 @@ saved  = fs.write(path: \"/workspace/reply.md\", text: reply) until stop
 return saved
 otherwise return \"interrupted\"
 ";
-            let streaming = json!({
-                "model": { "operations": { "generate": {
-                    "input": { "Record": { "messages": { "List": { "Record": { "role": "String", "content": "String" } } } } },
-                    "output": "String", "mode": "stream",
-                }}},
-                "fs": { "operations": { "write": {
-                    "input": { "Record": { "path": "String", "text": "String" } }, "output": "Int", "effect": true,
-                }}},
-                "session": { "channels": { "user": { "type": "String" } } },
-            });
-            let math = json!({ "math": { "operations": {
-                "double": { "input": { "Record": { "n": "Int" } }, "output": "Int" },
-            }}});
-            let child = "\
+
+const CHILD: &str = "\
 harness doubler(n: Int) -> Int
 uses m = \"math\"
 a = m.double(n: n)
 return a
 otherwise return -1
 ";
-            let parent = "\
+
+const PARENT: &str = "\
 harness parent(xs: List[Int]) -> Any
 uses m = \"math\"
 uses doubler = harness \"registered:doubler\"
@@ -97,24 +83,67 @@ total = fold doubled from 0 with (sum, d) => sum + d
 again = spawn doubler(total) only m.double
 return again
 ";
-            let doubler = decode(&surface::api::call(&encode(
-                &json!({ "op": "elaborate", "source": child, "capabilities": math }),
-            )))
-            .unwrap()["result"]["harness"]
-                .clone();
-            vec![
-                json!({ "op": "elaborate", "source": source, "capabilities": capabilities }),
-                json!({ "op": "elaborate", "source": broken, "capabilities": capabilities }),
-                json!({ "op": "elaborate", "source": turn, "capabilities": streaming }),
-                json!({ "op": "elaborate", "source": format!("{source}{claims}"), "capabilities": capabilities }),
-                json!({ "op": "elaborate", "source": child, "capabilities": math }),
-                json!({
-                    "op": "elaborate", "source": parent, "capabilities": math,
-                    "harnesses": { "registered:doubler": doubler },
-                }),
-            ]
-        },
-    )]
+
+fn platform() -> Value {
+    json!({ "model": fixture("model"), "approve": fixture("approve"), "notes": fixture("notes") })
+}
+
+fn streaming() -> Value {
+    json!({
+        "model": { "operations": { "generate": {
+            "input": { "Record": { "messages": { "List": { "Record": { "role": "String", "content": "String" } } } } },
+            "output": "String", "mode": "stream",
+        }}},
+        "fs": { "operations": { "write": {
+            "input": { "Record": { "path": "String", "text": "String" } }, "output": "Int", "effect": true,
+        }}},
+        "session": { "channels": { "user": { "type": "String" } } },
+    })
+}
+
+fn math() -> Value {
+    json!({ "math": { "operations": {
+        "double": { "input": { "Record": { "n": "Int" } }, "output": "Int" },
+    }}})
+}
+
+fn elaborate(source: &str, capabilities: Value) -> Value {
+    json!({ "op": "elaborate", "source": source, "capabilities": capabilities })
+}
+
+fn cases() -> Vec<Case> {
+    vec![
+        (
+            "harness",
+            "The platform's approved-note harness elaborated from source, and a source with problems.",
+            || {
+                vec![
+                    elaborate(APPROVED_NOTE, platform()),
+                    elaborate(BROKEN, platform()),
+                ]
+            },
+        ),
+        (
+            "streams",
+            "A turn that streams its reply and can be interrupted on a channel.",
+            || vec![elaborate(TURN, streaming())],
+        ),
+        (
+            "claims",
+            "Properties and invariants claimed in source.",
+            || vec![elaborate(&format!("{APPROVED_NOTE}{CLAIMS}"), platform())],
+        ),
+        (
+            "spawn",
+            "A fan-out whose total a declared child doubles.",
+            || {
+                let doubler = call(&elaborate(CHILD, math()))["result"]["harness"].clone();
+                let mut parent = elaborate(PARENT, math());
+                parent["harnesses"] = json!({ "registered:doubler": doubler });
+                vec![elaborate(CHILD, math()), parent]
+            },
+        ),
+    ]
 }
 
 #[test]

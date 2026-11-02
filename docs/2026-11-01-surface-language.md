@@ -172,6 +172,7 @@ property no_effect_without_approval:
      Each node is a `Let` over the record the previous one produced, so nodes settled in this pass are seen by the nodes after them. Pure nodes are `Let`s over the slots they read, so the pass needs no `fold`.
   5. **Return:** once every call, and everything `return` reads, has settled, emit `halt` with `return`'s value.
 - **Checking:** the kernel checks the generated harness (`checkHarness`) and each property, as for hand-written terms. A problem there is an elaborator bug, and is reported as one.
+  - The step's accumulators are annotated with the step's type, so the kernel checks every action the generated step can give. Actions are typed by the operations the harness calls, not every one its capabilities offer, so a child still checks against any narrowing that keeps those.
 
 ## Pieces
 
