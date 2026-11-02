@@ -72,8 +72,9 @@ The platform's contracts change with A3: `approve.ask`'s `args` becomes `Json`, 
 
 ## What the surface language gets
 
+Slots stay records, not variants: see the surface language plan.
+
 Once A1 lands, the workarounds go, each in its own change:
-- slots become a variant, `waiting | running {call} | ok {value} | failed {error} | refused | skipped`, matched rather than read by `kind`;
 - fan-out lists keep their type, and actions are typed;
 - with A2, a spawn's value has its child's result type, so a harness that spawns gets an induction obligation too;
 - with A3, `error` stops being text and keeps the world's detail as `Json`.
@@ -83,7 +84,7 @@ Once A1 lands, the workarounds go, each in its own change:
 Each is a kernel PR with compliance vectors, and the platform follows A2 and A3 in lockstep.
 
 - **A1:** expected types in `check.rs`, variant introduction, typed `[]`, and `type` annotations on `let` and `fold`. The SMT encoder encodes against an expected type the same way, so a variant built from a literal gets its constructor: an SMT-LIB definition gains an optional `result`, and an induction obligation's step is encoded at the state type. Minor version.
-- **A2:** errors, harness results and declared children, typed actions, declared grant parts, typed events, and `checkHarness` against an interface. Breaking version.
+- **A2:** errors, harness results and declared children, typed actions, declared grant parts, typed events, and `checkHarness` against an interface. With them, the label rule decided in the surface plan: an input's `kind`, `call` and `op` are the interpreter's, so trusted, and only `value` and `error` carry the sources of what arrived. Breaking version.
 - **A3:** `Json`, its `match`, its SMT encoding, the removal of `Any`, and `null` refused but at `Json`. Breaking version, with the platform's contracts updated.
 
 ## Open questions
