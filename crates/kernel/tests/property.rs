@@ -91,7 +91,12 @@ fn quantifiers_connect_results_to_their_calls() {
 fn properties_are_checked() {
     let bad =
         json!({ "name": "bad", "always": atom(op("add", vec![lit(json!(1)), lit(json!(2))])) });
-    let problems = call(json!({ "op": "checkProperty", "property": bad }))["problems"].clone();
+    let check = |property: Value| {
+        call(json!({ "op": "checkProperty", "property": property, "harness": obedient(), "interface": interface() }))
+            ["problems"]
+            .clone()
+    };
+    let problems = check(bad);
     assert_eq!(problems[0]["at"], "/holds");
     assert_eq!(problems[0]["problem"]["kind"], "mismatch");
     for good in [
@@ -99,7 +104,13 @@ fn properties_are_checked() {
         stop_means_stop(),
         results_answer_calls(),
     ] {
-        let problems = call(json!({ "op": "checkProperty", "property": good }))["problems"].clone();
-        assert_eq!(problems, json!([]));
+        assert_eq!(check(good), json!([]));
     }
+
+    // A field no event has, and a field read at a type no event gives it.
+    let problems = check(misspelled());
+    assert_eq!(problems[0]["problem"]["kind"], "noSuchField");
+    assert_eq!(problems[0]["problem"]["field"], "efect");
+    let problems = check(mistyped());
+    assert_eq!(problems[0]["problem"]["kind"], "operator");
 }

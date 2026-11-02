@@ -69,11 +69,18 @@ fn cases() -> Vec<Case> {
             |r| {
                 let mut bad = careful();
                 bad["init"] = json!(1);
-                r.call(json!({ "op": "checkHarness", "harness": bad }));
-                r.call(json!({ "op": "checkHarness", "harness": careful() }));
-                let interface = json!({ "operations": { "x": { "input": { "Record": {} }, "output": "Int", "pre": lit(json!(1)) } } });
-                r.call(json!({ "op": "checkInterface", "interface": interface }));
-                r.call(json!({ "op": "checkProperty", "property": stop_means_stop() }));
+                r.call(json!({ "op": "checkHarness", "harness": bad, "interface": interface() }));
+                r.call(
+                    json!({ "op": "checkHarness", "harness": careful(), "interface": interface() }),
+                );
+                let x = json!({ "operations": { "x": { "input": { "Record": {} }, "output": "Int", "pre": lit(json!(1)) } } });
+                r.call(json!({ "op": "checkInterface", "interface": x }));
+                r.call(
+                    json!({ "op": "eventType", "harness": obedient(), "interface": interface() }),
+                );
+                for property in [stop_means_stop(), misspelled(), mistyped()] {
+                    r.call(json!({ "op": "checkProperty", "property": property, "harness": obedient(), "interface": interface() }));
+                }
             },
         ),
         (
@@ -99,7 +106,7 @@ fn cases() -> Vec<Case> {
                     "arg": "Int", "state": state, "init": { "slot": { "kind": "waiting" } },
                     "step": let_("n", lit(json!(1)), set),
                 });
-                r.call(json!({ "op": "checkHarness", "harness": harness }));
+                r.call(json!({ "op": "checkHarness", "harness": harness, "interface": {} }));
                 let invariant = eq(path("state", &["slot", "kind"]), lit(json!("ok")));
                 r.call(json!({ "op": "obligation", "harness": harness, "invariant": invariant }));
             },
@@ -146,7 +153,7 @@ fn cases() -> Vec<Case> {
         ),
         (
             "monitoring",
-            "Properties monitored over traces, whole and step by step: a leak, and effects after stop.",
+            "Properties monitored over traces, whole and step by step, reading each event as its view: a leak, and effects after stop.",
             |r| {
                 let system = r.init(leaky(), interface(), Value::Null);
                 let (system, a) = r.deliver(system, start(json!({})));
@@ -158,6 +165,8 @@ fn cases() -> Vec<Case> {
                     .chain(b.as_array().unwrap())
                     .cloned()
                     .collect();
+                // What the properties read of it.
+                r.call(json!({ "op": "view", "events": trace }));
                 r.call(json!({ "op": "monitor", "property": no_untrusted_send(), "trace": trace }));
                 r.call(
                     json!({ "op": "monitor", "property": results_answer_calls(), "trace": trace }),

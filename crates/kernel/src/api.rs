@@ -12,8 +12,9 @@ use crate::ir::{Expr, Type};
 use crate::key::{Kind, key};
 use crate::labeled::{self, LValue};
 use crate::property::{MonitorState, Property, check_property, monitor, monitor_step};
-use crate::run::{Delivery, System};
+use crate::run::{Delivery, Event, System};
 use crate::smtlib::{self, Definition, Floats};
+use crate::view::{event_type, view};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
@@ -38,11 +39,10 @@ pub enum Request {
         #[serde(default)]
         vars: BTreeMap<String, Value>,
     },
-    /// Problems with a harness, against an interface if one is given.
+    /// Problems with a harness against an interface.
     CheckHarness {
         harness: Harness,
-        #[serde(default)]
-        interface: Option<Interface>,
+        interface: Interface,
     },
     /// The type of what a harness's step receives against an interface.
     InputType {
@@ -70,12 +70,25 @@ pub enum Request {
     },
     /// Deliver one input to a system: the next configuration, and what happened.
     Deliver { system: System, delivery: Delivery },
-    /// Problems with a property.
-    CheckProperty { property: Property },
+    /// Events as a property reads them.
+    View { events: Vec<Event> },
+    /// What a property may read of an event in a run of a harness against an interface.
+    EventType {
+        harness: Harness,
+        #[serde(default)]
+        interface: Interface,
+    },
+    /// Problems with a property of a harness against an interface.
+    CheckProperty {
+        property: Property,
+        harness: Harness,
+        #[serde(default)]
+        interface: Interface,
+    },
     /// Whether a trace satisfies a property, and if not, where it first fails.
     Monitor {
         property: Property,
-        trace: Vec<Value>,
+        trace: Vec<Event>,
     },
     /// The incremental monitor's state before any event, if it can decide the property.
     MonitorStart { property: Property },
@@ -84,7 +97,7 @@ pub enum Request {
         property: Property,
         #[serde(default)]
         state: MonitorState,
-        events: Vec<Value>,
+        events: Vec<Event>,
     },
     /// The kernel's verdict on a property of a harness, by a method, as evidence.
     Prove {
@@ -181,7 +194,7 @@ fn respond(request: Request) -> Value {
             }
         }
         Request::CheckHarness { harness, interface } => {
-            json!({ "problems": check_harness(&harness, interface.as_ref()) })
+            json!({ "problems": check_harness(&harness, &interface) })
         }
         Request::InputType { harness, interface } => {
             json!({ "type": input_type(&harness, &interface) })
@@ -208,8 +221,23 @@ fn respond(request: Request) -> Value {
             let events = system.deliver(&delivery);
             json!({ "system": system, "events": events })
         }
-        Request::CheckProperty { property } => json!({ "problems": check_property(&property) }),
-        Request::Monitor { property, trace } => json!(monitor(&property, &trace)),
+        Request::View { events } => {
+            json!({ "events": events.iter().map(view).collect::<Vec<_>>() })
+        }
+        Request::EventType { harness, interface } => {
+            json!({ "type": event_type(&harness, &interface) })
+        }
+        Request::CheckProperty {
+            property,
+            harness,
+            interface,
+        } => json!({ "problems": check_property(&property, &harness, &interface) }),
+        Request::Monitor { property, trace } => {
+            json!(monitor(
+                &property,
+                &trace.iter().map(view).collect::<Vec<_>>()
+            ))
+        }
         Request::MonitorStart { property } => refused_or(
             "started",
             "state",
@@ -219,7 +247,11 @@ fn respond(request: Request) -> Value {
             property,
             state,
             events,
-        } => match monitor_step(&property, &state, &events) {
+        } => match monitor_step(
+            &property,
+            &state,
+            &events.iter().map(view).collect::<Vec<_>>(),
+        ) {
             Ok((state, verdict)) => {
                 let mut stepped = json!({ "kind": "stepped", "state": state });
                 if let (Some(out), Value::Object(fields)) =

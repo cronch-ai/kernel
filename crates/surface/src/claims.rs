@@ -16,7 +16,7 @@ use crate::What;
 use crate::elaborate::{Cx, Read, eq, get, if_, let_, lit, one_of, var};
 use crate::lex::Span;
 use crate::syntax::{Binary, Expr, ExprKind, Name, Unary};
-use kernel::harness::Interface;
+use kernel::harness::{Harness, Interface};
 use kernel::ir::{Expr as K, Type};
 use kernel::property::{Formula, Property, check_property};
 use serde::Serialize;
@@ -54,7 +54,7 @@ fn guarded(conditions: Vec<K>, then: K) -> K {
 fn at_root_step() -> Vec<K> {
     vec![
         eq(ev(&["origin"]), lit(json!([]))),
-        one_of(&["in", "out"], ev(&["kind"])),
+        one_of(&["in", "out", "refused"], ev(&["kind"])),
     ]
 }
 
@@ -235,7 +235,6 @@ impl Cx<'_> {
                 vec![
                     eq(ev(&["kind"]), lit(json!("out"))),
                     eq(ev(&["action", "kind"]), lit(json!("call"))),
-                    ev(&["performed"]),
                 ],
                 ev(&["effect"]),
             )));
@@ -258,7 +257,6 @@ impl Cx<'_> {
                         eq(ev(&["kind"]), lit(json!("out"))),
                         eq(ev(&["action", "kind"]), lit(json!("call"))),
                         eq(ev(&["action", "op"]), lit(json!(target))),
-                        ev(&["performed"]),
                     ],
                     filter,
                 )
@@ -372,6 +370,7 @@ impl Cx<'_> {
         &mut self,
         name: &Name,
         body: &Expr,
+        harness: &Harness,
         interface: &Interface,
     ) -> Option<Property> {
         let before = self.problems.len();
@@ -383,7 +382,7 @@ impl Cx<'_> {
             name: name.text.clone(),
             always,
         };
-        let problems = check_property(&property);
+        let problems = check_property(&property, harness, interface);
         for p in &problems {
             self.report(
                 body.span,

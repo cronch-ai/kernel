@@ -354,7 +354,7 @@ struct Admitted {
 impl System {
     /// A system that hasn't started: the harness at `s₀`, against the interface, with the root grant state.
     pub fn new(harness: Harness, interface: Interface, grant: Value) -> Result<System, InitError> {
-        let problems = check_harness(&harness, Some(&interface));
+        let problems = check_harness(&harness, &interface);
         if !problems.is_empty() {
             return Err(InitError::Harness { problems });
         }
@@ -693,7 +693,7 @@ impl Run {
             Some(n) => serde_json::from_value(n.clone()).ok()?,
         };
         let interface = narrow(&self.interface, &narrowings).ok()?;
-        let well_formed = check_harness(&harness, Some(&interface)).is_empty()
+        let well_formed = check_harness(&harness, &interface).is_empty()
             && check_interface(&interface).is_empty()
             && inhabits(&arg.value(), &harness.arg);
         well_formed.then(|| {

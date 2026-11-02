@@ -222,7 +222,7 @@ fn properties_and_invariants_read_node_slots_by_name() {
 fn quantifiers_and_since_connect_events() {
     // Every append answers an ask that was answered with a yes since the last append.
     let source = format!(
-        "{APPROVED_NOTE}\nproperty fresh_yes:\n  called(notes.append) implies prev((not called(notes.append)) since returned(approve.ask, value != \"deny\"))\n\nproperty every_result_answers_a_call:\n  (event.kind == \"in\" and event.input.kind == \"ret\") implies exists k in event.call: k == event.input.call\n"
+        "{APPROVED_NOTE}\nproperty fresh_yes:\n  called(notes.append) implies prev((not called(notes.append)) since returned(approve.ask, value != \"deny\"))\n\nproperty every_result_answers_a_call:\n  (event.kind == \"in\" and event.input.kind == \"ret\") implies exists k in event.action.call: k == event.input.call\n"
     );
     let out = elaborated(&source);
     let none = json!({ "allow": [], "once": [] });

@@ -38,7 +38,8 @@ fn harnesses_are_checked() {
     let mut bad = double_harness();
     bad["init"] = json!({ "calls": "none" });
     bad["step"] = op("add", vec![var("state"), lit(json!(1))]);
-    let problems = call(json!({ "op": "checkHarness", "harness": bad }))["problems"].clone();
+    let problems =
+        call(json!({ "op": "checkHarness", "harness": bad, "interface": {} }))["problems"].clone();
     let kinds: Vec<&str> = problems
         .as_array()
         .unwrap()
@@ -49,7 +50,9 @@ fn harnesses_are_checked() {
 
     let mut unbound = double_harness();
     unbound["step"] = var("nowhere");
-    let problems = call(json!({ "op": "checkHarness", "harness": unbound }))["problems"].clone();
+    let problems =
+        call(json!({ "op": "checkHarness", "harness": unbound, "interface": {} }))["problems"]
+            .clone();
     assert_eq!(
         problems[0]["problem"],
         json!({ "kind": "unknownVariable", "at": "", "name": "nowhere" })
@@ -58,7 +61,9 @@ fn harnesses_are_checked() {
     assert_eq!(refused["kind"], "refused");
 
     let problems =
-        call(json!({ "op": "checkHarness", "harness": double_harness() }))["problems"].clone();
+        call(json!({ "op": "checkHarness", "harness": double_harness(), "interface": doubling() }))
+            ["problems"]
+            .clone();
     assert_eq!(problems, json!([]));
 }
 

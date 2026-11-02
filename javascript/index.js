@@ -48,7 +48,7 @@ export async function instantiate(source) {
       call({ op: "infer", expr, vars: vars ?? {}, ...(expected ? { expected } : {}) }),
     evaluate: (expr, vars) => call({ op: "evaluate", expr, vars: vars ?? {} }),
     checkHarness: (harness, iface) =>
-      call({ op: "checkHarness", harness, interface: iface ?? null }).problems,
+      call({ op: "checkHarness", harness, interface: iface }).problems,
     inputType: (harness, iface) => call({ op: "inputType", harness, interface: iface }).type,
     checkInterface: (iface) => call({ op: "checkInterface", interface: iface }).problems,
     install: (capabilities) => call({ op: "install", capabilities }),
@@ -56,7 +56,10 @@ export async function instantiate(source) {
     init: ({ harness, interface: iface, grant }) =>
       call({ op: "init", harness, interface: iface ?? {}, grant: grant ?? null }),
     deliver: (system, delivery) => call({ op: "deliver", system, delivery }),
-    checkProperty: (property) => call({ op: "checkProperty", property }).problems,
+    view: (events) => call({ op: "view", events }).events,
+    eventType: (harness, iface) => call({ op: "eventType", harness, interface: iface }).type,
+    checkProperty: (property, harness, iface) =>
+      call({ op: "checkProperty", property, harness, interface: iface }).problems,
     monitor: (property, trace) => call({ op: "monitor", property, trace }),
     monitorStart: (property) => call({ op: "monitorStart", property }),
     monitorStep: (property, state, events) =>

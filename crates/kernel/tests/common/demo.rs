@@ -106,7 +106,6 @@ fn performed_call() -> Value {
     all(vec![
         eq(ev(&["kind"]), lit(json!("out"))),
         eq(ev(&["action", "kind"]), lit(json!("call"))),
-        ev(&["performed"]),
     ])
 }
 
@@ -150,10 +149,24 @@ pub fn results_answer_calls() -> Value {
         eq(ev(&["kind"]), lit(json!("in"))),
         eq(ev(&["input", "kind"]), lit(json!("ret"))),
     ]));
-    json!({ "name": "resultsAnswerCalls", "always": implies(is_ret, exists("k", ev(&["call"]), and(vec![
+    json!({ "name": "resultsAnswerCalls", "always": implies(is_ret, exists("k", ev(&["action", "call"]), and(vec![
         atom(eq(ev(&["input", "call"]), var("k"))),
-        once(atom(all(vec![performed_call(), eq(ev(&["call"]), var("k"))]))),
+        once(atom(all(vec![performed_call(), eq(ev(&["action", "call"]), var("k"))]))),
     ])))})
+}
+
+/// `stopMeansStop` with `effect` misspelled: without its type, the property would hold of every run.
+pub fn misspelled() -> Value {
+    json!({ "name": "misspelled", "always": implies(
+        atom(all(vec![performed_call(), ev(&["efect"])])),
+        not(since(not(user_says_other_than_stop()), user_says("stop"))),
+    )})
+}
+
+/// A send's body used as a number.
+pub fn mistyped() -> Value {
+    let length = op("add", vec![ev(&["action", "args", "body"]), lit(json!(1))]);
+    json!({ "name": "mistyped", "always": atom(op("gt", vec![length, lit(json!(0))])) })
 }
 
 /// Performs the action each message on `act` names, whatever it is. Ignores everything else.

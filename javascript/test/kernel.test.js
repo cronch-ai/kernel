@@ -71,6 +71,18 @@ test("runs a harness, checking preconditions at the point of the call", () => {
   assert.equal(outside.events[2].input.kind, "refused");
 });
 
+test("properties read events as views, typed by the harness and interface", () => {
+  const ready = kernel.init({ harness: writer, interface: files });
+  const outside = kernel.deliver(ready.system, { input: { kind: "start", value: "/etc/passwd" } });
+  const [, refused] = kernel.view(outside.events);
+  assert.equal(refused.kind, "refused");
+  assert.equal(refused.action.call, 0);
+  assert.equal(kernel.eventType(writer, files).Record.action.Record.call, "Int");
+  const misspelled = { name: "m", always: { f: "atom", holds: get(v("event"), "efect") } };
+  const [problem] = kernel.checkProperty(misspelled, writer, files);
+  assert.equal(problem.problem.kind, "noSuchField");
+});
+
 test("proves and re-checks evidence", () => {
   const performedOutside = {
     e: "op",
@@ -79,19 +91,12 @@ test("proves and re-checks evidence", () => {
       eq(get(v("event"), "kind"), lit("out")),
       {
         e: "op",
-        op: "and",
+        op: "not",
         args: [
-          get(v("event"), "performed"),
           {
             e: "op",
-            op: "not",
-            args: [
-              {
-                e: "op",
-                op: "prefix",
-                args: [lit("/workspace/"), get(get(get(v("event"), "action"), "args"), "path")],
-              },
-            ],
+            op: "prefix",
+            args: [lit("/workspace/"), get(get(get(v("event"), "action"), "args"), "path")],
           },
         ],
       },
@@ -115,7 +120,7 @@ test("proves and re-checks evidence", () => {
 
 test("monitors a run step by step as it would the whole trace", () => {
   const property = {
-    name: "staysInWorkspace",
+    name: "neverTriesOutside",
     always: {
       f: "not",
       of: {
@@ -124,7 +129,7 @@ test("monitors a run step by step as it would the whole trace", () => {
           e: "op",
           op: "and",
           args: [
-            eq(get(v("event"), "kind"), lit("out")),
+            eq(get(v("event"), "kind"), lit("refused")),
             {
               e: "op",
               op: "not",
@@ -147,6 +152,7 @@ test("monitors a run step by step as it would the whole trace", () => {
   const outside = kernel.deliver(system, { input: { kind: "start", value: "/etc/passwd" } });
   const stepped = kernel.monitorStep(property, started.state, outside.events);
   assert.equal(stepped.kind, "stepped");
+  assert.equal(stepped.verdict, "violated");
   assert.deepEqual(
     { verdict: stepped.verdict, at: stepped.at },
     kernel.monitor(property, outside.events),
