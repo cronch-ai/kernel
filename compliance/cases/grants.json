@@ -3951,6 +3951,7 @@
               "children": [
                 {
                   "call": 1,
+                  "op": "spawn",
                   "run": {
                     "grant": {
                       "allow": [],
@@ -4767,6 +4768,7 @@
             "children": [
               {
                 "call": 1,
+                "op": "spawn",
                 "run": {
                   "grant": {
                     "allow": [],

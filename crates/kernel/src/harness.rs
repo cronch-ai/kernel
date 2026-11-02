@@ -11,7 +11,7 @@
 use crate::check::{Problem, check, infer};
 use crate::ir::{Expr, Type};
 use crate::labeled::Label;
-use crate::types::inhabits;
+use crate::types::{conforms, inhabits};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::BTreeMap;
@@ -20,12 +20,47 @@ use std::collections::BTreeMap;
 pub struct Harness {
     /// `A`: the type of the value a run is started with.
     pub arg: Type,
+    /// `R`: the type of the value a run halts with. A halt with a value outside it is a step failure. Absent: `Any`.
+    #[serde(default = "any", skip_serializing_if = "is_any")]
+    pub result: Type,
+    /// The children it may spawn, by name. A spawn that names one gets a child whose term has that signature, and
+    /// its result arrives as `ret` on the operation `spawn.<name>`, at the signature's result type.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub spawns: BTreeMap<String, Signature>,
     /// `S`: the type of the state.
     pub state: Type,
     /// `s₀`.
     pub init: Value,
     /// `δ : S × Inp → S × List(Act)`, over the variables `state` and `input`, giving `{state, actions}`.
     pub step: Expr,
+}
+
+/// What a child declared in `spawns` takes and gives.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct Signature {
+    pub arg: Type,
+    pub result: Type,
+}
+
+impl Signature {
+    /// Whether a child harness has this signature: it accepts every argument the signature does, and gives only
+    /// results the signature does.
+    pub fn admits(&self, child: &Harness) -> bool {
+        conforms(&self.arg, &child.arg) && conforms(&child.result, &self.result)
+    }
+}
+
+/// The operation a declared child's results arrive on.
+pub fn spawn_op(name: &str) -> String {
+    format!("spawn.{name}")
+}
+
+fn any() -> Type {
+    Type::Any
+}
+
+fn is_any(ty: &Type) -> bool {
+    *ty == Type::Any
 }
 
 /// Whether a call delivers one result, or any number of items and then an end.
@@ -250,6 +285,8 @@ pub enum HarnessProblem {
     Init { expected: Type, got: Value },
     /// `δ` doesn't give `{state: S, actions: List}`.
     Step { expected: Type, got: Type },
+    /// A declared child whose results would arrive on an operation the interface already has.
+    SpawnClash { name: String },
     /// A contract's expression has the wrong type: a condition that isn't `Bool`, a label that isn't a list of sources.
     Part {
         place: Place,
@@ -368,8 +405,9 @@ pub fn step_type(state: &Type) -> Type {
 }
 
 /// The type of what `δ` receives against this interface: a variant over input kinds. A result's case is itself a
-/// variant over the operation it answers (`op`), so matching on it gives the operation's output type; a spawned
-/// child's result is `Any`, since the child's harness is chosen at run time. A message's case is a variant over
+/// variant over the operation it answers (`op`), so matching on it gives the operation's output type. A declared
+/// child's result arrives on `spawn.<name>` at its signature's result type; an undeclared one's on `spawn`, as `Any`,
+/// since its harness is chosen at run time. A message's case is a variant over
 /// channels, each with its type.
 pub fn input_type(harness: &Harness, interface: &Interface) -> Type {
     let record = |fields: Vec<(&str, Type)>| {
@@ -396,6 +434,13 @@ pub fn input_type(harness: &Harness, interface: &Interface) -> Type {
         "spawn".to_string(),
         record(vec![("call", Type::Int), ("value", Type::Any)]),
     );
+    for (name, signature) in &harness.spawns {
+        let case = record(vec![
+            ("call", Type::Int),
+            ("value", signature.result.clone()),
+        ]);
+        results.insert(spawn_op(name), case);
+    }
     let ends: BTreeMap<String, Type> = interface
         .operations
         .iter()
@@ -437,6 +482,13 @@ pub fn check_harness(harness: &Harness, interface: Option<&Interface>) -> Vec<Ha
             expected: harness.state.clone(),
             got: harness.init.clone(),
         });
+    }
+    if let Some(i) = interface {
+        for name in harness.spawns.keys() {
+            if i.operations.contains_key(&spawn_op(name)) {
+                problems.push(HarnessProblem::SpawnClash { name: name.clone() });
+            }
+        }
     }
     let input = interface.map_or(Type::Any, |i| input_type(harness, i));
     let scope = vec![

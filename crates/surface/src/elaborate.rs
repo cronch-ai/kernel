@@ -27,7 +27,8 @@ use crate::syntax::{self, Binary, ExprKind, File, Pattern, TypeExpr, Unary};
 use crate::{Problem, What};
 use kernel::check::infer;
 use kernel::harness::{
-    Harness, Installation, Interface, Mode, Narrowing, check_harness, install, narrow,
+    Harness, Installation, Interface, Mode, Narrowing, Signature, check_harness, install, narrow,
+    spawn_op,
 };
 use kernel::ir::{Case, Expr as K, Type};
 use kernel::property::Property;
@@ -1155,6 +1156,7 @@ struct Lowered {
 
 struct Plan {
     arg: Type,
+    result: Type,
     param: String,
     order: Vec<usize>,
     needs: Vec<Needs>,
@@ -1277,8 +1279,10 @@ impl Cx<'_> {
                     .child
                     .clone()
                     .unwrap_or_else(|| unreachable!("a spawn node always has its child"));
+                let name = c.target.strip_prefix("spawn.").unwrap_or_default();
                 let action = rec(vec![
                     ("kind", lit(json!("spawn"))),
+                    ("name", lit(json!(name))),
                     ("harness", lit(json!(child))),
                     ("narrow", lit(json!(narrowings))),
                     ("arg", lowered.args[&n].clone()),
@@ -1739,8 +1743,24 @@ impl Cx<'_> {
             .iter()
             .map(|(&i, c)| (self.node_name(i).to_string(), initial_slot(c)))
             .collect();
+        // Each child the harness spawns, by the name its header binds it to.
+        let spawns = self
+            .calls
+            .values()
+            .filter_map(|c| {
+                let (child, _) = c.child.as_ref()?;
+                let name = c.target.strip_prefix("spawn.")?.to_string();
+                let signature = Signature {
+                    arg: child.arg.clone(),
+                    result: child.result.clone(),
+                };
+                Some((name, signature))
+            })
+            .collect();
         Harness {
             arg: plan.arg.clone(),
+            result: plan.result.clone(),
+            spawns,
             state,
             init: json!({ "arg": default_value(&plan.arg), "next": 0, "nodes": waiting }),
             step: step_fn,
@@ -1921,9 +1941,10 @@ pub fn elaborate(
                 }
                 Call {
                     kind: Slotted::Spawn,
-                    target: "spawn".to_string(),
+                    // A declared child: its results arrive on its own operation, at its result type.
+                    target: spawn_op(&harness.text),
                     input: child.arg.clone(),
-                    value: Type::Any,
+                    value: child.result.clone(),
                     binder: None,
                     child: Some((child, narrowings)),
                     until: None,
@@ -2086,7 +2107,7 @@ pub fn elaborate(
     let every_read: Vec<&(usize, Read)> =
         node_reads.iter().flatten().chain(&return_reads).collect();
     // A receive can't fail, but a cancelled call does.
-    let unhandled = cx
+    let unhandled: BTreeSet<usize> = cx
         .calls
         .iter()
         .filter(|(_, c)| c.kind != Slotted::Receive)
@@ -2101,6 +2122,17 @@ pub fn elaborate(
                 })
         })
         .collect();
+
+    // Without `otherwise`, an unhandled failure halts with `{"failed": node}`, which the result type must admit.
+    let failed = Type::Record(BTreeMap::from([("failed".to_string(), Type::String)]));
+    if file.otherwise.is_empty()
+        && !conforms(&failed, &result)
+        && let Some(&n) = unhandled.iter().next()
+    {
+        let node = cx.node_name(n).to_string();
+        let at = file.returns.first().map_or(file.name.span, |r| r.span);
+        cx.report(at, What::NeedsOtherwise { node });
+    }
 
     // Lowering and typing.
     let nodes_type = Type::Record(
@@ -2213,6 +2245,7 @@ pub fn elaborate(
 
     let plan = Plan {
         arg,
+        result: result.clone(),
         param: file.param.text.clone(),
         order,
         needs,

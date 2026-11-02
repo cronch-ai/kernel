@@ -86,6 +86,7 @@ harness doubler(n: Int) -> Int
 uses m = \"math\"
 a = m.double(n: n)
 return a
+otherwise return -1
 ";
             let parent = "\
 harness parent(xs: List[Int]) -> Any

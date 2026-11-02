@@ -12297,7 +12297,7 @@
           }
         },
         "op": "elaborate",
-        "source": "harness doubler(n: Int) -> Int\nuses m = \"math\"\na = m.double(n: n)\nreturn a\n"
+        "source": "harness doubler(n: Int) -> Int\nuses m = \"math\"\na = m.double(n: n)\nreturn a\notherwise return -1\n"
       },
       "response": {
         "ok": true,
@@ -12316,6 +12316,7 @@
                 }
               }
             },
+            "result": "Int",
             "state": {
               "Record": {
                 "arg": "Int",
@@ -13387,10 +13388,26 @@
                                   "v": "halt"
                                 },
                                 "value": {
-                                  "e": "lit",
-                                  "v": {
-                                    "failed": "a"
-                                  }
+                                  "be": {
+                                    "e": "get",
+                                    "field": "arg",
+                                    "of": {
+                                      "e": "var",
+                                      "name": "@state"
+                                    }
+                                  },
+                                  "e": "let",
+                                  "in": {
+                                    "args": [
+                                      {
+                                        "e": "lit",
+                                        "v": 1
+                                      }
+                                    ],
+                                    "e": "op",
+                                    "op": "neg"
+                                  },
+                                  "name": "n"
                                 }
                               }
                             }
@@ -13472,6 +13489,7 @@
                 }
               }
             },
+            "result": "Int",
             "state": {
               "Record": {
                 "arg": "Int",
@@ -14543,10 +14561,26 @@
                                   "v": "halt"
                                 },
                                 "value": {
-                                  "e": "lit",
-                                  "v": {
-                                    "failed": "a"
-                                  }
+                                  "be": {
+                                    "e": "get",
+                                    "field": "arg",
+                                    "of": {
+                                      "e": "var",
+                                      "name": "@state"
+                                    }
+                                  },
+                                  "e": "let",
+                                  "in": {
+                                    "args": [
+                                      {
+                                        "e": "lit",
+                                        "v": 1
+                                      }
+                                    ],
+                                    "e": "op",
+                                    "op": "neg"
+                                  },
+                                  "name": "n"
                                 }
                               }
                             }
@@ -14587,7 +14621,7 @@
                   "call": 0,
                   "error": "",
                   "kind": "waiting",
-                  "value": null
+                  "value": 0
                 },
                 "doubled": {
                   "call": 0,
@@ -14596,6 +14630,12 @@
                   "kind": "waiting",
                   "value": []
                 }
+              }
+            },
+            "spawns": {
+              "doubler": {
+                "arg": "Int",
+                "result": "Int"
               }
             },
             "state": {
@@ -14611,7 +14651,7 @@
                         "call": "Int",
                         "error": "String",
                         "kind": "String",
-                        "value": "Any"
+                        "value": "Int"
                       }
                     },
                     "doubled": {
@@ -15788,7 +15828,7 @@
                             "name": "@r"
                           }
                         },
-                        "spawn": {
+                        "spawn.doubler": {
                           "bind": "@in",
                           "body": {
                             "be": {
@@ -17361,6 +17401,7 @@
                                                               }
                                                             }
                                                           },
+                                                          "result": "Int",
                                                           "state": {
                                                             "Record": {
                                                               "arg": "Int",
@@ -18437,10 +18478,26 @@
                                                                                 "v": "halt"
                                                                               },
                                                                               "value": {
-                                                                                "e": "lit",
-                                                                                "v": {
-                                                                                  "failed": "a"
-                                                                                }
+                                                                                "be": {
+                                                                                  "e": "get",
+                                                                                  "field": "arg",
+                                                                                  "of": {
+                                                                                    "e": "var",
+                                                                                    "name": "@state"
+                                                                                  }
+                                                                                },
+                                                                                "e": "let",
+                                                                                "in": {
+                                                                                  "args": [
+                                                                                    {
+                                                                                      "e": "lit",
+                                                                                      "v": 1
+                                                                                    }
+                                                                                  ],
+                                                                                  "e": "op",
+                                                                                  "op": "neg"
+                                                                                },
+                                                                                "name": "n"
                                                                               }
                                                                             }
                                                                           }
@@ -18466,6 +18523,10 @@
                                                       "kind": {
                                                         "e": "lit",
                                                         "v": "spawn"
+                                                      },
+                                                      "name": {
+                                                        "e": "lit",
+                                                        "v": "doubler"
                                                       },
                                                       "narrow": {
                                                         "e": "lit",
