@@ -8,10 +8,10 @@
 //! An interface is what a harness can do and be reached by: operations it may call and channels the world may send on.
 //! None are built in: every one comes from an installed capability.
 
-use crate::check::{Problem, infer};
+use crate::check::{Problem, check, infer};
 use crate::ir::{Expr, Type};
 use crate::labeled::Label;
-use crate::types::{conforms, inhabits};
+use crate::types::inhabits;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::BTreeMap;
@@ -272,18 +272,27 @@ fn check_part(
     problems: &mut Vec<HarnessProblem>,
 ) {
     let Some(expr) = expr else { return };
-    let (ty, found) = infer(expr, scope(vars));
-    problems.extend(found.into_iter().map(|problem| HarnessProblem::Expr {
-        place: place.clone(),
-        problem,
-    }));
-    if let (Some(got), Some(expected)) = (ty, expected)
-        && !conforms(&got, &expected)
-    {
-        problems.push(HarnessProblem::Part {
-            place,
-            expected,
-            got,
+    let Some(expected) = expected else {
+        let (_, found) = infer(expr, scope(vars));
+        problems.extend(found.into_iter().map(|problem| HarnessProblem::Expr {
+            place: place.clone(),
+            problem,
+        }));
+        return;
+    };
+    let (_, found) = check(expr, &expected, scope(vars));
+    for problem in found {
+        problems.push(match problem {
+            // The part as a whole has the wrong type.
+            Problem::Mismatch { at, expected, got } if at.is_empty() => HarnessProblem::Part {
+                place: place.clone(),
+                expected,
+                got,
+            },
+            problem => HarnessProblem::Expr {
+                place: place.clone(),
+                problem,
+            },
         });
     }
 }
@@ -434,16 +443,19 @@ pub fn check_harness(harness: &Harness, interface: Option<&Interface>) -> Vec<Ha
         ("state".to_string(), harness.state.clone()),
         ("input".to_string(), input),
     ];
-    let (ty, found) = infer(&harness.step, scope);
-    problems.extend(found.into_iter().map(|problem| HarnessProblem::Expr {
-        place: Place::Step,
-        problem,
-    }));
-    let expected = step_type(&harness.state);
-    if let Some(got) = ty
-        && !conforms(&got, &expected)
-    {
-        problems.push(HarnessProblem::Step { expected, got });
+    // The step is checked against its type, so the state it builds can hold variants.
+    let (_, found) = check(&harness.step, &step_type(&harness.state), scope);
+    for problem in found {
+        problems.push(match problem {
+            // The step as a whole has the wrong type.
+            Problem::Mismatch { at, expected, got } if at.is_empty() => {
+                HarnessProblem::Step { expected, got }
+            }
+            problem => HarnessProblem::Expr {
+                place: Place::Step,
+                problem,
+            },
+        });
     }
     problems
 }

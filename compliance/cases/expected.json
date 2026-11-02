@@ -1,0 +1,425 @@
+{
+  "description": "Checking against an expected type: a record literal naming a case is that variant, in a state too.",
+  "exchanges": [
+    {
+      "request": {
+        "expected": {
+          "Variant": {
+            "cases": {
+              "ok": {
+                "Record": {
+                  "value": "Int"
+                }
+              },
+              "waiting": {
+                "Record": {}
+              }
+            },
+            "tag": "kind"
+          }
+        },
+        "expr": {
+          "e": "record",
+          "fields": {
+            "kind": {
+              "e": "lit",
+              "v": "ok"
+            },
+            "value": {
+              "e": "var",
+              "name": "n"
+            }
+          }
+        },
+        "op": "infer",
+        "vars": {
+          "n": "Int"
+        }
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "problems": [],
+          "type": {
+            "Variant": {
+              "cases": {
+                "ok": {
+                  "Record": {
+                    "value": "Int"
+                  }
+                },
+                "waiting": {
+                  "Record": {}
+                }
+              },
+              "tag": "kind"
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "expected": {
+          "Variant": {
+            "cases": {
+              "ok": {
+                "Record": {
+                  "value": "Int"
+                }
+              },
+              "waiting": {
+                "Record": {}
+              }
+            },
+            "tag": "kind"
+          }
+        },
+        "expr": {
+          "e": "record",
+          "fields": {
+            "kind": {
+              "e": "lit",
+              "v": "ok"
+            },
+            "value": {
+              "e": "var",
+              "name": "n"
+            }
+          }
+        },
+        "op": "infer",
+        "vars": {
+          "n": "String"
+        }
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "problems": [
+            {
+              "at": "/fields/value",
+              "expected": "Int",
+              "got": "String",
+              "kind": "mismatch"
+            }
+          ],
+          "type": null
+        }
+      }
+    },
+    {
+      "request": {
+        "expected": {
+          "List": {
+            "Variant": {
+              "cases": {
+                "ok": {
+                  "Record": {
+                    "value": "Int"
+                  }
+                },
+                "waiting": {
+                  "Record": {}
+                }
+              },
+              "tag": "kind"
+            }
+          }
+        },
+        "expr": {
+          "e": "list",
+          "items": []
+        },
+        "op": "infer"
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "problems": [],
+          "type": {
+            "List": {
+              "Variant": {
+                "cases": {
+                  "ok": {
+                    "Record": {
+                      "value": "Int"
+                    }
+                  },
+                  "waiting": {
+                    "Record": {}
+                  }
+                },
+                "tag": "kind"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "harness": {
+          "arg": "Int",
+          "init": {
+            "slot": {
+              "kind": "waiting"
+            }
+          },
+          "state": {
+            "Record": {
+              "slot": {
+                "Variant": {
+                  "cases": {
+                    "ok": {
+                      "Record": {
+                        "value": "Int"
+                      }
+                    },
+                    "waiting": {
+                      "Record": {}
+                    }
+                  },
+                  "tag": "kind"
+                }
+              }
+            }
+          },
+          "step": {
+            "be": {
+              "e": "lit",
+              "v": 1
+            },
+            "e": "let",
+            "in": {
+              "be": {
+                "e": "record",
+                "fields": {
+                  "slot": {
+                    "e": "record",
+                    "fields": {
+                      "kind": {
+                        "e": "lit",
+                        "v": "ok"
+                      },
+                      "value": {
+                        "e": "var",
+                        "name": "n"
+                      }
+                    }
+                  }
+                }
+              },
+              "e": "let",
+              "in": {
+                "e": "record",
+                "fields": {
+                  "actions": {
+                    "e": "list",
+                    "items": []
+                  },
+                  "state": {
+                    "e": "var",
+                    "name": "next"
+                  }
+                }
+              },
+              "name": "next",
+              "type": {
+                "Record": {
+                  "slot": {
+                    "Variant": {
+                      "cases": {
+                        "ok": {
+                          "Record": {
+                            "value": "Int"
+                          }
+                        },
+                        "waiting": {
+                          "Record": {}
+                        }
+                      },
+                      "tag": "kind"
+                    }
+                  }
+                }
+              }
+            },
+            "name": "n"
+          }
+        },
+        "op": "checkHarness"
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "problems": []
+        }
+      }
+    },
+    {
+      "request": {
+        "harness": {
+          "arg": "Int",
+          "init": {
+            "slot": {
+              "kind": "waiting"
+            }
+          },
+          "state": {
+            "Record": {
+              "slot": {
+                "Variant": {
+                  "cases": {
+                    "ok": {
+                      "Record": {
+                        "value": "Int"
+                      }
+                    },
+                    "waiting": {
+                      "Record": {}
+                    }
+                  },
+                  "tag": "kind"
+                }
+              }
+            }
+          },
+          "step": {
+            "be": {
+              "e": "lit",
+              "v": 1
+            },
+            "e": "let",
+            "in": {
+              "be": {
+                "e": "record",
+                "fields": {
+                  "slot": {
+                    "e": "record",
+                    "fields": {
+                      "kind": {
+                        "e": "lit",
+                        "v": "ok"
+                      },
+                      "value": {
+                        "e": "var",
+                        "name": "n"
+                      }
+                    }
+                  }
+                }
+              },
+              "e": "let",
+              "in": {
+                "e": "record",
+                "fields": {
+                  "actions": {
+                    "e": "list",
+                    "items": []
+                  },
+                  "state": {
+                    "e": "var",
+                    "name": "next"
+                  }
+                }
+              },
+              "name": "next",
+              "type": {
+                "Record": {
+                  "slot": {
+                    "Variant": {
+                      "cases": {
+                        "ok": {
+                          "Record": {
+                            "value": "Int"
+                          }
+                        },
+                        "waiting": {
+                          "Record": {}
+                        }
+                      },
+                      "tag": "kind"
+                    }
+                  }
+                }
+              }
+            },
+            "name": "n"
+          }
+        },
+        "invariant": {
+          "args": [
+            {
+              "e": "get",
+              "field": "kind",
+              "of": {
+                "e": "get",
+                "field": "slot",
+                "of": {
+                  "e": "var",
+                  "name": "state"
+                }
+              }
+            },
+            {
+              "e": "lit",
+              "v": "ok"
+            }
+          ],
+          "e": "op",
+          "op": "eq"
+        },
+        "op": "obligation"
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "excluded": ["failed", "ret.spawn"],
+          "initiation": false,
+          "kind": "obligation",
+          "reads": [
+            {
+              "Record": {
+                "slot": {
+                  "Variant": {
+                    "cases": {
+                      "ok": {
+                        "Record": {
+                          "value": "Int"
+                        }
+                      },
+                      "waiting": {
+                        "Record": {}
+                      }
+                    },
+                    "tag": "kind"
+                  }
+                }
+              }
+            },
+            {
+              "Variant": {
+                "cases": {
+                  "refused": {
+                    "Record": {
+                      "call": "Int",
+                      "op": "String"
+                    }
+                  },
+                  "start": {
+                    "Record": {
+                      "value": "Int"
+                    }
+                  }
+                },
+                "tag": "kind"
+              }
+            }
+          ],
+          "text": "; Consecution: sat exactly where the invariant holds of a state and fails after one step.\n; A model is a counterexample to induction for the kernel to check; unsat is not a verdict.\n; Inputs left out, whose types have no sort: failed, ret.spawn.\n(set-option :produce-models true)\n(set-logic ALL)\n\n; Records and variants.\n; A variant with the cases ok, waiting.\n(declare-datatype |variant:fda1d360| ((|variant:fda1d360#ok| (|variant:fda1d360#ok.value| Int)) (|variant:fda1d360#waiting|)))\n; {slot: <kind: ok: {value: Int} | waiting: {}>}\n(declare-datatype |record:a473073e| ((|record:a473073e| (|record:a473073e.slot| |variant:fda1d360|))))\n; A variant with the cases refused, start.\n(declare-datatype |variant:c74b9b78| ((|variant:c74b9b78#refused| (|variant:c74b9b78#refused.call| Int) (|variant:c74b9b78#refused.op| String)) (|variant:c74b9b78#start| (|variant:c74b9b78#start.value| Int))))\n\n; Definitions.\n; The invariant, of a state.\n(define-fun |def:invariant| ((|v:state| |record:a473073e|)) Bool (= (ite ((_ is |variant:fda1d360#ok|) (|record:a473073e.slot| |v:state|)) \"ok\" \"waiting\") \"ok\"))\n; The state the step gives.\n(define-fun |def:next| ((|v:state| |record:a473073e|) (|v:input| |variant:c74b9b78|)) |record:a473073e| (let ((|v:n| 1)) (let ((|v:next| (|record:a473073e| (|variant:fda1d360#ok| |v:n|)))) |v:next|)))\n\n; A counterexample to induction.\n(declare-const |q:state| |record:a473073e|)\n(declare-const |q:input| |variant:c74b9b78|)\n(assert (|def:invariant| |q:state|))\n(assert (not (|def:invariant| (|def:next| |q:state| |q:input|))))\n(check-sat)\n(get-value (|q:state| |q:input|))\n"
+        }
+      }
+    }
+  ]
+}

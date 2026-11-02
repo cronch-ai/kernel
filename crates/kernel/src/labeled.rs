@@ -254,7 +254,8 @@ impl Evaluator {
                 let sources = of.label().into_iter().map(Value::String).collect();
                 Ok(LValue::new(&Value::Array(sources), pc))
             }
-            Expr::Let { name, be, body } => {
+            // Annotations are for checking; evaluation never needs them.
+            Expr::Let { name, be, body, .. } => {
                 let bound = self.eval(be, &child(at, "be"), pc)?;
                 self.bind(vec![(name.clone(), bound)], |e| {
                     e.eval(body, &child(at, "in"), pc)
@@ -350,6 +351,7 @@ impl Evaluator {
                 acc,
                 item,
                 body,
+                ..
             } => {
                 let over_at = child(at, "over");
                 let (outer, items) = match self.eval(over, &over_at, pc)? {

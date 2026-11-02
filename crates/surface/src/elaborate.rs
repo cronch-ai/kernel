@@ -202,6 +202,7 @@ pub(crate) fn op(name: &str, args: Vec<K>) -> K {
 
 pub(crate) fn let_(name: &str, be: K, body: K) -> K {
     K::Let {
+        ty: None,
         name: name.to_string(),
         be: Box::new(be),
         body: Box::new(body),
@@ -331,6 +332,7 @@ fn replaced(items: K, index: K, value: K) -> K {
         acc: "@b".to_string(),
         item: "@y".to_string(),
         body: Box::new(body),
+        ty: None,
     };
     get(fold, "out")
 }
@@ -343,6 +345,7 @@ fn fold_into(over: K, init: K, item: &str, body: K) -> K {
         acc: "@a".to_string(),
         item: item.to_string(),
         body: Box::new(body),
+        ty: None,
     }
 }
 
@@ -911,6 +914,7 @@ impl<'a> Cx<'a> {
                     acc: acc.text.clone(),
                     item: item.text.clone(),
                     body: Box::new(body),
+                    ty: None,
                 }
             }
         }

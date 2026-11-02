@@ -166,3 +166,88 @@ fn variants_and_matches_export_to_smtlib_and_read_back() {
         call(json!({ "op": "evaluate", "expr": area, "vars": { "s": { "kind": "hexagon" } } }));
     assert_eq!(none["error"]["kind"], "noCase");
 }
+
+fn slot() -> Value {
+    json!({ "Variant": { "tag": "kind", "cases": {
+        "waiting": { "Record": {} },
+        "ok": { "Record": { "value": "Int" } },
+    }}})
+}
+
+/// A state with a variant in it, set from record literals: start, count, and keep the count in the slot.
+fn slotted() -> Value {
+    let state_type = json!({ "Record": { "slot": slot() } });
+    let counted = json!({
+        "e": "let", "name": "next", "type": state_type,
+        "be": rec(vec![("slot", rec(vec![("kind", lit(json!("ok"))), ("value", path("c", &["value"]))]))]),
+        "in": step(var("next"), vec![halt(path("c", &["value"]))]),
+    });
+    let ret = match_(
+        var("r"),
+        "op",
+        vec![("count", "c", counted)],
+        Some(step(var("state"), vec![])),
+    );
+    json!({
+        "arg": { "Record": {} },
+        "state": state_type,
+        "init": { "slot": { "kind": "waiting" } },
+        "step": match_(
+            var("input"),
+            "kind",
+            vec![
+                ("start", "s", step(rec(vec![("slot", rec(vec![("kind", lit(json!("waiting")))]))]), vec![call_action("count", rec(vec![]))])),
+                ("ret", "r", ret),
+            ],
+            Some(step(var("state"), vec![])),
+        ),
+    })
+}
+
+#[test]
+fn a_step_can_build_its_state_at_a_variant_type() {
+    assert_eq!(check(slotted()), json!([]));
+    let ready = call(json!({ "op": "init", "harness": slotted(), "interface": interface() }));
+    let (system, events) = deliver_all(
+        ready["system"].clone(),
+        vec![start(json!({})), ret(0, json!(7))],
+    );
+    assert_eq!(system["root"]["outcome"]["value"], json!(7));
+    let last = events.last().unwrap();
+    assert_eq!(
+        last["state"],
+        json!({ "slot": { "kind": "ok", "value": 7 } })
+    );
+
+    // A field of the case at the wrong type is caught where it is.
+    let mut wrong = slotted();
+    wrong["step"]["cases"]["start"]["body"]["fields"]["state"]["fields"]["slot"]["fields"]["kind"] =
+        lit(json!("ok"));
+    let problems = check(wrong);
+    assert_eq!(problems[0]["problem"]["kind"], "mismatch", "{problems}");
+
+    // The state has a sort, so an invariant over it gets an obligation, with the case's constructor in it.
+    let invariant = match_(
+        path("state", &["slot"]),
+        "kind",
+        vec![
+            (
+                "ok",
+                "o",
+                op("ge", vec![path("o", &["value"]), lit(json!(0))]),
+            ),
+            ("waiting", "w", lit(json!(true))),
+        ],
+        None,
+    );
+    let out = call(
+        json!({ "op": "obligation", "harness": slotted(), "interface": interface(), "invariant": invariant }),
+    );
+    assert_eq!(out["kind"], "obligation", "{out}");
+    assert_eq!(out["initiation"], json!(true));
+    assert!(
+        out["text"].as_str().unwrap().contains("#ok"),
+        "{}",
+        out["text"]
+    );
+}

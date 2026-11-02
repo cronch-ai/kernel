@@ -24,7 +24,14 @@ export type Expr =
   | { readonly e: "lit"; readonly v: Value }
   | { readonly e: "var"; readonly name: string }
   | { readonly e: "op"; readonly op: string; readonly args: readonly Expr[] }
-  | { readonly e: "let"; readonly name: string; readonly be: Expr; readonly in: Expr }
+  | {
+      readonly e: "let";
+      readonly name: string;
+      readonly be: Expr;
+      readonly in: Expr;
+      /** Checked against, and the type `name` has. */
+      readonly type?: Type;
+    }
   | { readonly e: "if"; readonly cond: Expr; readonly then: Expr; readonly else: Expr }
   | { readonly e: "record"; readonly fields: Readonly<Record<string, Expr>> }
   | { readonly e: "list"; readonly items: readonly Expr[] }
@@ -46,6 +53,8 @@ export type Expr =
       readonly acc: string;
       readonly item: string;
       readonly body: Expr;
+      /** The accumulator's type, which `init` and `body` are checked against. */
+      readonly type?: Type;
     };
 
 /** A `/`-separated path into an expression; `""` is the root. */
@@ -513,6 +522,8 @@ export interface Definition {
   readonly name: string;
   readonly params?: readonly Param[];
   readonly body: Expr;
+  /** The type `body` is checked and encoded at. Absent, it is the type the body has. */
+  readonly result?: Type;
   readonly description?: string;
 }
 
@@ -557,9 +568,11 @@ type Refusable<K extends string, T> =
   | { readonly kind: "refused"; readonly error: unknown };
 
 export interface Kernel {
+  /** With `expected`, the expression is checked against it: a record literal naming a case is that variant. */
   infer(
     expr: Expr,
     vars?: Readonly<Record<string, Type>>,
+    expected?: Type,
   ): { readonly type: Type | null; readonly problems: readonly Problem[] };
   evaluate(
     expr: Expr,

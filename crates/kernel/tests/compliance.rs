@@ -77,6 +77,34 @@ fn cases() -> Vec<Case> {
             },
         ),
         (
+            "expected",
+            "Checking against an expected type: a record literal naming a case is that variant, in a state too.",
+            |r| {
+                let slot = json!({ "Variant": { "tag": "kind", "cases": {
+                    "waiting": { "Record": {} },
+                    "ok": { "Record": { "value": "Int" } },
+                }}});
+                let ok = rec(vec![("kind", lit(json!("ok"))), ("value", var("n"))]);
+                r.call(
+                    json!({ "op": "infer", "expr": ok, "vars": { "n": "Int" }, "expected": slot }),
+                );
+                r.call(json!({ "op": "infer", "expr": ok, "vars": { "n": "String" }, "expected": slot }));
+                r.call(
+                    json!({ "op": "infer", "expr": list(vec![]), "expected": { "List": slot } }),
+                );
+                let state = json!({ "Record": { "slot": slot } });
+                let set = json!({ "e": "let", "name": "next", "type": state,
+                    "be": rec(vec![("slot", ok)]), "in": step(var("next"), vec![]) });
+                let harness = json!({
+                    "arg": "Int", "state": state, "init": { "slot": { "kind": "waiting" } },
+                    "step": let_("n", lit(json!(1)), set),
+                });
+                r.call(json!({ "op": "checkHarness", "harness": harness }));
+                let invariant = eq(path("state", &["slot", "kind"]), lit(json!("ok")));
+                r.call(json!({ "op": "obligation", "harness": harness, "invariant": invariant }));
+            },
+        ),
+        (
             "run",
             "A run that fetches and sends, a refusal, and withheld inputs.",
             |r| {
