@@ -15,12 +15,15 @@ Requests and responses are shown as JSON. On the wire they are deterministic CBO
 
 The Rust kernel replays them in `crates/kernel/tests/compliance.rs`, and the WebAssembly build in `javascript/test/compliance.test.js`.
 
+`surface/` holds the vectors for `elaborate`, in the same form. They pin the elaborated term exactly, since anyone with a source and the same `@cronch/kernel` must be able to recompute it. `crates/surface/tests/compliance.rs` replays them, and the WebAssembly build replays them with the rest.
+
 ## Changing them
 
 The cases are defined in `crates/kernel/tests/compliance.rs`. After changing a definition or the kernel's behaviour, write the vectors again and format them:
 
 ```sh
 CRONCH_BLESS=1 cargo test -p kernel --test compliance
+CRONCH_BLESS=1 cargo test -p surface --test compliance
 npm run format
 ```
 

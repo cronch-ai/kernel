@@ -75,7 +75,7 @@ dependencies = [
 name = "kernel-abi"
 version = "0.0.0"
 dependencies = [
- "kernel",
+ "surface",
 ]
 
 [[package]]
@@ -160,6 +160,15 @@ dependencies = [
  "cfg-if",
  "cpufeatures",
  "digest",
+]
+
+[[package]]
+name = "surface"
+version = "0.1.0"
+dependencies = [
+ "kernel",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

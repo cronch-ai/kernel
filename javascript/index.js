@@ -74,6 +74,7 @@ export async function instantiate(source) {
       }),
     checkInduction: ({ harness, interface: iface, invariant, state, input }) =>
       call({ op: "checkInduction", harness, interface: iface ?? {}, invariant, state, input }),
+    elaborate: (source, capabilities) => call({ op: "elaborate", source, capabilities }),
     key: (kind, object) => call({ op: "objectKey", kind, object }).key,
     smtlib: (definitions, floats) => call({ op: "smtlib", definitions, floats: floats ?? "exact" }),
     readValues: (reply, types) => call({ op: "readValues", reply, types }),

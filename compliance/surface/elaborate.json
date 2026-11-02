@@ -1,0 +1,4076 @@
+{
+  "description": "The platform's approved-note harness elaborated from source, and a source with problems.",
+  "exchanges": [
+    {
+      "request": {
+        "capabilities": {
+          "approve": {
+            "operations": {
+              "ask": {
+                "input": {
+                  "Record": {
+                    "action": "String",
+                    "args": "Any"
+                  }
+                },
+                "onResult": {
+                  "cond": {
+                    "args": [
+                      {
+                        "e": "var",
+                        "name": "result"
+                      },
+                      {
+                        "e": "lit",
+                        "v": "always"
+                      }
+                    ],
+                    "e": "op",
+                    "op": "eq"
+                  },
+                  "e": "if",
+                  "else": {
+                    "cond": {
+                      "args": [
+                        {
+                          "e": "var",
+                          "name": "result"
+                        },
+                        {
+                          "e": "lit",
+                          "v": "once"
+                        }
+                      ],
+                      "e": "op",
+                      "op": "eq"
+                    },
+                    "e": "if",
+                    "else": {
+                      "e": "var",
+                      "name": "grant"
+                    },
+                    "then": {
+                      "e": "record",
+                      "fields": {
+                        "allow": {
+                          "e": "get",
+                          "field": "allow",
+                          "of": {
+                            "e": "var",
+                            "name": "grant"
+                          }
+                        },
+                        "once": {
+                          "args": [
+                            {
+                              "e": "get",
+                              "field": "once",
+                              "of": {
+                                "e": "var",
+                                "name": "grant"
+                              }
+                            },
+                            {
+                              "e": "var",
+                              "name": "args"
+                            }
+                          ],
+                          "e": "op",
+                          "op": "append"
+                        }
+                      }
+                    }
+                  },
+                  "then": {
+                    "e": "record",
+                    "fields": {
+                      "allow": {
+                        "args": [
+                          {
+                            "e": "get",
+                            "field": "allow",
+                            "of": {
+                              "e": "var",
+                              "name": "grant"
+                            }
+                          },
+                          {
+                            "e": "get",
+                            "field": "action",
+                            "of": {
+                              "e": "var",
+                              "name": "args"
+                            }
+                          }
+                        ],
+                        "e": "op",
+                        "op": "append"
+                      },
+                      "once": {
+                        "e": "get",
+                        "field": "once",
+                        "of": {
+                          "e": "var",
+                          "name": "grant"
+                        }
+                      }
+                    }
+                  }
+                },
+                "output": "String",
+                "post": {
+                  "args": [
+                    {
+                      "e": "lit",
+                      "v": ["once", "always", "deny"]
+                    },
+                    {
+                      "e": "var",
+                      "name": "result"
+                    }
+                  ],
+                  "e": "op",
+                  "op": "contains"
+                },
+                "ret": {
+                  "e": "list",
+                  "items": []
+                }
+              }
+            }
+          },
+          "model": {
+            "operations": {
+              "generate": {
+                "input": {
+                  "Record": {
+                    "messages": {
+                      "List": {
+                        "Record": {
+                          "content": "String",
+                          "role": "String"
+                        }
+                      }
+                    }
+                  }
+                },
+                "output": "String",
+                "ret": {
+                  "e": "list",
+                  "items": [
+                    {
+                      "e": "lit",
+                      "v": "model"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "notes": {
+            "operations": {
+              "append": {
+                "effect": true,
+                "footprint": {
+                  "e": "record",
+                  "fields": {
+                    "appends": {
+                      "e": "lit",
+                      "v": "notes"
+                    }
+                  }
+                },
+                "input": {
+                  "Record": {
+                    "text": "String"
+                  }
+                },
+                "onCall": {
+                  "e": "record",
+                  "fields": {
+                    "allow": {
+                      "e": "get",
+                      "field": "allow",
+                      "of": {
+                        "e": "var",
+                        "name": "grant"
+                      }
+                    },
+                    "once": {
+                      "acc": "kept",
+                      "body": {
+                        "cond": {
+                          "args": [
+                            {
+                              "e": "var",
+                              "name": "x"
+                            },
+                            {
+                              "e": "record",
+                              "fields": {
+                                "action": {
+                                  "e": "lit",
+                                  "v": "notes.append"
+                                },
+                                "args": {
+                                  "e": "var",
+                                  "name": "args"
+                                }
+                              }
+                            }
+                          ],
+                          "e": "op",
+                          "op": "eq"
+                        },
+                        "e": "if",
+                        "else": {
+                          "args": [
+                            {
+                              "e": "var",
+                              "name": "kept"
+                            },
+                            {
+                              "e": "var",
+                              "name": "x"
+                            }
+                          ],
+                          "e": "op",
+                          "op": "append"
+                        },
+                        "then": {
+                          "e": "var",
+                          "name": "kept"
+                        }
+                      },
+                      "e": "fold",
+                      "init": {
+                        "e": "list",
+                        "items": []
+                      },
+                      "item": "x",
+                      "over": {
+                        "e": "get",
+                        "field": "once",
+                        "of": {
+                          "e": "var",
+                          "name": "grant"
+                        }
+                      }
+                    }
+                  }
+                },
+                "output": "String",
+                "pre": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "e": "get",
+                          "field": "allow",
+                          "of": {
+                            "e": "var",
+                            "name": "grant"
+                          }
+                        },
+                        {
+                          "e": "lit",
+                          "v": "notes.append"
+                        }
+                      ],
+                      "e": "op",
+                      "op": "contains"
+                    },
+                    {
+                      "args": [
+                        {
+                          "e": "get",
+                          "field": "once",
+                          "of": {
+                            "e": "var",
+                            "name": "grant"
+                          }
+                        },
+                        {
+                          "e": "record",
+                          "fields": {
+                            "action": {
+                              "e": "lit",
+                              "v": "notes.append"
+                            },
+                            "args": {
+                              "e": "var",
+                              "name": "args"
+                            }
+                          }
+                        }
+                      ],
+                      "e": "op",
+                      "op": "contains"
+                    }
+                  ],
+                  "e": "op",
+                  "op": "or"
+                }
+              },
+              "read": {
+                "input": {
+                  "Record": {}
+                },
+                "output": {
+                  "List": "String"
+                },
+                "ret": {
+                  "e": "list",
+                  "items": [
+                    {
+                      "e": "lit",
+                      "v": "notes"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "op": "elaborate",
+        "source": "harness approved_note(prompt: String) -> Any\n\nuses model, approve, notes\n\ndraft    = model.generate(messages: [{role: \"user\", content: prompt}])\ndecision = approve.ask(action: \"notes.append\", args: {text: draft})\nsaved    = notes.append(text: draft) when decision != \"deny\"\n\nreturn match saved {\n  ok(note) => note\n  skipped  => \"denied\"\n}\n\notherwise return \"stopped\"\n"
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "harness": {
+            "arg": "String",
+            "init": {
+              "arg": "",
+              "next": 0,
+              "nodes": {
+                "decision": {
+                  "call": 0,
+                  "error": null,
+                  "kind": "waiting",
+                  "value": ""
+                },
+                "draft": {
+                  "call": 0,
+                  "error": null,
+                  "kind": "waiting",
+                  "value": ""
+                },
+                "saved": {
+                  "call": 0,
+                  "error": null,
+                  "kind": "waiting",
+                  "value": ""
+                }
+              }
+            },
+            "state": {
+              "Record": {
+                "arg": "String",
+                "next": "Int",
+                "nodes": {
+                  "Record": {
+                    "decision": {
+                      "Record": {
+                        "call": "Int",
+                        "error": "Any",
+                        "kind": "String",
+                        "value": "String"
+                      }
+                    },
+                    "draft": {
+                      "Record": {
+                        "call": "Int",
+                        "error": "Any",
+                        "kind": "String",
+                        "value": "String"
+                      }
+                    },
+                    "saved": {
+                      "Record": {
+                        "call": "Int",
+                        "error": "Any",
+                        "kind": "String",
+                        "value": "String"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "step": {
+              "cond": {
+                "args": [
+                  {
+                    "e": "lit",
+                    "v": ["msg", "end"]
+                  },
+                  {
+                    "e": "get",
+                    "field": "kind",
+                    "of": {
+                      "e": "var",
+                      "name": "input"
+                    }
+                  }
+                ],
+                "e": "op",
+                "op": "contains"
+              },
+              "e": "if",
+              "else": {
+                "be": {
+                  "cases": {
+                    "failed": {
+                      "bind": "@in",
+                      "body": {
+                        "cond": {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "e": "get",
+                                  "field": "kind",
+                                  "of": {
+                                    "e": "get",
+                                    "field": "draft",
+                                    "of": {
+                                      "e": "get",
+                                      "field": "nodes",
+                                      "of": {
+                                        "e": "var",
+                                        "name": "state"
+                                      }
+                                    }
+                                  }
+                                },
+                                {
+                                  "e": "lit",
+                                  "v": "running"
+                                }
+                              ],
+                              "e": "op",
+                              "op": "eq"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "e": "get",
+                                  "field": "call",
+                                  "of": {
+                                    "e": "get",
+                                    "field": "draft",
+                                    "of": {
+                                      "e": "get",
+                                      "field": "nodes",
+                                      "of": {
+                                        "e": "var",
+                                        "name": "state"
+                                      }
+                                    }
+                                  }
+                                },
+                                {
+                                  "e": "get",
+                                  "field": "call",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "@in"
+                                  }
+                                }
+                              ],
+                              "e": "op",
+                              "op": "eq"
+                            }
+                          ],
+                          "e": "op",
+                          "op": "and"
+                        },
+                        "e": "if",
+                        "else": {
+                          "cond": {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "e": "get",
+                                    "field": "kind",
+                                    "of": {
+                                      "e": "get",
+                                      "field": "decision",
+                                      "of": {
+                                        "e": "get",
+                                        "field": "nodes",
+                                        "of": {
+                                          "e": "var",
+                                          "name": "state"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  {
+                                    "e": "lit",
+                                    "v": "running"
+                                  }
+                                ],
+                                "e": "op",
+                                "op": "eq"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "e": "get",
+                                    "field": "call",
+                                    "of": {
+                                      "e": "get",
+                                      "field": "decision",
+                                      "of": {
+                                        "e": "get",
+                                        "field": "nodes",
+                                        "of": {
+                                          "e": "var",
+                                          "name": "state"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  {
+                                    "e": "get",
+                                    "field": "call",
+                                    "of": {
+                                      "e": "var",
+                                      "name": "@in"
+                                    }
+                                  }
+                                ],
+                                "e": "op",
+                                "op": "eq"
+                              }
+                            ],
+                            "e": "op",
+                            "op": "and"
+                          },
+                          "e": "if",
+                          "else": {
+                            "cond": {
+                              "args": [
+                                {
+                                  "args": [
+                                    {
+                                      "e": "get",
+                                      "field": "kind",
+                                      "of": {
+                                        "e": "get",
+                                        "field": "saved",
+                                        "of": {
+                                          "e": "get",
+                                          "field": "nodes",
+                                          "of": {
+                                            "e": "var",
+                                            "name": "state"
+                                          }
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "e": "lit",
+                                      "v": "running"
+                                    }
+                                  ],
+                                  "e": "op",
+                                  "op": "eq"
+                                },
+                                {
+                                  "args": [
+                                    {
+                                      "e": "get",
+                                      "field": "call",
+                                      "of": {
+                                        "e": "get",
+                                        "field": "saved",
+                                        "of": {
+                                          "e": "get",
+                                          "field": "nodes",
+                                          "of": {
+                                            "e": "var",
+                                            "name": "state"
+                                          }
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "e": "get",
+                                      "field": "call",
+                                      "of": {
+                                        "e": "var",
+                                        "name": "@in"
+                                      }
+                                    }
+                                  ],
+                                  "e": "op",
+                                  "op": "eq"
+                                }
+                              ],
+                              "e": "op",
+                              "op": "and"
+                            },
+                            "e": "if",
+                            "else": {
+                              "e": "var",
+                              "name": "state"
+                            },
+                            "then": {
+                              "e": "record",
+                              "fields": {
+                                "arg": {
+                                  "e": "get",
+                                  "field": "arg",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "state"
+                                  }
+                                },
+                                "next": {
+                                  "e": "get",
+                                  "field": "next",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "state"
+                                  }
+                                },
+                                "nodes": {
+                                  "e": "record",
+                                  "fields": {
+                                    "decision": {
+                                      "e": "get",
+                                      "field": "decision",
+                                      "of": {
+                                        "e": "get",
+                                        "field": "nodes",
+                                        "of": {
+                                          "e": "var",
+                                          "name": "state"
+                                        }
+                                      }
+                                    },
+                                    "draft": {
+                                      "e": "get",
+                                      "field": "draft",
+                                      "of": {
+                                        "e": "get",
+                                        "field": "nodes",
+                                        "of": {
+                                          "e": "var",
+                                          "name": "state"
+                                        }
+                                      }
+                                    },
+                                    "saved": {
+                                      "e": "record",
+                                      "fields": {
+                                        "call": {
+                                          "e": "get",
+                                          "field": "call",
+                                          "of": {
+                                            "e": "var",
+                                            "name": "@in"
+                                          }
+                                        },
+                                        "error": {
+                                          "e": "get",
+                                          "field": "error",
+                                          "of": {
+                                            "e": "var",
+                                            "name": "@in"
+                                          }
+                                        },
+                                        "kind": {
+                                          "e": "lit",
+                                          "v": "failed"
+                                        },
+                                        "value": {
+                                          "e": "get",
+                                          "field": "value",
+                                          "of": {
+                                            "e": "get",
+                                            "field": "saved",
+                                            "of": {
+                                              "e": "get",
+                                              "field": "nodes",
+                                              "of": {
+                                                "e": "var",
+                                                "name": "state"
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "then": {
+                            "e": "record",
+                            "fields": {
+                              "arg": {
+                                "e": "get",
+                                "field": "arg",
+                                "of": {
+                                  "e": "var",
+                                  "name": "state"
+                                }
+                              },
+                              "next": {
+                                "e": "get",
+                                "field": "next",
+                                "of": {
+                                  "e": "var",
+                                  "name": "state"
+                                }
+                              },
+                              "nodes": {
+                                "e": "record",
+                                "fields": {
+                                  "decision": {
+                                    "e": "record",
+                                    "fields": {
+                                      "call": {
+                                        "e": "get",
+                                        "field": "call",
+                                        "of": {
+                                          "e": "var",
+                                          "name": "@in"
+                                        }
+                                      },
+                                      "error": {
+                                        "e": "get",
+                                        "field": "error",
+                                        "of": {
+                                          "e": "var",
+                                          "name": "@in"
+                                        }
+                                      },
+                                      "kind": {
+                                        "e": "lit",
+                                        "v": "failed"
+                                      },
+                                      "value": {
+                                        "e": "get",
+                                        "field": "value",
+                                        "of": {
+                                          "e": "get",
+                                          "field": "decision",
+                                          "of": {
+                                            "e": "get",
+                                            "field": "nodes",
+                                            "of": {
+                                              "e": "var",
+                                              "name": "state"
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "draft": {
+                                    "e": "get",
+                                    "field": "draft",
+                                    "of": {
+                                      "e": "get",
+                                      "field": "nodes",
+                                      "of": {
+                                        "e": "var",
+                                        "name": "state"
+                                      }
+                                    }
+                                  },
+                                  "saved": {
+                                    "e": "get",
+                                    "field": "saved",
+                                    "of": {
+                                      "e": "get",
+                                      "field": "nodes",
+                                      "of": {
+                                        "e": "var",
+                                        "name": "state"
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "then": {
+                          "e": "record",
+                          "fields": {
+                            "arg": {
+                              "e": "get",
+                              "field": "arg",
+                              "of": {
+                                "e": "var",
+                                "name": "state"
+                              }
+                            },
+                            "next": {
+                              "e": "get",
+                              "field": "next",
+                              "of": {
+                                "e": "var",
+                                "name": "state"
+                              }
+                            },
+                            "nodes": {
+                              "e": "record",
+                              "fields": {
+                                "decision": {
+                                  "e": "get",
+                                  "field": "decision",
+                                  "of": {
+                                    "e": "get",
+                                    "field": "nodes",
+                                    "of": {
+                                      "e": "var",
+                                      "name": "state"
+                                    }
+                                  }
+                                },
+                                "draft": {
+                                  "e": "record",
+                                  "fields": {
+                                    "call": {
+                                      "e": "get",
+                                      "field": "call",
+                                      "of": {
+                                        "e": "var",
+                                        "name": "@in"
+                                      }
+                                    },
+                                    "error": {
+                                      "e": "get",
+                                      "field": "error",
+                                      "of": {
+                                        "e": "var",
+                                        "name": "@in"
+                                      }
+                                    },
+                                    "kind": {
+                                      "e": "lit",
+                                      "v": "failed"
+                                    },
+                                    "value": {
+                                      "e": "get",
+                                      "field": "value",
+                                      "of": {
+                                        "e": "get",
+                                        "field": "draft",
+                                        "of": {
+                                          "e": "get",
+                                          "field": "nodes",
+                                          "of": {
+                                            "e": "var",
+                                            "name": "state"
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                },
+                                "saved": {
+                                  "e": "get",
+                                  "field": "saved",
+                                  "of": {
+                                    "e": "get",
+                                    "field": "nodes",
+                                    "of": {
+                                      "e": "var",
+                                      "name": "state"
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "refused": {
+                      "bind": "@in",
+                      "body": {
+                        "cond": {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "e": "get",
+                                  "field": "kind",
+                                  "of": {
+                                    "e": "get",
+                                    "field": "draft",
+                                    "of": {
+                                      "e": "get",
+                                      "field": "nodes",
+                                      "of": {
+                                        "e": "var",
+                                        "name": "state"
+                                      }
+                                    }
+                                  }
+                                },
+                                {
+                                  "e": "lit",
+                                  "v": "running"
+                                }
+                              ],
+                              "e": "op",
+                              "op": "eq"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "e": "get",
+                                  "field": "call",
+                                  "of": {
+                                    "e": "get",
+                                    "field": "draft",
+                                    "of": {
+                                      "e": "get",
+                                      "field": "nodes",
+                                      "of": {
+                                        "e": "var",
+                                        "name": "state"
+                                      }
+                                    }
+                                  }
+                                },
+                                {
+                                  "e": "get",
+                                  "field": "call",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "@in"
+                                  }
+                                }
+                              ],
+                              "e": "op",
+                              "op": "eq"
+                            }
+                          ],
+                          "e": "op",
+                          "op": "and"
+                        },
+                        "e": "if",
+                        "else": {
+                          "cond": {
+                            "args": [
+                              {
+                                "args": [
+                                  {
+                                    "e": "get",
+                                    "field": "kind",
+                                    "of": {
+                                      "e": "get",
+                                      "field": "decision",
+                                      "of": {
+                                        "e": "get",
+                                        "field": "nodes",
+                                        "of": {
+                                          "e": "var",
+                                          "name": "state"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  {
+                                    "e": "lit",
+                                    "v": "running"
+                                  }
+                                ],
+                                "e": "op",
+                                "op": "eq"
+                              },
+                              {
+                                "args": [
+                                  {
+                                    "e": "get",
+                                    "field": "call",
+                                    "of": {
+                                      "e": "get",
+                                      "field": "decision",
+                                      "of": {
+                                        "e": "get",
+                                        "field": "nodes",
+                                        "of": {
+                                          "e": "var",
+                                          "name": "state"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  {
+                                    "e": "get",
+                                    "field": "call",
+                                    "of": {
+                                      "e": "var",
+                                      "name": "@in"
+                                    }
+                                  }
+                                ],
+                                "e": "op",
+                                "op": "eq"
+                              }
+                            ],
+                            "e": "op",
+                            "op": "and"
+                          },
+                          "e": "if",
+                          "else": {
+                            "cond": {
+                              "args": [
+                                {
+                                  "args": [
+                                    {
+                                      "e": "get",
+                                      "field": "kind",
+                                      "of": {
+                                        "e": "get",
+                                        "field": "saved",
+                                        "of": {
+                                          "e": "get",
+                                          "field": "nodes",
+                                          "of": {
+                                            "e": "var",
+                                            "name": "state"
+                                          }
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "e": "lit",
+                                      "v": "running"
+                                    }
+                                  ],
+                                  "e": "op",
+                                  "op": "eq"
+                                },
+                                {
+                                  "args": [
+                                    {
+                                      "e": "get",
+                                      "field": "call",
+                                      "of": {
+                                        "e": "get",
+                                        "field": "saved",
+                                        "of": {
+                                          "e": "get",
+                                          "field": "nodes",
+                                          "of": {
+                                            "e": "var",
+                                            "name": "state"
+                                          }
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "e": "get",
+                                      "field": "call",
+                                      "of": {
+                                        "e": "var",
+                                        "name": "@in"
+                                      }
+                                    }
+                                  ],
+                                  "e": "op",
+                                  "op": "eq"
+                                }
+                              ],
+                              "e": "op",
+                              "op": "and"
+                            },
+                            "e": "if",
+                            "else": {
+                              "e": "var",
+                              "name": "state"
+                            },
+                            "then": {
+                              "e": "record",
+                              "fields": {
+                                "arg": {
+                                  "e": "get",
+                                  "field": "arg",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "state"
+                                  }
+                                },
+                                "next": {
+                                  "e": "get",
+                                  "field": "next",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "state"
+                                  }
+                                },
+                                "nodes": {
+                                  "e": "record",
+                                  "fields": {
+                                    "decision": {
+                                      "e": "get",
+                                      "field": "decision",
+                                      "of": {
+                                        "e": "get",
+                                        "field": "nodes",
+                                        "of": {
+                                          "e": "var",
+                                          "name": "state"
+                                        }
+                                      }
+                                    },
+                                    "draft": {
+                                      "e": "get",
+                                      "field": "draft",
+                                      "of": {
+                                        "e": "get",
+                                        "field": "nodes",
+                                        "of": {
+                                          "e": "var",
+                                          "name": "state"
+                                        }
+                                      }
+                                    },
+                                    "saved": {
+                                      "e": "record",
+                                      "fields": {
+                                        "call": {
+                                          "e": "get",
+                                          "field": "call",
+                                          "of": {
+                                            "e": "var",
+                                            "name": "@in"
+                                          }
+                                        },
+                                        "error": {
+                                          "e": "lit",
+                                          "v": null
+                                        },
+                                        "kind": {
+                                          "e": "lit",
+                                          "v": "refused"
+                                        },
+                                        "value": {
+                                          "e": "get",
+                                          "field": "value",
+                                          "of": {
+                                            "e": "get",
+                                            "field": "saved",
+                                            "of": {
+                                              "e": "get",
+                                              "field": "nodes",
+                                              "of": {
+                                                "e": "var",
+                                                "name": "state"
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "then": {
+                            "e": "record",
+                            "fields": {
+                              "arg": {
+                                "e": "get",
+                                "field": "arg",
+                                "of": {
+                                  "e": "var",
+                                  "name": "state"
+                                }
+                              },
+                              "next": {
+                                "e": "get",
+                                "field": "next",
+                                "of": {
+                                  "e": "var",
+                                  "name": "state"
+                                }
+                              },
+                              "nodes": {
+                                "e": "record",
+                                "fields": {
+                                  "decision": {
+                                    "e": "record",
+                                    "fields": {
+                                      "call": {
+                                        "e": "get",
+                                        "field": "call",
+                                        "of": {
+                                          "e": "var",
+                                          "name": "@in"
+                                        }
+                                      },
+                                      "error": {
+                                        "e": "lit",
+                                        "v": null
+                                      },
+                                      "kind": {
+                                        "e": "lit",
+                                        "v": "refused"
+                                      },
+                                      "value": {
+                                        "e": "get",
+                                        "field": "value",
+                                        "of": {
+                                          "e": "get",
+                                          "field": "decision",
+                                          "of": {
+                                            "e": "get",
+                                            "field": "nodes",
+                                            "of": {
+                                              "e": "var",
+                                              "name": "state"
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "draft": {
+                                    "e": "get",
+                                    "field": "draft",
+                                    "of": {
+                                      "e": "get",
+                                      "field": "nodes",
+                                      "of": {
+                                        "e": "var",
+                                        "name": "state"
+                                      }
+                                    }
+                                  },
+                                  "saved": {
+                                    "e": "get",
+                                    "field": "saved",
+                                    "of": {
+                                      "e": "get",
+                                      "field": "nodes",
+                                      "of": {
+                                        "e": "var",
+                                        "name": "state"
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "then": {
+                          "e": "record",
+                          "fields": {
+                            "arg": {
+                              "e": "get",
+                              "field": "arg",
+                              "of": {
+                                "e": "var",
+                                "name": "state"
+                              }
+                            },
+                            "next": {
+                              "e": "get",
+                              "field": "next",
+                              "of": {
+                                "e": "var",
+                                "name": "state"
+                              }
+                            },
+                            "nodes": {
+                              "e": "record",
+                              "fields": {
+                                "decision": {
+                                  "e": "get",
+                                  "field": "decision",
+                                  "of": {
+                                    "e": "get",
+                                    "field": "nodes",
+                                    "of": {
+                                      "e": "var",
+                                      "name": "state"
+                                    }
+                                  }
+                                },
+                                "draft": {
+                                  "e": "record",
+                                  "fields": {
+                                    "call": {
+                                      "e": "get",
+                                      "field": "call",
+                                      "of": {
+                                        "e": "var",
+                                        "name": "@in"
+                                      }
+                                    },
+                                    "error": {
+                                      "e": "lit",
+                                      "v": null
+                                    },
+                                    "kind": {
+                                      "e": "lit",
+                                      "v": "refused"
+                                    },
+                                    "value": {
+                                      "e": "get",
+                                      "field": "value",
+                                      "of": {
+                                        "e": "get",
+                                        "field": "draft",
+                                        "of": {
+                                          "e": "get",
+                                          "field": "nodes",
+                                          "of": {
+                                            "e": "var",
+                                            "name": "state"
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                },
+                                "saved": {
+                                  "e": "get",
+                                  "field": "saved",
+                                  "of": {
+                                    "e": "get",
+                                    "field": "nodes",
+                                    "of": {
+                                      "e": "var",
+                                      "name": "state"
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "ret": {
+                      "bind": "@in",
+                      "body": {
+                        "cases": {
+                          "approve.ask": {
+                            "bind": "@in",
+                            "body": {
+                              "cond": {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "e": "get",
+                                        "field": "kind",
+                                        "of": {
+                                          "e": "get",
+                                          "field": "decision",
+                                          "of": {
+                                            "e": "get",
+                                            "field": "nodes",
+                                            "of": {
+                                              "e": "var",
+                                              "name": "state"
+                                            }
+                                          }
+                                        }
+                                      },
+                                      {
+                                        "e": "lit",
+                                        "v": "running"
+                                      }
+                                    ],
+                                    "e": "op",
+                                    "op": "eq"
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "e": "get",
+                                        "field": "call",
+                                        "of": {
+                                          "e": "get",
+                                          "field": "decision",
+                                          "of": {
+                                            "e": "get",
+                                            "field": "nodes",
+                                            "of": {
+                                              "e": "var",
+                                              "name": "state"
+                                            }
+                                          }
+                                        }
+                                      },
+                                      {
+                                        "e": "get",
+                                        "field": "call",
+                                        "of": {
+                                          "e": "var",
+                                          "name": "@in"
+                                        }
+                                      }
+                                    ],
+                                    "e": "op",
+                                    "op": "eq"
+                                  }
+                                ],
+                                "e": "op",
+                                "op": "and"
+                              },
+                              "e": "if",
+                              "else": {
+                                "e": "var",
+                                "name": "state"
+                              },
+                              "then": {
+                                "e": "record",
+                                "fields": {
+                                  "arg": {
+                                    "e": "get",
+                                    "field": "arg",
+                                    "of": {
+                                      "e": "var",
+                                      "name": "state"
+                                    }
+                                  },
+                                  "next": {
+                                    "e": "get",
+                                    "field": "next",
+                                    "of": {
+                                      "e": "var",
+                                      "name": "state"
+                                    }
+                                  },
+                                  "nodes": {
+                                    "e": "record",
+                                    "fields": {
+                                      "decision": {
+                                        "e": "record",
+                                        "fields": {
+                                          "call": {
+                                            "e": "get",
+                                            "field": "call",
+                                            "of": {
+                                              "e": "var",
+                                              "name": "@in"
+                                            }
+                                          },
+                                          "error": {
+                                            "e": "lit",
+                                            "v": null
+                                          },
+                                          "kind": {
+                                            "e": "lit",
+                                            "v": "ok"
+                                          },
+                                          "value": {
+                                            "e": "get",
+                                            "field": "value",
+                                            "of": {
+                                              "e": "var",
+                                              "name": "@in"
+                                            }
+                                          }
+                                        }
+                                      },
+                                      "draft": {
+                                        "e": "get",
+                                        "field": "draft",
+                                        "of": {
+                                          "e": "get",
+                                          "field": "nodes",
+                                          "of": {
+                                            "e": "var",
+                                            "name": "state"
+                                          }
+                                        }
+                                      },
+                                      "saved": {
+                                        "e": "get",
+                                        "field": "saved",
+                                        "of": {
+                                          "e": "get",
+                                          "field": "nodes",
+                                          "of": {
+                                            "e": "var",
+                                            "name": "state"
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "model.generate": {
+                            "bind": "@in",
+                            "body": {
+                              "cond": {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "e": "get",
+                                        "field": "kind",
+                                        "of": {
+                                          "e": "get",
+                                          "field": "draft",
+                                          "of": {
+                                            "e": "get",
+                                            "field": "nodes",
+                                            "of": {
+                                              "e": "var",
+                                              "name": "state"
+                                            }
+                                          }
+                                        }
+                                      },
+                                      {
+                                        "e": "lit",
+                                        "v": "running"
+                                      }
+                                    ],
+                                    "e": "op",
+                                    "op": "eq"
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "e": "get",
+                                        "field": "call",
+                                        "of": {
+                                          "e": "get",
+                                          "field": "draft",
+                                          "of": {
+                                            "e": "get",
+                                            "field": "nodes",
+                                            "of": {
+                                              "e": "var",
+                                              "name": "state"
+                                            }
+                                          }
+                                        }
+                                      },
+                                      {
+                                        "e": "get",
+                                        "field": "call",
+                                        "of": {
+                                          "e": "var",
+                                          "name": "@in"
+                                        }
+                                      }
+                                    ],
+                                    "e": "op",
+                                    "op": "eq"
+                                  }
+                                ],
+                                "e": "op",
+                                "op": "and"
+                              },
+                              "e": "if",
+                              "else": {
+                                "e": "var",
+                                "name": "state"
+                              },
+                              "then": {
+                                "e": "record",
+                                "fields": {
+                                  "arg": {
+                                    "e": "get",
+                                    "field": "arg",
+                                    "of": {
+                                      "e": "var",
+                                      "name": "state"
+                                    }
+                                  },
+                                  "next": {
+                                    "e": "get",
+                                    "field": "next",
+                                    "of": {
+                                      "e": "var",
+                                      "name": "state"
+                                    }
+                                  },
+                                  "nodes": {
+                                    "e": "record",
+                                    "fields": {
+                                      "decision": {
+                                        "e": "get",
+                                        "field": "decision",
+                                        "of": {
+                                          "e": "get",
+                                          "field": "nodes",
+                                          "of": {
+                                            "e": "var",
+                                            "name": "state"
+                                          }
+                                        }
+                                      },
+                                      "draft": {
+                                        "e": "record",
+                                        "fields": {
+                                          "call": {
+                                            "e": "get",
+                                            "field": "call",
+                                            "of": {
+                                              "e": "var",
+                                              "name": "@in"
+                                            }
+                                          },
+                                          "error": {
+                                            "e": "lit",
+                                            "v": null
+                                          },
+                                          "kind": {
+                                            "e": "lit",
+                                            "v": "ok"
+                                          },
+                                          "value": {
+                                            "e": "get",
+                                            "field": "value",
+                                            "of": {
+                                              "e": "var",
+                                              "name": "@in"
+                                            }
+                                          }
+                                        }
+                                      },
+                                      "saved": {
+                                        "e": "get",
+                                        "field": "saved",
+                                        "of": {
+                                          "e": "get",
+                                          "field": "nodes",
+                                          "of": {
+                                            "e": "var",
+                                            "name": "state"
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "notes.append": {
+                            "bind": "@in",
+                            "body": {
+                              "cond": {
+                                "args": [
+                                  {
+                                    "args": [
+                                      {
+                                        "e": "get",
+                                        "field": "kind",
+                                        "of": {
+                                          "e": "get",
+                                          "field": "saved",
+                                          "of": {
+                                            "e": "get",
+                                            "field": "nodes",
+                                            "of": {
+                                              "e": "var",
+                                              "name": "state"
+                                            }
+                                          }
+                                        }
+                                      },
+                                      {
+                                        "e": "lit",
+                                        "v": "running"
+                                      }
+                                    ],
+                                    "e": "op",
+                                    "op": "eq"
+                                  },
+                                  {
+                                    "args": [
+                                      {
+                                        "e": "get",
+                                        "field": "call",
+                                        "of": {
+                                          "e": "get",
+                                          "field": "saved",
+                                          "of": {
+                                            "e": "get",
+                                            "field": "nodes",
+                                            "of": {
+                                              "e": "var",
+                                              "name": "state"
+                                            }
+                                          }
+                                        }
+                                      },
+                                      {
+                                        "e": "get",
+                                        "field": "call",
+                                        "of": {
+                                          "e": "var",
+                                          "name": "@in"
+                                        }
+                                      }
+                                    ],
+                                    "e": "op",
+                                    "op": "eq"
+                                  }
+                                ],
+                                "e": "op",
+                                "op": "and"
+                              },
+                              "e": "if",
+                              "else": {
+                                "e": "var",
+                                "name": "state"
+                              },
+                              "then": {
+                                "e": "record",
+                                "fields": {
+                                  "arg": {
+                                    "e": "get",
+                                    "field": "arg",
+                                    "of": {
+                                      "e": "var",
+                                      "name": "state"
+                                    }
+                                  },
+                                  "next": {
+                                    "e": "get",
+                                    "field": "next",
+                                    "of": {
+                                      "e": "var",
+                                      "name": "state"
+                                    }
+                                  },
+                                  "nodes": {
+                                    "e": "record",
+                                    "fields": {
+                                      "decision": {
+                                        "e": "get",
+                                        "field": "decision",
+                                        "of": {
+                                          "e": "get",
+                                          "field": "nodes",
+                                          "of": {
+                                            "e": "var",
+                                            "name": "state"
+                                          }
+                                        }
+                                      },
+                                      "draft": {
+                                        "e": "get",
+                                        "field": "draft",
+                                        "of": {
+                                          "e": "get",
+                                          "field": "nodes",
+                                          "of": {
+                                            "e": "var",
+                                            "name": "state"
+                                          }
+                                        }
+                                      },
+                                      "saved": {
+                                        "e": "record",
+                                        "fields": {
+                                          "call": {
+                                            "e": "get",
+                                            "field": "call",
+                                            "of": {
+                                              "e": "var",
+                                              "name": "@in"
+                                            }
+                                          },
+                                          "error": {
+                                            "e": "lit",
+                                            "v": null
+                                          },
+                                          "kind": {
+                                            "e": "lit",
+                                            "v": "ok"
+                                          },
+                                          "value": {
+                                            "e": "get",
+                                            "field": "value",
+                                            "of": {
+                                              "e": "var",
+                                              "name": "@in"
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "e": "match",
+                        "of": {
+                          "e": "var",
+                          "name": "@in"
+                        },
+                        "on": "op",
+                        "otherwise": {
+                          "e": "var",
+                          "name": "state"
+                        }
+                      }
+                    },
+                    "start": {
+                      "bind": "@in",
+                      "body": {
+                        "e": "record",
+                        "fields": {
+                          "arg": {
+                            "e": "get",
+                            "field": "value",
+                            "of": {
+                              "e": "var",
+                              "name": "@in"
+                            }
+                          },
+                          "next": {
+                            "e": "get",
+                            "field": "next",
+                            "of": {
+                              "e": "var",
+                              "name": "state"
+                            }
+                          },
+                          "nodes": {
+                            "e": "get",
+                            "field": "nodes",
+                            "of": {
+                              "e": "var",
+                              "name": "state"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "e": "match",
+                  "of": {
+                    "e": "var",
+                    "name": "input"
+                  },
+                  "otherwise": {
+                    "e": "var",
+                    "name": "state"
+                  }
+                },
+                "e": "let",
+                "in": {
+                  "cond": {
+                    "args": [
+                      {
+                        "e": "lit",
+                        "v": ["failed", "refused"]
+                      },
+                      {
+                        "e": "get",
+                        "field": "kind",
+                        "of": {
+                          "e": "get",
+                          "field": "draft",
+                          "of": {
+                            "e": "get",
+                            "field": "nodes",
+                            "of": {
+                              "e": "var",
+                              "name": "@state"
+                            }
+                          }
+                        }
+                      }
+                    ],
+                    "e": "op",
+                    "op": "contains"
+                  },
+                  "e": "if",
+                  "else": {
+                    "cond": {
+                      "args": [
+                        {
+                          "e": "lit",
+                          "v": ["failed", "refused"]
+                        },
+                        {
+                          "e": "get",
+                          "field": "kind",
+                          "of": {
+                            "e": "get",
+                            "field": "decision",
+                            "of": {
+                              "e": "get",
+                              "field": "nodes",
+                              "of": {
+                                "e": "var",
+                                "name": "@state"
+                              }
+                            }
+                          }
+                        }
+                      ],
+                      "e": "op",
+                      "op": "contains"
+                    },
+                    "e": "if",
+                    "else": {
+                      "cond": {
+                        "args": [
+                          {
+                            "e": "lit",
+                            "v": ["failed", "refused"]
+                          },
+                          {
+                            "e": "get",
+                            "field": "kind",
+                            "of": {
+                              "e": "get",
+                              "field": "saved",
+                              "of": {
+                                "e": "get",
+                                "field": "nodes",
+                                "of": {
+                                  "e": "var",
+                                  "name": "@state"
+                                }
+                              }
+                            }
+                          }
+                        ],
+                        "e": "op",
+                        "op": "contains"
+                      },
+                      "e": "if",
+                      "else": {
+                        "be": {
+                          "e": "record",
+                          "fields": {
+                            "actions": {
+                              "e": "list",
+                              "items": []
+                            },
+                            "state": {
+                              "e": "var",
+                              "name": "@state"
+                            }
+                          }
+                        },
+                        "e": "let",
+                        "in": {
+                          "be": {
+                            "be": {
+                              "e": "get",
+                              "field": "state",
+                              "of": {
+                                "e": "var",
+                                "name": "@acc"
+                              }
+                            },
+                            "e": "let",
+                            "in": {
+                              "be": {
+                                "e": "get",
+                                "field": "nodes",
+                                "of": {
+                                  "e": "var",
+                                  "name": "@state"
+                                }
+                              },
+                              "e": "let",
+                              "in": {
+                                "cond": {
+                                  "args": [
+                                    {
+                                      "args": [
+                                        {
+                                          "e": "get",
+                                          "field": "kind",
+                                          "of": {
+                                            "e": "get",
+                                            "field": "draft",
+                                            "of": {
+                                              "e": "get",
+                                              "field": "nodes",
+                                              "of": {
+                                                "e": "var",
+                                                "name": "@state"
+                                              }
+                                            }
+                                          }
+                                        },
+                                        {
+                                          "e": "lit",
+                                          "v": "waiting"
+                                        }
+                                      ],
+                                      "e": "op",
+                                      "op": "eq"
+                                    },
+                                    {
+                                      "e": "lit",
+                                      "v": true
+                                    }
+                                  ],
+                                  "e": "op",
+                                  "op": "and"
+                                },
+                                "e": "if",
+                                "else": {
+                                  "e": "var",
+                                  "name": "@acc"
+                                },
+                                "then": {
+                                  "cond": {
+                                    "e": "lit",
+                                    "v": false
+                                  },
+                                  "e": "if",
+                                  "else": {
+                                    "be": {
+                                      "e": "get",
+                                      "field": "arg",
+                                      "of": {
+                                        "e": "var",
+                                        "name": "@state"
+                                      }
+                                    },
+                                    "e": "let",
+                                    "in": {
+                                      "e": "record",
+                                      "fields": {
+                                        "actions": {
+                                          "args": [
+                                            {
+                                              "e": "get",
+                                              "field": "actions",
+                                              "of": {
+                                                "e": "var",
+                                                "name": "@acc"
+                                              }
+                                            },
+                                            {
+                                              "e": "record",
+                                              "fields": {
+                                                "args": {
+                                                  "e": "record",
+                                                  "fields": {
+                                                    "messages": {
+                                                      "e": "list",
+                                                      "items": [
+                                                        {
+                                                          "e": "record",
+                                                          "fields": {
+                                                            "content": {
+                                                              "e": "var",
+                                                              "name": "prompt"
+                                                            },
+                                                            "role": {
+                                                              "e": "lit",
+                                                              "v": "user"
+                                                            }
+                                                          }
+                                                        }
+                                                      ]
+                                                    }
+                                                  }
+                                                },
+                                                "kind": {
+                                                  "e": "lit",
+                                                  "v": "call"
+                                                },
+                                                "op": {
+                                                  "e": "lit",
+                                                  "v": "model.generate"
+                                                }
+                                              }
+                                            }
+                                          ],
+                                          "e": "op",
+                                          "op": "append"
+                                        },
+                                        "state": {
+                                          "e": "record",
+                                          "fields": {
+                                            "arg": {
+                                              "e": "get",
+                                              "field": "arg",
+                                              "of": {
+                                                "e": "var",
+                                                "name": "@state"
+                                              }
+                                            },
+                                            "next": {
+                                              "args": [
+                                                {
+                                                  "e": "get",
+                                                  "field": "next",
+                                                  "of": {
+                                                    "e": "var",
+                                                    "name": "@state"
+                                                  }
+                                                },
+                                                {
+                                                  "e": "lit",
+                                                  "v": 1
+                                                }
+                                              ],
+                                              "e": "op",
+                                              "op": "add"
+                                            },
+                                            "nodes": {
+                                              "e": "record",
+                                              "fields": {
+                                                "decision": {
+                                                  "e": "get",
+                                                  "field": "decision",
+                                                  "of": {
+                                                    "e": "get",
+                                                    "field": "nodes",
+                                                    "of": {
+                                                      "e": "var",
+                                                      "name": "@state"
+                                                    }
+                                                  }
+                                                },
+                                                "draft": {
+                                                  "e": "record",
+                                                  "fields": {
+                                                    "call": {
+                                                      "e": "get",
+                                                      "field": "next",
+                                                      "of": {
+                                                        "e": "var",
+                                                        "name": "@state"
+                                                      }
+                                                    },
+                                                    "error": {
+                                                      "e": "lit",
+                                                      "v": null
+                                                    },
+                                                    "kind": {
+                                                      "e": "lit",
+                                                      "v": "running"
+                                                    },
+                                                    "value": {
+                                                      "e": "get",
+                                                      "field": "value",
+                                                      "of": {
+                                                        "e": "get",
+                                                        "field": "draft",
+                                                        "of": {
+                                                          "e": "get",
+                                                          "field": "nodes",
+                                                          "of": {
+                                                            "e": "var",
+                                                            "name": "@state"
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                },
+                                                "saved": {
+                                                  "e": "get",
+                                                  "field": "saved",
+                                                  "of": {
+                                                    "e": "get",
+                                                    "field": "nodes",
+                                                    "of": {
+                                                      "e": "var",
+                                                      "name": "@state"
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "name": "prompt"
+                                  },
+                                  "then": {
+                                    "e": "record",
+                                    "fields": {
+                                      "actions": {
+                                        "e": "get",
+                                        "field": "actions",
+                                        "of": {
+                                          "e": "var",
+                                          "name": "@acc"
+                                        }
+                                      },
+                                      "state": {
+                                        "e": "record",
+                                        "fields": {
+                                          "arg": {
+                                            "e": "get",
+                                            "field": "arg",
+                                            "of": {
+                                              "e": "var",
+                                              "name": "@state"
+                                            }
+                                          },
+                                          "next": {
+                                            "e": "get",
+                                            "field": "next",
+                                            "of": {
+                                              "e": "var",
+                                              "name": "@state"
+                                            }
+                                          },
+                                          "nodes": {
+                                            "e": "record",
+                                            "fields": {
+                                              "decision": {
+                                                "e": "get",
+                                                "field": "decision",
+                                                "of": {
+                                                  "e": "get",
+                                                  "field": "nodes",
+                                                  "of": {
+                                                    "e": "var",
+                                                    "name": "@state"
+                                                  }
+                                                }
+                                              },
+                                              "draft": {
+                                                "e": "record",
+                                                "fields": {
+                                                  "call": {
+                                                    "e": "get",
+                                                    "field": "call",
+                                                    "of": {
+                                                      "e": "get",
+                                                      "field": "draft",
+                                                      "of": {
+                                                        "e": "get",
+                                                        "field": "nodes",
+                                                        "of": {
+                                                          "e": "var",
+                                                          "name": "@state"
+                                                        }
+                                                      }
+                                                    }
+                                                  },
+                                                  "error": {
+                                                    "e": "lit",
+                                                    "v": null
+                                                  },
+                                                  "kind": {
+                                                    "e": "lit",
+                                                    "v": "skipped"
+                                                  },
+                                                  "value": {
+                                                    "e": "get",
+                                                    "field": "value",
+                                                    "of": {
+                                                      "e": "get",
+                                                      "field": "draft",
+                                                      "of": {
+                                                        "e": "get",
+                                                        "field": "nodes",
+                                                        "of": {
+                                                          "e": "var",
+                                                          "name": "@state"
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              },
+                                              "saved": {
+                                                "e": "get",
+                                                "field": "saved",
+                                                "of": {
+                                                  "e": "get",
+                                                  "field": "nodes",
+                                                  "of": {
+                                                    "e": "var",
+                                                    "name": "@state"
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              },
+                              "name": "@nodes"
+                            },
+                            "name": "@state"
+                          },
+                          "e": "let",
+                          "in": {
+                            "be": {
+                              "be": {
+                                "e": "get",
+                                "field": "state",
+                                "of": {
+                                  "e": "var",
+                                  "name": "@acc"
+                                }
+                              },
+                              "e": "let",
+                              "in": {
+                                "be": {
+                                  "e": "get",
+                                  "field": "nodes",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "@state"
+                                  }
+                                },
+                                "e": "let",
+                                "in": {
+                                  "cond": {
+                                    "args": [
+                                      {
+                                        "args": [
+                                          {
+                                            "e": "get",
+                                            "field": "kind",
+                                            "of": {
+                                              "e": "get",
+                                              "field": "decision",
+                                              "of": {
+                                                "e": "get",
+                                                "field": "nodes",
+                                                "of": {
+                                                  "e": "var",
+                                                  "name": "@state"
+                                                }
+                                              }
+                                            }
+                                          },
+                                          {
+                                            "e": "lit",
+                                            "v": "waiting"
+                                          }
+                                        ],
+                                        "e": "op",
+                                        "op": "eq"
+                                      },
+                                      {
+                                        "args": [
+                                          {
+                                            "e": "lit",
+                                            "v": ["ok", "failed", "refused", "skipped"]
+                                          },
+                                          {
+                                            "e": "get",
+                                            "field": "kind",
+                                            "of": {
+                                              "e": "get",
+                                              "field": "draft",
+                                              "of": {
+                                                "e": "get",
+                                                "field": "nodes",
+                                                "of": {
+                                                  "e": "var",
+                                                  "name": "@state"
+                                                }
+                                              }
+                                            }
+                                          }
+                                        ],
+                                        "e": "op",
+                                        "op": "contains"
+                                      }
+                                    ],
+                                    "e": "op",
+                                    "op": "and"
+                                  },
+                                  "e": "if",
+                                  "else": {
+                                    "e": "var",
+                                    "name": "@acc"
+                                  },
+                                  "then": {
+                                    "cond": {
+                                      "args": [
+                                        {
+                                          "e": "get",
+                                          "field": "kind",
+                                          "of": {
+                                            "e": "get",
+                                            "field": "draft",
+                                            "of": {
+                                              "e": "get",
+                                              "field": "nodes",
+                                              "of": {
+                                                "e": "var",
+                                                "name": "@state"
+                                              }
+                                            }
+                                          }
+                                        },
+                                        {
+                                          "e": "lit",
+                                          "v": "skipped"
+                                        }
+                                      ],
+                                      "e": "op",
+                                      "op": "eq"
+                                    },
+                                    "e": "if",
+                                    "else": {
+                                      "be": {
+                                        "e": "get",
+                                        "field": "arg",
+                                        "of": {
+                                          "e": "var",
+                                          "name": "@state"
+                                        }
+                                      },
+                                      "e": "let",
+                                      "in": {
+                                        "be": {
+                                          "e": "get",
+                                          "field": "value",
+                                          "of": {
+                                            "e": "get",
+                                            "field": "draft",
+                                            "of": {
+                                              "e": "get",
+                                              "field": "nodes",
+                                              "of": {
+                                                "e": "var",
+                                                "name": "@state"
+                                              }
+                                            }
+                                          }
+                                        },
+                                        "e": "let",
+                                        "in": {
+                                          "e": "record",
+                                          "fields": {
+                                            "actions": {
+                                              "args": [
+                                                {
+                                                  "e": "get",
+                                                  "field": "actions",
+                                                  "of": {
+                                                    "e": "var",
+                                                    "name": "@acc"
+                                                  }
+                                                },
+                                                {
+                                                  "e": "record",
+                                                  "fields": {
+                                                    "args": {
+                                                      "e": "record",
+                                                      "fields": {
+                                                        "action": {
+                                                          "e": "lit",
+                                                          "v": "notes.append"
+                                                        },
+                                                        "args": {
+                                                          "e": "record",
+                                                          "fields": {
+                                                            "text": {
+                                                              "e": "var",
+                                                              "name": "draft"
+                                                            }
+                                                          }
+                                                        }
+                                                      }
+                                                    },
+                                                    "kind": {
+                                                      "e": "lit",
+                                                      "v": "call"
+                                                    },
+                                                    "op": {
+                                                      "e": "lit",
+                                                      "v": "approve.ask"
+                                                    }
+                                                  }
+                                                }
+                                              ],
+                                              "e": "op",
+                                              "op": "append"
+                                            },
+                                            "state": {
+                                              "e": "record",
+                                              "fields": {
+                                                "arg": {
+                                                  "e": "get",
+                                                  "field": "arg",
+                                                  "of": {
+                                                    "e": "var",
+                                                    "name": "@state"
+                                                  }
+                                                },
+                                                "next": {
+                                                  "args": [
+                                                    {
+                                                      "e": "get",
+                                                      "field": "next",
+                                                      "of": {
+                                                        "e": "var",
+                                                        "name": "@state"
+                                                      }
+                                                    },
+                                                    {
+                                                      "e": "lit",
+                                                      "v": 1
+                                                    }
+                                                  ],
+                                                  "e": "op",
+                                                  "op": "add"
+                                                },
+                                                "nodes": {
+                                                  "e": "record",
+                                                  "fields": {
+                                                    "decision": {
+                                                      "e": "record",
+                                                      "fields": {
+                                                        "call": {
+                                                          "e": "get",
+                                                          "field": "next",
+                                                          "of": {
+                                                            "e": "var",
+                                                            "name": "@state"
+                                                          }
+                                                        },
+                                                        "error": {
+                                                          "e": "lit",
+                                                          "v": null
+                                                        },
+                                                        "kind": {
+                                                          "e": "lit",
+                                                          "v": "running"
+                                                        },
+                                                        "value": {
+                                                          "e": "get",
+                                                          "field": "value",
+                                                          "of": {
+                                                            "e": "get",
+                                                            "field": "decision",
+                                                            "of": {
+                                                              "e": "get",
+                                                              "field": "nodes",
+                                                              "of": {
+                                                                "e": "var",
+                                                                "name": "@state"
+                                                              }
+                                                            }
+                                                          }
+                                                        }
+                                                      }
+                                                    },
+                                                    "draft": {
+                                                      "e": "get",
+                                                      "field": "draft",
+                                                      "of": {
+                                                        "e": "get",
+                                                        "field": "nodes",
+                                                        "of": {
+                                                          "e": "var",
+                                                          "name": "@state"
+                                                        }
+                                                      }
+                                                    },
+                                                    "saved": {
+                                                      "e": "get",
+                                                      "field": "saved",
+                                                      "of": {
+                                                        "e": "get",
+                                                        "field": "nodes",
+                                                        "of": {
+                                                          "e": "var",
+                                                          "name": "@state"
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        },
+                                        "name": "draft"
+                                      },
+                                      "name": "prompt"
+                                    },
+                                    "then": {
+                                      "e": "record",
+                                      "fields": {
+                                        "actions": {
+                                          "e": "get",
+                                          "field": "actions",
+                                          "of": {
+                                            "e": "var",
+                                            "name": "@acc"
+                                          }
+                                        },
+                                        "state": {
+                                          "e": "record",
+                                          "fields": {
+                                            "arg": {
+                                              "e": "get",
+                                              "field": "arg",
+                                              "of": {
+                                                "e": "var",
+                                                "name": "@state"
+                                              }
+                                            },
+                                            "next": {
+                                              "e": "get",
+                                              "field": "next",
+                                              "of": {
+                                                "e": "var",
+                                                "name": "@state"
+                                              }
+                                            },
+                                            "nodes": {
+                                              "e": "record",
+                                              "fields": {
+                                                "decision": {
+                                                  "e": "record",
+                                                  "fields": {
+                                                    "call": {
+                                                      "e": "get",
+                                                      "field": "call",
+                                                      "of": {
+                                                        "e": "get",
+                                                        "field": "decision",
+                                                        "of": {
+                                                          "e": "get",
+                                                          "field": "nodes",
+                                                          "of": {
+                                                            "e": "var",
+                                                            "name": "@state"
+                                                          }
+                                                        }
+                                                      }
+                                                    },
+                                                    "error": {
+                                                      "e": "lit",
+                                                      "v": null
+                                                    },
+                                                    "kind": {
+                                                      "e": "lit",
+                                                      "v": "skipped"
+                                                    },
+                                                    "value": {
+                                                      "e": "get",
+                                                      "field": "value",
+                                                      "of": {
+                                                        "e": "get",
+                                                        "field": "decision",
+                                                        "of": {
+                                                          "e": "get",
+                                                          "field": "nodes",
+                                                          "of": {
+                                                            "e": "var",
+                                                            "name": "@state"
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                },
+                                                "draft": {
+                                                  "e": "get",
+                                                  "field": "draft",
+                                                  "of": {
+                                                    "e": "get",
+                                                    "field": "nodes",
+                                                    "of": {
+                                                      "e": "var",
+                                                      "name": "@state"
+                                                    }
+                                                  }
+                                                },
+                                                "saved": {
+                                                  "e": "get",
+                                                  "field": "saved",
+                                                  "of": {
+                                                    "e": "get",
+                                                    "field": "nodes",
+                                                    "of": {
+                                                      "e": "var",
+                                                      "name": "@state"
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                },
+                                "name": "@nodes"
+                              },
+                              "name": "@state"
+                            },
+                            "e": "let",
+                            "in": {
+                              "be": {
+                                "be": {
+                                  "e": "get",
+                                  "field": "state",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "@acc"
+                                  }
+                                },
+                                "e": "let",
+                                "in": {
+                                  "be": {
+                                    "e": "get",
+                                    "field": "nodes",
+                                    "of": {
+                                      "e": "var",
+                                      "name": "@state"
+                                    }
+                                  },
+                                  "e": "let",
+                                  "in": {
+                                    "cond": {
+                                      "args": [
+                                        {
+                                          "args": [
+                                            {
+                                              "e": "get",
+                                              "field": "kind",
+                                              "of": {
+                                                "e": "get",
+                                                "field": "saved",
+                                                "of": {
+                                                  "e": "get",
+                                                  "field": "nodes",
+                                                  "of": {
+                                                    "e": "var",
+                                                    "name": "@state"
+                                                  }
+                                                }
+                                              }
+                                            },
+                                            {
+                                              "e": "lit",
+                                              "v": "waiting"
+                                            }
+                                          ],
+                                          "e": "op",
+                                          "op": "eq"
+                                        },
+                                        {
+                                          "args": [
+                                            {
+                                              "args": [
+                                                {
+                                                  "e": "lit",
+                                                  "v": ["ok", "failed", "refused", "skipped"]
+                                                },
+                                                {
+                                                  "e": "get",
+                                                  "field": "kind",
+                                                  "of": {
+                                                    "e": "get",
+                                                    "field": "draft",
+                                                    "of": {
+                                                      "e": "get",
+                                                      "field": "nodes",
+                                                      "of": {
+                                                        "e": "var",
+                                                        "name": "@state"
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              ],
+                                              "e": "op",
+                                              "op": "contains"
+                                            },
+                                            {
+                                              "args": [
+                                                {
+                                                  "e": "lit",
+                                                  "v": ["ok", "failed", "refused", "skipped"]
+                                                },
+                                                {
+                                                  "e": "get",
+                                                  "field": "kind",
+                                                  "of": {
+                                                    "e": "get",
+                                                    "field": "decision",
+                                                    "of": {
+                                                      "e": "get",
+                                                      "field": "nodes",
+                                                      "of": {
+                                                        "e": "var",
+                                                        "name": "@state"
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              ],
+                                              "e": "op",
+                                              "op": "contains"
+                                            }
+                                          ],
+                                          "e": "op",
+                                          "op": "and"
+                                        }
+                                      ],
+                                      "e": "op",
+                                      "op": "and"
+                                    },
+                                    "e": "if",
+                                    "else": {
+                                      "e": "var",
+                                      "name": "@acc"
+                                    },
+                                    "then": {
+                                      "cond": {
+                                        "args": [
+                                          {
+                                            "args": [
+                                              {
+                                                "e": "get",
+                                                "field": "kind",
+                                                "of": {
+                                                  "e": "get",
+                                                  "field": "draft",
+                                                  "of": {
+                                                    "e": "get",
+                                                    "field": "nodes",
+                                                    "of": {
+                                                      "e": "var",
+                                                      "name": "@state"
+                                                    }
+                                                  }
+                                                }
+                                              },
+                                              {
+                                                "e": "lit",
+                                                "v": "skipped"
+                                              }
+                                            ],
+                                            "e": "op",
+                                            "op": "eq"
+                                          },
+                                          {
+                                            "args": [
+                                              {
+                                                "e": "get",
+                                                "field": "kind",
+                                                "of": {
+                                                  "e": "get",
+                                                  "field": "decision",
+                                                  "of": {
+                                                    "e": "get",
+                                                    "field": "nodes",
+                                                    "of": {
+                                                      "e": "var",
+                                                      "name": "@state"
+                                                    }
+                                                  }
+                                                }
+                                              },
+                                              {
+                                                "e": "lit",
+                                                "v": "skipped"
+                                              }
+                                            ],
+                                            "e": "op",
+                                            "op": "eq"
+                                          }
+                                        ],
+                                        "e": "op",
+                                        "op": "or"
+                                      },
+                                      "e": "if",
+                                      "else": {
+                                        "be": {
+                                          "e": "get",
+                                          "field": "arg",
+                                          "of": {
+                                            "e": "var",
+                                            "name": "@state"
+                                          }
+                                        },
+                                        "e": "let",
+                                        "in": {
+                                          "be": {
+                                            "e": "get",
+                                            "field": "value",
+                                            "of": {
+                                              "e": "get",
+                                              "field": "draft",
+                                              "of": {
+                                                "e": "get",
+                                                "field": "nodes",
+                                                "of": {
+                                                  "e": "var",
+                                                  "name": "@state"
+                                                }
+                                              }
+                                            }
+                                          },
+                                          "e": "let",
+                                          "in": {
+                                            "be": {
+                                              "e": "get",
+                                              "field": "value",
+                                              "of": {
+                                                "e": "get",
+                                                "field": "decision",
+                                                "of": {
+                                                  "e": "get",
+                                                  "field": "nodes",
+                                                  "of": {
+                                                    "e": "var",
+                                                    "name": "@state"
+                                                  }
+                                                }
+                                              }
+                                            },
+                                            "e": "let",
+                                            "in": {
+                                              "cond": {
+                                                "args": [
+                                                  {
+                                                    "e": "var",
+                                                    "name": "decision"
+                                                  },
+                                                  {
+                                                    "e": "lit",
+                                                    "v": "deny"
+                                                  }
+                                                ],
+                                                "e": "op",
+                                                "op": "ne"
+                                              },
+                                              "e": "if",
+                                              "else": {
+                                                "e": "record",
+                                                "fields": {
+                                                  "actions": {
+                                                    "e": "get",
+                                                    "field": "actions",
+                                                    "of": {
+                                                      "e": "var",
+                                                      "name": "@acc"
+                                                    }
+                                                  },
+                                                  "state": {
+                                                    "e": "record",
+                                                    "fields": {
+                                                      "arg": {
+                                                        "e": "get",
+                                                        "field": "arg",
+                                                        "of": {
+                                                          "e": "var",
+                                                          "name": "@state"
+                                                        }
+                                                      },
+                                                      "next": {
+                                                        "e": "get",
+                                                        "field": "next",
+                                                        "of": {
+                                                          "e": "var",
+                                                          "name": "@state"
+                                                        }
+                                                      },
+                                                      "nodes": {
+                                                        "e": "record",
+                                                        "fields": {
+                                                          "decision": {
+                                                            "e": "get",
+                                                            "field": "decision",
+                                                            "of": {
+                                                              "e": "get",
+                                                              "field": "nodes",
+                                                              "of": {
+                                                                "e": "var",
+                                                                "name": "@state"
+                                                              }
+                                                            }
+                                                          },
+                                                          "draft": {
+                                                            "e": "get",
+                                                            "field": "draft",
+                                                            "of": {
+                                                              "e": "get",
+                                                              "field": "nodes",
+                                                              "of": {
+                                                                "e": "var",
+                                                                "name": "@state"
+                                                              }
+                                                            }
+                                                          },
+                                                          "saved": {
+                                                            "e": "record",
+                                                            "fields": {
+                                                              "call": {
+                                                                "e": "get",
+                                                                "field": "call",
+                                                                "of": {
+                                                                  "e": "get",
+                                                                  "field": "saved",
+                                                                  "of": {
+                                                                    "e": "get",
+                                                                    "field": "nodes",
+                                                                    "of": {
+                                                                      "e": "var",
+                                                                      "name": "@state"
+                                                                    }
+                                                                  }
+                                                                }
+                                                              },
+                                                              "error": {
+                                                                "e": "lit",
+                                                                "v": null
+                                                              },
+                                                              "kind": {
+                                                                "e": "lit",
+                                                                "v": "skipped"
+                                                              },
+                                                              "value": {
+                                                                "e": "get",
+                                                                "field": "value",
+                                                                "of": {
+                                                                  "e": "get",
+                                                                  "field": "saved",
+                                                                  "of": {
+                                                                    "e": "get",
+                                                                    "field": "nodes",
+                                                                    "of": {
+                                                                      "e": "var",
+                                                                      "name": "@state"
+                                                                    }
+                                                                  }
+                                                                }
+                                                              }
+                                                            }
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              },
+                                              "then": {
+                                                "e": "record",
+                                                "fields": {
+                                                  "actions": {
+                                                    "args": [
+                                                      {
+                                                        "e": "get",
+                                                        "field": "actions",
+                                                        "of": {
+                                                          "e": "var",
+                                                          "name": "@acc"
+                                                        }
+                                                      },
+                                                      {
+                                                        "e": "record",
+                                                        "fields": {
+                                                          "args": {
+                                                            "e": "record",
+                                                            "fields": {
+                                                              "text": {
+                                                                "e": "var",
+                                                                "name": "draft"
+                                                              }
+                                                            }
+                                                          },
+                                                          "kind": {
+                                                            "e": "lit",
+                                                            "v": "call"
+                                                          },
+                                                          "op": {
+                                                            "e": "lit",
+                                                            "v": "notes.append"
+                                                          }
+                                                        }
+                                                      }
+                                                    ],
+                                                    "e": "op",
+                                                    "op": "append"
+                                                  },
+                                                  "state": {
+                                                    "e": "record",
+                                                    "fields": {
+                                                      "arg": {
+                                                        "e": "get",
+                                                        "field": "arg",
+                                                        "of": {
+                                                          "e": "var",
+                                                          "name": "@state"
+                                                        }
+                                                      },
+                                                      "next": {
+                                                        "args": [
+                                                          {
+                                                            "e": "get",
+                                                            "field": "next",
+                                                            "of": {
+                                                              "e": "var",
+                                                              "name": "@state"
+                                                            }
+                                                          },
+                                                          {
+                                                            "e": "lit",
+                                                            "v": 1
+                                                          }
+                                                        ],
+                                                        "e": "op",
+                                                        "op": "add"
+                                                      },
+                                                      "nodes": {
+                                                        "e": "record",
+                                                        "fields": {
+                                                          "decision": {
+                                                            "e": "get",
+                                                            "field": "decision",
+                                                            "of": {
+                                                              "e": "get",
+                                                              "field": "nodes",
+                                                              "of": {
+                                                                "e": "var",
+                                                                "name": "@state"
+                                                              }
+                                                            }
+                                                          },
+                                                          "draft": {
+                                                            "e": "get",
+                                                            "field": "draft",
+                                                            "of": {
+                                                              "e": "get",
+                                                              "field": "nodes",
+                                                              "of": {
+                                                                "e": "var",
+                                                                "name": "@state"
+                                                              }
+                                                            }
+                                                          },
+                                                          "saved": {
+                                                            "e": "record",
+                                                            "fields": {
+                                                              "call": {
+                                                                "e": "get",
+                                                                "field": "next",
+                                                                "of": {
+                                                                  "e": "var",
+                                                                  "name": "@state"
+                                                                }
+                                                              },
+                                                              "error": {
+                                                                "e": "lit",
+                                                                "v": null
+                                                              },
+                                                              "kind": {
+                                                                "e": "lit",
+                                                                "v": "running"
+                                                              },
+                                                              "value": {
+                                                                "e": "get",
+                                                                "field": "value",
+                                                                "of": {
+                                                                  "e": "get",
+                                                                  "field": "saved",
+                                                                  "of": {
+                                                                    "e": "get",
+                                                                    "field": "nodes",
+                                                                    "of": {
+                                                                      "e": "var",
+                                                                      "name": "@state"
+                                                                    }
+                                                                  }
+                                                                }
+                                                              }
+                                                            }
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            },
+                                            "name": "decision"
+                                          },
+                                          "name": "draft"
+                                        },
+                                        "name": "prompt"
+                                      },
+                                      "then": {
+                                        "e": "record",
+                                        "fields": {
+                                          "actions": {
+                                            "e": "get",
+                                            "field": "actions",
+                                            "of": {
+                                              "e": "var",
+                                              "name": "@acc"
+                                            }
+                                          },
+                                          "state": {
+                                            "e": "record",
+                                            "fields": {
+                                              "arg": {
+                                                "e": "get",
+                                                "field": "arg",
+                                                "of": {
+                                                  "e": "var",
+                                                  "name": "@state"
+                                                }
+                                              },
+                                              "next": {
+                                                "e": "get",
+                                                "field": "next",
+                                                "of": {
+                                                  "e": "var",
+                                                  "name": "@state"
+                                                }
+                                              },
+                                              "nodes": {
+                                                "e": "record",
+                                                "fields": {
+                                                  "decision": {
+                                                    "e": "get",
+                                                    "field": "decision",
+                                                    "of": {
+                                                      "e": "get",
+                                                      "field": "nodes",
+                                                      "of": {
+                                                        "e": "var",
+                                                        "name": "@state"
+                                                      }
+                                                    }
+                                                  },
+                                                  "draft": {
+                                                    "e": "get",
+                                                    "field": "draft",
+                                                    "of": {
+                                                      "e": "get",
+                                                      "field": "nodes",
+                                                      "of": {
+                                                        "e": "var",
+                                                        "name": "@state"
+                                                      }
+                                                    }
+                                                  },
+                                                  "saved": {
+                                                    "e": "record",
+                                                    "fields": {
+                                                      "call": {
+                                                        "e": "get",
+                                                        "field": "call",
+                                                        "of": {
+                                                          "e": "get",
+                                                          "field": "saved",
+                                                          "of": {
+                                                            "e": "get",
+                                                            "field": "nodes",
+                                                            "of": {
+                                                              "e": "var",
+                                                              "name": "@state"
+                                                            }
+                                                          }
+                                                        }
+                                                      },
+                                                      "error": {
+                                                        "e": "lit",
+                                                        "v": null
+                                                      },
+                                                      "kind": {
+                                                        "e": "lit",
+                                                        "v": "skipped"
+                                                      },
+                                                      "value": {
+                                                        "e": "get",
+                                                        "field": "value",
+                                                        "of": {
+                                                          "e": "get",
+                                                          "field": "saved",
+                                                          "of": {
+                                                            "e": "get",
+                                                            "field": "nodes",
+                                                            "of": {
+                                                              "e": "var",
+                                                              "name": "@state"
+                                                            }
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "name": "@nodes"
+                                },
+                                "name": "@state"
+                              },
+                              "e": "let",
+                              "in": {
+                                "be": {
+                                  "e": "get",
+                                  "field": "state",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "@acc"
+                                  }
+                                },
+                                "e": "let",
+                                "in": {
+                                  "be": {
+                                    "e": "get",
+                                    "field": "nodes",
+                                    "of": {
+                                      "e": "var",
+                                      "name": "@state"
+                                    }
+                                  },
+                                  "e": "let",
+                                  "in": {
+                                    "cond": {
+                                      "args": [
+                                        {
+                                          "args": [
+                                            {
+                                              "args": [
+                                                {
+                                                  "e": "lit",
+                                                  "v": ["ok", "failed", "refused", "skipped"]
+                                                },
+                                                {
+                                                  "e": "get",
+                                                  "field": "kind",
+                                                  "of": {
+                                                    "e": "get",
+                                                    "field": "draft",
+                                                    "of": {
+                                                      "e": "get",
+                                                      "field": "nodes",
+                                                      "of": {
+                                                        "e": "var",
+                                                        "name": "@state"
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              ],
+                                              "e": "op",
+                                              "op": "contains"
+                                            },
+                                            {
+                                              "args": [
+                                                {
+                                                  "e": "lit",
+                                                  "v": ["ok", "failed", "refused", "skipped"]
+                                                },
+                                                {
+                                                  "e": "get",
+                                                  "field": "kind",
+                                                  "of": {
+                                                    "e": "get",
+                                                    "field": "decision",
+                                                    "of": {
+                                                      "e": "get",
+                                                      "field": "nodes",
+                                                      "of": {
+                                                        "e": "var",
+                                                        "name": "@state"
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              ],
+                                              "e": "op",
+                                              "op": "contains"
+                                            }
+                                          ],
+                                          "e": "op",
+                                          "op": "and"
+                                        },
+                                        {
+                                          "args": [
+                                            {
+                                              "e": "lit",
+                                              "v": ["ok", "failed", "refused", "skipped"]
+                                            },
+                                            {
+                                              "e": "get",
+                                              "field": "kind",
+                                              "of": {
+                                                "e": "get",
+                                                "field": "saved",
+                                                "of": {
+                                                  "e": "get",
+                                                  "field": "nodes",
+                                                  "of": {
+                                                    "e": "var",
+                                                    "name": "@state"
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          ],
+                                          "e": "op",
+                                          "op": "contains"
+                                        }
+                                      ],
+                                      "e": "op",
+                                      "op": "and"
+                                    },
+                                    "e": "if",
+                                    "else": {
+                                      "e": "var",
+                                      "name": "@acc"
+                                    },
+                                    "then": {
+                                      "be": {
+                                        "e": "get",
+                                        "field": "arg",
+                                        "of": {
+                                          "e": "var",
+                                          "name": "@state"
+                                        }
+                                      },
+                                      "e": "let",
+                                      "in": {
+                                        "e": "record",
+                                        "fields": {
+                                          "actions": {
+                                            "args": [
+                                              {
+                                                "e": "get",
+                                                "field": "actions",
+                                                "of": {
+                                                  "e": "var",
+                                                  "name": "@acc"
+                                                }
+                                              },
+                                              {
+                                                "e": "record",
+                                                "fields": {
+                                                  "kind": {
+                                                    "e": "lit",
+                                                    "v": "halt"
+                                                  },
+                                                  "value": {
+                                                    "be": {
+                                                      "e": "get",
+                                                      "field": "saved",
+                                                      "of": {
+                                                        "e": "var",
+                                                        "name": "@nodes"
+                                                      }
+                                                    },
+                                                    "e": "let",
+                                                    "in": {
+                                                      "cond": {
+                                                        "args": [
+                                                          {
+                                                            "e": "get",
+                                                            "field": "kind",
+                                                            "of": {
+                                                              "e": "var",
+                                                              "name": "@1"
+                                                            }
+                                                          },
+                                                          {
+                                                            "e": "lit",
+                                                            "v": "ok"
+                                                          }
+                                                        ],
+                                                        "e": "op",
+                                                        "op": "eq"
+                                                      },
+                                                      "e": "if",
+                                                      "else": {
+                                                        "e": "lit",
+                                                        "v": "denied"
+                                                      },
+                                                      "then": {
+                                                        "be": {
+                                                          "e": "get",
+                                                          "field": "value",
+                                                          "of": {
+                                                            "e": "var",
+                                                            "name": "@1"
+                                                          }
+                                                        },
+                                                        "e": "let",
+                                                        "in": {
+                                                          "e": "var",
+                                                          "name": "note"
+                                                        },
+                                                        "name": "note"
+                                                      }
+                                                    },
+                                                    "name": "@1"
+                                                  }
+                                                }
+                                              }
+                                            ],
+                                            "e": "op",
+                                            "op": "append"
+                                          },
+                                          "state": {
+                                            "e": "var",
+                                            "name": "@state"
+                                          }
+                                        }
+                                      },
+                                      "name": "prompt"
+                                    }
+                                  },
+                                  "name": "@nodes"
+                                },
+                                "name": "@state"
+                              },
+                              "name": "@acc"
+                            },
+                            "name": "@acc"
+                          },
+                          "name": "@acc"
+                        },
+                        "name": "@acc"
+                      },
+                      "then": {
+                        "e": "record",
+                        "fields": {
+                          "actions": {
+                            "e": "list",
+                            "items": [
+                              {
+                                "e": "record",
+                                "fields": {
+                                  "kind": {
+                                    "e": "lit",
+                                    "v": "halt"
+                                  },
+                                  "value": {
+                                    "be": {
+                                      "e": "get",
+                                      "field": "arg",
+                                      "of": {
+                                        "e": "var",
+                                        "name": "@state"
+                                      }
+                                    },
+                                    "e": "let",
+                                    "in": {
+                                      "e": "lit",
+                                      "v": "stopped"
+                                    },
+                                    "name": "prompt"
+                                  }
+                                }
+                              }
+                            ]
+                          },
+                          "state": {
+                            "e": "var",
+                            "name": "@state"
+                          }
+                        }
+                      }
+                    },
+                    "then": {
+                      "e": "record",
+                      "fields": {
+                        "actions": {
+                          "e": "list",
+                          "items": [
+                            {
+                              "e": "record",
+                              "fields": {
+                                "kind": {
+                                  "e": "lit",
+                                  "v": "halt"
+                                },
+                                "value": {
+                                  "be": {
+                                    "e": "get",
+                                    "field": "arg",
+                                    "of": {
+                                      "e": "var",
+                                      "name": "@state"
+                                    }
+                                  },
+                                  "e": "let",
+                                  "in": {
+                                    "e": "lit",
+                                    "v": "stopped"
+                                  },
+                                  "name": "prompt"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        "state": {
+                          "e": "var",
+                          "name": "@state"
+                        }
+                      }
+                    }
+                  },
+                  "then": {
+                    "e": "record",
+                    "fields": {
+                      "actions": {
+                        "e": "list",
+                        "items": [
+                          {
+                            "e": "record",
+                            "fields": {
+                              "kind": {
+                                "e": "lit",
+                                "v": "halt"
+                              },
+                              "value": {
+                                "be": {
+                                  "e": "get",
+                                  "field": "arg",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "@state"
+                                  }
+                                },
+                                "e": "let",
+                                "in": {
+                                  "e": "lit",
+                                  "v": "stopped"
+                                },
+                                "name": "prompt"
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      "state": {
+                        "e": "var",
+                        "name": "@state"
+                      }
+                    }
+                  }
+                },
+                "name": "@state"
+              },
+              "then": {
+                "e": "record",
+                "fields": {
+                  "actions": {
+                    "e": "list",
+                    "items": []
+                  },
+                  "state": {
+                    "e": "var",
+                    "name": "state"
+                  }
+                }
+              }
+            }
+          },
+          "kind": "elaborated",
+          "uses": [
+            {
+              "capability": "model",
+              "name": "model"
+            },
+            {
+              "capability": "approve",
+              "name": "approve"
+            },
+            {
+              "capability": "notes",
+              "name": "notes"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "request": {
+        "capabilities": {
+          "approve": {
+            "operations": {
+              "ask": {
+                "input": {
+                  "Record": {
+                    "action": "String",
+                    "args": "Any"
+                  }
+                },
+                "onResult": {
+                  "cond": {
+                    "args": [
+                      {
+                        "e": "var",
+                        "name": "result"
+                      },
+                      {
+                        "e": "lit",
+                        "v": "always"
+                      }
+                    ],
+                    "e": "op",
+                    "op": "eq"
+                  },
+                  "e": "if",
+                  "else": {
+                    "cond": {
+                      "args": [
+                        {
+                          "e": "var",
+                          "name": "result"
+                        },
+                        {
+                          "e": "lit",
+                          "v": "once"
+                        }
+                      ],
+                      "e": "op",
+                      "op": "eq"
+                    },
+                    "e": "if",
+                    "else": {
+                      "e": "var",
+                      "name": "grant"
+                    },
+                    "then": {
+                      "e": "record",
+                      "fields": {
+                        "allow": {
+                          "e": "get",
+                          "field": "allow",
+                          "of": {
+                            "e": "var",
+                            "name": "grant"
+                          }
+                        },
+                        "once": {
+                          "args": [
+                            {
+                              "e": "get",
+                              "field": "once",
+                              "of": {
+                                "e": "var",
+                                "name": "grant"
+                              }
+                            },
+                            {
+                              "e": "var",
+                              "name": "args"
+                            }
+                          ],
+                          "e": "op",
+                          "op": "append"
+                        }
+                      }
+                    }
+                  },
+                  "then": {
+                    "e": "record",
+                    "fields": {
+                      "allow": {
+                        "args": [
+                          {
+                            "e": "get",
+                            "field": "allow",
+                            "of": {
+                              "e": "var",
+                              "name": "grant"
+                            }
+                          },
+                          {
+                            "e": "get",
+                            "field": "action",
+                            "of": {
+                              "e": "var",
+                              "name": "args"
+                            }
+                          }
+                        ],
+                        "e": "op",
+                        "op": "append"
+                      },
+                      "once": {
+                        "e": "get",
+                        "field": "once",
+                        "of": {
+                          "e": "var",
+                          "name": "grant"
+                        }
+                      }
+                    }
+                  }
+                },
+                "output": "String",
+                "post": {
+                  "args": [
+                    {
+                      "e": "lit",
+                      "v": ["once", "always", "deny"]
+                    },
+                    {
+                      "e": "var",
+                      "name": "result"
+                    }
+                  ],
+                  "e": "op",
+                  "op": "contains"
+                },
+                "ret": {
+                  "e": "list",
+                  "items": []
+                }
+              }
+            }
+          },
+          "model": {
+            "operations": {
+              "generate": {
+                "input": {
+                  "Record": {
+                    "messages": {
+                      "List": {
+                        "Record": {
+                          "content": "String",
+                          "role": "String"
+                        }
+                      }
+                    }
+                  }
+                },
+                "output": "String",
+                "ret": {
+                  "e": "list",
+                  "items": [
+                    {
+                      "e": "lit",
+                      "v": "model"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "notes": {
+            "operations": {
+              "append": {
+                "effect": true,
+                "footprint": {
+                  "e": "record",
+                  "fields": {
+                    "appends": {
+                      "e": "lit",
+                      "v": "notes"
+                    }
+                  }
+                },
+                "input": {
+                  "Record": {
+                    "text": "String"
+                  }
+                },
+                "onCall": {
+                  "e": "record",
+                  "fields": {
+                    "allow": {
+                      "e": "get",
+                      "field": "allow",
+                      "of": {
+                        "e": "var",
+                        "name": "grant"
+                      }
+                    },
+                    "once": {
+                      "acc": "kept",
+                      "body": {
+                        "cond": {
+                          "args": [
+                            {
+                              "e": "var",
+                              "name": "x"
+                            },
+                            {
+                              "e": "record",
+                              "fields": {
+                                "action": {
+                                  "e": "lit",
+                                  "v": "notes.append"
+                                },
+                                "args": {
+                                  "e": "var",
+                                  "name": "args"
+                                }
+                              }
+                            }
+                          ],
+                          "e": "op",
+                          "op": "eq"
+                        },
+                        "e": "if",
+                        "else": {
+                          "args": [
+                            {
+                              "e": "var",
+                              "name": "kept"
+                            },
+                            {
+                              "e": "var",
+                              "name": "x"
+                            }
+                          ],
+                          "e": "op",
+                          "op": "append"
+                        },
+                        "then": {
+                          "e": "var",
+                          "name": "kept"
+                        }
+                      },
+                      "e": "fold",
+                      "init": {
+                        "e": "list",
+                        "items": []
+                      },
+                      "item": "x",
+                      "over": {
+                        "e": "get",
+                        "field": "once",
+                        "of": {
+                          "e": "var",
+                          "name": "grant"
+                        }
+                      }
+                    }
+                  }
+                },
+                "output": "String",
+                "pre": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "e": "get",
+                          "field": "allow",
+                          "of": {
+                            "e": "var",
+                            "name": "grant"
+                          }
+                        },
+                        {
+                          "e": "lit",
+                          "v": "notes.append"
+                        }
+                      ],
+                      "e": "op",
+                      "op": "contains"
+                    },
+                    {
+                      "args": [
+                        {
+                          "e": "get",
+                          "field": "once",
+                          "of": {
+                            "e": "var",
+                            "name": "grant"
+                          }
+                        },
+                        {
+                          "e": "record",
+                          "fields": {
+                            "action": {
+                              "e": "lit",
+                              "v": "notes.append"
+                            },
+                            "args": {
+                              "e": "var",
+                              "name": "args"
+                            }
+                          }
+                        }
+                      ],
+                      "e": "op",
+                      "op": "contains"
+                    }
+                  ],
+                  "e": "op",
+                  "op": "or"
+                }
+              },
+              "read": {
+                "input": {
+                  "Record": {}
+                },
+                "output": {
+                  "List": "String"
+                },
+                "ret": {
+                  "e": "list",
+                  "items": [
+                    {
+                      "e": "lit",
+                      "v": "notes"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "op": "elaborate",
+        "source": "harness broken(prompt: String) -> String\nuses model\ndraft = model.generate(messages: [{role: \"user\", content: topic}])\nreturn draft\n"
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "kind": "problems",
+          "problems": [
+            {
+              "kind": "unknownName",
+              "name": "topic",
+              "span": {
+                "end": {
+                  "column": 64,
+                  "line": 3
+                },
+                "start": {
+                  "column": 59,
+                  "line": 3
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

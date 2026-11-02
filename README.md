@@ -28,9 +28,10 @@ The definitions are in [harness.rs](crates/kernel/src/harness.rs), [run.rs](crat
 ## Layout
 
 - `crates/kernel`: the library. Requests enter through `api::call` (CBOR in, CBOR out).
-- `crates/kernel-abi`: the WASM exports `cronch_alloc`, `cronch_call` and `cronch_free`.
+- `crates/surface`: the surface language and its elaborator, which turns a harness written as a graph of named calls into a harness term. It answers the `elaborate` request and passes every other request to the kernel. It is untrusted: the kernel checks what it produces. The design is in [the surface language](docs/2026-11-01-surface-language.md).
+- `crates/kernel-abi`: the WASM exports `cronch_alloc`, `cronch_call` and `cronch_free`, through `surface`.
 - `javascript`: the JS loader, the CBOR codec and the TypeScript types.
-- `compliance`: cross-implementation test vectors, replayed by both the Rust kernel and the WASM build.
+- `compliance`: cross-implementation test vectors, replayed by both the Rust crates and the WASM build.
 
 ## Development
 
