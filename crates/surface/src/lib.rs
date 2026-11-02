@@ -10,6 +10,7 @@
 //! contracts, grant or proved properties forbid.
 
 pub mod api;
+mod claims;
 pub mod elaborate;
 pub mod lex;
 pub mod parse;
@@ -123,6 +124,21 @@ pub enum What {
     MixedPatterns,
     /// A literal `match` with no `_` arm.
     NoDefault,
+    /// `since` or a quantifier outside a property.
+    PropertyOnly {
+        construct: String,
+    },
+    /// A property or invariant reads a node without a slot: a pure value, which the state doesn't hold.
+    NotASlot {
+        node: String,
+    },
+    /// A temporal operator or event helper with the wrong arguments.
+    Helper {
+        name: String,
+        expected: String,
+    },
+    /// `always` anywhere but around a whole property, which is always `□` already.
+    NestedAlways,
     /// `otherwise` reads a node.
     OtherwiseReadsNode {
         node: String,

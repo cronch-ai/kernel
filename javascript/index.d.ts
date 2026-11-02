@@ -217,6 +217,19 @@ export interface Binding {
   readonly capability: string;
 }
 
+/** An invariant of an elaborated harness's state, over the variable `state`. */
+export interface Invariant {
+  readonly name: string;
+  readonly expr: Expr;
+}
+
+/** Where each named thing of a source is. */
+export interface SourceMap {
+  readonly nodes: Readonly<Record<string, Span>>;
+  readonly properties: Readonly<Record<string, Span>>;
+  readonly invariants: Readonly<Record<string, Span>>;
+}
+
 /** A registered harness a harness spawns, by the name it uses for it. */
 export interface HarnessBinding {
   readonly name: string;
@@ -249,6 +262,10 @@ export type SourceProblem = { readonly span: Span } & (
   | { readonly kind: "noSuchOutcome"; readonly outcome: string }
   | { readonly kind: "mixedPatterns" }
   | { readonly kind: "noDefault" }
+  | { readonly kind: "propertyOnly"; readonly construct: string }
+  | { readonly kind: "notASlot"; readonly node: string }
+  | { readonly kind: "helper"; readonly name: string; readonly expected: string }
+  | { readonly kind: "nestedAlways" }
   | { readonly kind: "otherwiseReadsNode"; readonly node: string }
   | { readonly kind: "type"; readonly problem: Problem }
   | { readonly kind: "mismatch"; readonly expected: Type; readonly got: Type }
@@ -649,6 +666,9 @@ export interface Kernel {
         readonly harness: Harness;
         readonly uses: readonly Binding[];
         readonly harnesses: readonly HarnessBinding[];
+        readonly properties: readonly Property[];
+        readonly invariants: readonly Invariant[];
+        readonly sourceMap: SourceMap;
       }
     | { readonly kind: "problems"; readonly problems: readonly SourceProblem[] };
   key(kind: Kind, object: unknown): string;

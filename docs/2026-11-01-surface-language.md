@@ -111,7 +111,7 @@ property no_effect_without_approval:
   - The filter reads the message and the parameter, never a node, so it can be decided when the message arrives.
   - A message nobody is listening for changes nothing.
   - A receive nothing reads doesn't keep the run going: the run halts once every call, and everything `return` reads, has settled.
-- **Cancellation:** `reply = model.generate(...) until stop` cancels the call once `stop` returns. The slot fails with `{"cancelled": true}`, whether the call was running or still waiting, and is handled like any other failure.
+- **Cancellation:** `reply = model.generate(...) until stop` cancels the call once `stop` returns. The slot fails with the error `"cancelled"`, whether the call was running or still waiting, and is handled like any other failure.
   - The kernel's `cancel` of a call is a request to the world, and the call stays pending. The elaborator settles the slot itself, and any result that still arrives finds no slot running its call.
   - That is enough for the Claude Code exercise's P4, "an interrupt stops effects until the next prompt".
 
@@ -130,19 +130,27 @@ property no_effect_without_approval:
 
 ### Properties and invariants (S3)
 
-- **`property name:`** gives `□φ` with `φ` written as an expression:
-  - `implies`, `and`, `or`, `not`;
-  - `prev`, `since`, `once`, `historically`;
-  - `exists x in e:` and `forall x in e:`, bounded by the trace as the kernel requires.
-- **Event helpers** spell the common atoms: `called(op, ...)`, `returned(op, ...)`, `failed(op)`, `effect()`, `msg(channel)`, `labelled(...)`. A trailing expression filters on the event's fields, as `value in [...]` does above.
-- **Node helpers** read the slots in the state each event carries: `ok(saved)`, `skipped(saved)`, `saved.value`. This is what decision 6 allows.
-- **Guards are explicit.** The elaborator puts every field access behind a guard atom, so a property can't be vacuously violated by reading a field an event doesn't have. That is gap 5 of the design session.
-- **`invariant name: expr`** over node slots becomes an invariant certificate's expression over the generated state. With one slot per node, the invariants worth stating, such as "`saved` never runs unless `decision` returned something other than `deny`", are short.
+- **`property name: φ`** gives `□φ`, with `φ` written as an expression. The body can start on the next line. `always(φ)` around the whole body says the same thing, and is refused anywhere else.
+  - The connectives are `implies`, `and`, `or` and `not`. The temporal operators are `prev`, `since`, `once` and `historically`.
+  - `exists x in e: φ` and `forall x in e: φ` range over the values `e` gave at the events so far, as the kernel requires. The kernel only searches quantifier-free properties, so a quantified one is monitored, not proved.
+  - Any other boolean expression is an atom over `event`.
+- **Event helpers** spell the common atoms. Each takes an operation or channel as a path from a capability (`approve.ask`) or a string. An optional condition reads what arrived:
+  - `called(op, cond)`: a performed call, with the arguments as `args`;
+  - `returned(op, cond)`: a result, as `value`;
+  - `failed(op, cond)`: a failure, as `error`; and `refused(op)`;
+  - `effect()`: a performed call that has an effect;
+  - `msg(channel, cond)`: a message, as `value`.
+- **Node helpers** read the slots in the state each event carries: `ok(saved)`, `failed(saved)`, `refused(saved)`, `skipped(saved)`, `running(saved)` and `waiting(saved)`. A node's name in an atom is its slot, so `saved.value` and `saved.kind` read it. This is what decision 6 allows. Slots are read only at the root run's own steps, so an atom that reads one is false at every other event.
+- **Guards are explicit.** An atom that fails to evaluate is false as a whole. So each helper is an atom of its own, with its field reads behind `if`s, and one helper's missing field can't falsify another. That is gap 5 of the design session.
+- **`invariant name: expr`** over node slots, and the parameter, becomes an expression over the generated state, for an invariant certificate or an induction obligation. With one slot per node, the invariants worth stating are short, such as "`saved` never runs unless `decision` returned something other than `deny`".
+  - An obligation needs a state with no `Any` in it. That is why a slot's `error` holds the failure's error as text, and why the generated step names only the inputs the harness can use, and handles failures in its `otherwise`, which an obligation can leave out.
+  - A harness that spawns still has an `Any` in its state, the child's result, so it gets no obligation until the kernel types spawn results. See [Removing `Any`](2026-11-02-removing-any.md).
 
 ### Source maps (S3)
 
-- `elaborate` returns, with the terms, a map from each node and each `Expr` path to a source span.
-- Counterexamples, refusals and monitor verdicts can then be reported as source lines: which node was waiting, which line made the call. The kernel API gains no new verdicts; the map is enough for a caller to translate.
+- `elaborate` returns `sourceMap`: the span of each node, property and invariant.
+- That is enough to read back what the kernel reports in source terms. A counterexample's states name their slots by node, a call's identifier is in the slot that made it, and a violated property is named. The kernel API gains no new verdicts.
+- A map from each path of the generated term to a span is left until a caller needs one. The generated term's problems are elaborator bugs, not the author's.
 
 ## Elaboration
 
@@ -151,7 +159,7 @@ property no_effect_without_approval:
 - **The generated state** is a record:
   - `arg`, the start value;
   - `next`, the call counter;
-  - `nodes`, a record with one slot per call or receive node. A slot is a record `{kind, call, value, error}`. `kind` is `waiting`, `running`, `ok`, `failed`, `refused` or `skipped`, and says which of the other fields mean anything. `value` is the operation's output, a stream's items as a list, or the message.
+  - `nodes`, a record with one slot per call or receive node. A slot is a record `{kind, call, value, error}`, with `error` as text. `kind` is `waiting`, `running`, `ok`, `failed`, `refused` or `skipped`, and says which of the other fields mean anything. `value` is the operation's output, a stream's items as a list, or the message.
   - A slot is a record rather than a variant because the kernel has no expression that builds a value at a variant type: a record literal never conforms to one. `value` is carried from slot to slot, never rebuilt from a literal, so it keeps its type in every branch.
 - **The generated `δ`** is one pass:
   1. **Record:** `start` stores `arg`. `ret`, `failed` or `refused` for call `k` settles the slot running `k`; on a stream, `ret` appends an item and `end` settles it. A message settles every receive listening on its channel whose filter it passes. An input for a call no slot is running (only possible after a cancel) changes nothing.

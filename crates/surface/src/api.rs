@@ -29,9 +29,11 @@ fn respond(request: Request) -> Value {
             capabilities,
             harnesses,
         } => match elaborate(&source, &capabilities, &harnesses) {
-            Ok(e) => json!({
-                "kind": "elaborated", "harness": e.harness, "uses": e.uses, "harnesses": e.harnesses,
-            }),
+            Ok(e) => {
+                let mut out = json!(e);
+                out["kind"] = json!("elaborated");
+                out
+            }
             Err(problems) => json!({ "kind": "problems", "problems": problems }),
         },
     }

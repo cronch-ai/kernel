@@ -58,6 +58,10 @@ pub enum Binary {
     Div,
     IDiv,
     Mod,
+    /// `a implies b`: `not a or b`.
+    Implies,
+    /// `a since b`: only in properties.
+    Since,
 }
 
 #[derive(Clone, Debug)]
@@ -78,6 +82,13 @@ pub enum ExprKind {
         init: Box<Expr>,
         acc: Name,
         item: Name,
+        body: Box<Expr>,
+    },
+    /// `exists x in e: body` or `forall x in e: body`: only in properties, over the values `e` gave so far.
+    Quantified {
+        exists: bool,
+        var: Name,
+        over: Box<Expr>,
         body: Box<Expr>,
     },
     /// `for item in over: call`: one call per item. Only a node can be one.
@@ -154,4 +165,8 @@ pub struct File {
     /// Every `return`, so more than one can be reported.
     pub returns: Vec<Expr>,
     pub otherwise: Vec<Expr>,
+    /// `property name: formula`, each `□formula` over the events of a run.
+    pub properties: Vec<(Name, Expr)>,
+    /// `invariant name: expr`, over the node slots of the state.
+    pub invariants: Vec<(Name, Expr)>,
 }
