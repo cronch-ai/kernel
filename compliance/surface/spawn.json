@@ -1090,7 +1090,9 @@
                                       }
                                     },
                                     "spawn": {
-                                      "Record": {}
+                                      "Record": {
+                                        "name": "String"
+                                      }
                                     }
                                   },
                                   "tag": "kind"
@@ -1152,7 +1154,9 @@
                                     }
                                   },
                                   "spawn": {
-                                    "Record": {}
+                                    "Record": {
+                                      "name": "String"
+                                    }
                                   }
                                 },
                                 "tag": "kind"
@@ -1271,7 +1275,9 @@
                               }
                             },
                             "spawn": {
-                              "Record": {}
+                              "Record": {
+                                "name": "String"
+                              }
                             }
                           },
                           "tag": "kind"
@@ -2415,7 +2421,9 @@
                                       }
                                     },
                                     "spawn": {
-                                      "Record": {}
+                                      "Record": {
+                                        "name": "String"
+                                      }
                                     }
                                   },
                                   "tag": "kind"
@@ -2477,7 +2485,9 @@
                                     }
                                   },
                                   "spawn": {
-                                    "Record": {}
+                                    "Record": {
+                                      "name": "String"
+                                    }
                                   }
                                 },
                                 "tag": "kind"
@@ -2596,7 +2606,9 @@
                               }
                             },
                             "spawn": {
-                              "Record": {}
+                              "Record": {
+                                "name": "String"
+                              }
                             }
                           },
                           "tag": "kind"
@@ -2657,6 +2669,7 @@
                 }
               }
             },
+            "result": "Json",
             "spawns": {
               "doubler": {
                 "arg": "Int",
@@ -6492,7 +6505,9 @@
                                                                                     }
                                                                                   },
                                                                                   "spawn": {
-                                                                                    "Record": {}
+                                                                                    "Record": {
+                                                                                      "name": "String"
+                                                                                    }
                                                                                   }
                                                                                 },
                                                                                 "tag": "kind"
@@ -6554,7 +6569,9 @@
                                                                                   }
                                                                                 },
                                                                                 "spawn": {
-                                                                                  "Record": {}
+                                                                                  "Record": {
+                                                                                    "name": "String"
+                                                                                  }
                                                                                 }
                                                                               },
                                                                               "tag": "kind"
@@ -6673,7 +6690,9 @@
                                                                             }
                                                                           },
                                                                           "spawn": {
-                                                                            "Record": {}
+                                                                            "Record": {
+                                                                              "name": "String"
+                                                                            }
                                                                           }
                                                                         },
                                                                         "tag": "kind"
@@ -7115,7 +7134,9 @@
                                           }
                                         },
                                         "spawn": {
-                                          "Record": {}
+                                          "Record": {
+                                            "name": "String"
+                                          }
                                         }
                                       },
                                       "tag": "kind"
@@ -7192,7 +7213,9 @@
                                         }
                                       },
                                       "spawn": {
-                                        "Record": {}
+                                        "Record": {
+                                          "name": "String"
+                                        }
                                       }
                                     },
                                     "tag": "kind"
@@ -7269,7 +7292,9 @@
                                       }
                                     },
                                     "spawn": {
-                                      "Record": {}
+                                      "Record": {
+                                        "name": "String"
+                                      }
                                     }
                                   },
                                   "tag": "kind"
@@ -7426,7 +7451,9 @@
                               }
                             },
                             "spawn": {
-                              "Record": {}
+                              "Record": {
+                                "name": "String"
+                              }
                             }
                           },
                           "tag": "kind"

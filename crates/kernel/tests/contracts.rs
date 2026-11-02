@@ -33,7 +33,7 @@ fn puppet() -> Value {
         ],
     );
     json!({
-        "arg": { "Record": { "op": "String", "args": "Json" } },
+        "result": "Json", "arg": { "Record": { "op": "String", "args": "Json" } },
         "state": { "Record": {} },
         "init": {},
         "step": on(
@@ -342,7 +342,7 @@ fn results_carry_their_return_label_and_must_meet_their_postcondition() {
     let counter = json!({ "operations": { "count": {
         "input": { "Record": {} }, "output": "Int",
         "post": op("ge", vec![var("result"), lit(json!(0))]),
-    }}, "channels": drivers()["channels"] });
+    }}, "channels": drivers()["channels"], "grant": drivers()["grant"] });
     let (system, _) = deliver_all(system_with(counter), vec![drive("count", json!({}))]);
     let (system, events) = deliver_all(system, vec![ret(0, json!(-1))]);
     assert_eq!(shape(&events), ["withheld:postcondition"]);
@@ -351,8 +351,9 @@ fn results_carry_their_return_label_and_must_meet_their_postcondition() {
 }
 
 fn system_with(interface: Value) -> Value {
-    let ready =
-        call(json!({ "op": "init", "harness": puppet(), "interface": interface, "grant": {} }));
+    let ready = call(
+        json!({ "op": "init", "harness": puppet(), "interface": interface, "grant": { "mode": "default" } }),
+    );
     assert_eq!(ready["kind"], "ready", "{ready}");
     deliver_all(
         ready["system"].clone(),
@@ -430,7 +431,7 @@ fn contracts_are_checked() {
         .map(|p| p["place"]["part"].as_str().unwrap())
         .collect();
     assert_eq!(parts, ["pre", "ret"]);
-    let idle = json!({ "arg": "Json", "state": { "Record": {} }, "init": {}, "step": step(var("state"), vec![]) });
+    let idle = json!({ "result": "Json", "arg": "Json", "state": { "Record": {} }, "init": {}, "step": step(var("state"), vec![]) });
     let refused = call(json!({ "op": "init", "harness": idle, "interface": interface }));
     assert_eq!(refused["error"]["kind"], "interface");
 }
@@ -484,7 +485,7 @@ fn capabilities_declare_their_part_of_the_grant_state() {
     assert_eq!(problems[0]["place"]["part"], "onCall");
 
     // And a run can't start with a grant state of another type.
-    let harness = json!({ "arg": "Json", "state": { "Record": {} }, "init": {}, "step": step(var("state"), vec![]) });
+    let harness = json!({ "result": "Json", "arg": "Json", "state": { "Record": {} }, "init": {}, "step": step(var("state"), vec![]) });
     let refused = call(
         json!({ "op": "init", "harness": harness, "interface": counter, "grant": { "ticks": "none" } }),
     );

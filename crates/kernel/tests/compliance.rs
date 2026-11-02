@@ -103,7 +103,7 @@ fn cases() -> Vec<Case> {
                 let set = json!({ "e": "let", "name": "next", "type": state,
                     "be": rec(vec![("slot", ok)]), "in": step(var("next"), vec![]) });
                 let harness = json!({
-                    "arg": "Int", "state": state, "init": { "slot": { "kind": "waiting" } },
+                    "result": "Json", "arg": "Int", "state": state, "init": { "slot": { "kind": "waiting" } },
                     "step": let_("n", lit(json!(1)), set),
                 });
                 r.call(json!({ "op": "checkHarness", "harness": harness, "interface": {} }));
@@ -142,7 +142,7 @@ fn cases() -> Vec<Case> {
                 r.call(json!({ "op": "evaluate", "expr": text, "vars": { "x": { "op": "a", "args": { "text": 7 } } } }));
                 // In SMT-LIB: a state that holds Json, and a model read back.
                 let keeper = json!({
-                    "arg": "Json", "state": { "Record": { "last": "Json" } }, "init": { "last": null },
+                    "result": "Json", "arg": "Json", "state": { "Record": { "last": "Json" } }, "init": { "last": null },
                     "step": match_(var("input"), "kind", vec![
                         ("start", "s", step(rec(vec![("last", path("s", &["value"]))]), vec![])),
                     ], Some(step(var("state"), vec![]))),
@@ -190,7 +190,7 @@ fn cases() -> Vec<Case> {
                 let (system, _) = r.deliver(system, run.clone());
                 let spawn = msg(
                     "act",
-                    json!({ "kind": "spawn", "harness": worker(), "narrow": [{ "kind": "only", "ops": ["shell.approve"] }],
+                    json!({ "kind": "spawn", "name": "worker", "harness": worker(), "narrow": [{ "kind": "only", "ops": ["shell.approve"] }],
                                             "arg": { "op": "shell.approve", "args": { "argv": publish } } }),
                 );
                 let (system, _) = r.deliver(system, spawn);
@@ -280,7 +280,7 @@ fn cases() -> Vec<Case> {
                 r.call(request);
                 let count = json!({ "operations": { "count": { "input": { "Record": {} }, "output": "Int" } } });
                 let counter = json!({
-                    "arg": { "Record": {} }, "state": { "Record": { "n": "Int" } }, "init": { "n": 0 },
+                    "result": "Json", "arg": { "Record": {} }, "state": { "Record": { "n": "Int" } }, "init": { "n": 0 },
                     "step": match_(var("input"), "kind", vec![
                         ("ret", "r", match_(var("r"), "op", vec![
                             ("count", "c", step(rec(vec![("n", op("add", vec![path("state", &["n"]), path("c", &["value"])]))]), vec![])),

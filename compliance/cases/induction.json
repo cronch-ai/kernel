@@ -30,6 +30,7 @@
             "Record": {}
           },
           "init": {},
+          "result": "Json",
           "state": {
             "Record": {}
           },
@@ -303,12 +304,13 @@
               },
               "system": {
                 "root": {
-                  "grant": null,
+                  "grant": {},
                   "harness": {
                     "arg": {
                       "Record": {}
                     },
                     "init": {},
+                    "result": "Json",
                     "state": {
                       "Record": {}
                     },
@@ -470,12 +472,13 @@
               },
               "system": {
                 "root": {
-                  "grant": null,
+                  "grant": {},
                   "harness": {
                     "arg": {
                       "Record": {}
                     },
                     "init": {},
+                    "result": "Json",
                     "state": {
                       "Record": {}
                     },
@@ -673,12 +676,13 @@
               },
               "system": {
                 "root": {
-                  "grant": null,
+                  "grant": {},
                   "harness": {
                     "arg": {
                       "Record": {}
                     },
                     "init": {},
+                    "result": "Json",
                     "state": {
                       "Record": {}
                     },
@@ -862,12 +866,13 @@
               },
               "system": {
                 "root": {
-                  "grant": null,
+                  "grant": {},
                   "harness": {
                     "arg": {
                       "Record": {}
                     },
                     "init": {},
+                    "result": "Json",
                     "state": {
                       "Record": {}
                     },
@@ -1045,12 +1050,13 @@
               },
               "system": {
                 "root": {
-                  "grant": null,
+                  "grant": {},
                   "harness": {
                     "arg": {
                       "Record": {}
                     },
                     "init": {},
+                    "result": "Json",
                     "state": {
                       "Record": {}
                     },
@@ -1241,6 +1247,7 @@
             "Record": {}
           },
           "init": {},
+          "result": "Json",
           "state": {
             "Record": {}
           },
@@ -1414,12 +1421,13 @@
               },
               "system": {
                 "root": {
-                  "grant": null,
+                  "grant": {},
                   "harness": {
                     "arg": {
                       "Record": {}
                     },
                     "init": {},
+                    "result": "Json",
                     "state": {
                       "Record": {}
                     },
@@ -1581,12 +1589,13 @@
               },
               "system": {
                 "root": {
-                  "grant": null,
+                  "grant": {},
                   "harness": {
                     "arg": {
                       "Record": {}
                     },
                     "init": {},
+                    "result": "Json",
                     "state": {
                       "Record": {}
                     },
@@ -1784,12 +1793,13 @@
               },
               "system": {
                 "root": {
-                  "grant": null,
+                  "grant": {},
                   "harness": {
                     "arg": {
                       "Record": {}
                     },
                     "init": {},
+                    "result": "Json",
                     "state": {
                       "Record": {}
                     },
@@ -1973,12 +1983,13 @@
               },
               "system": {
                 "root": {
-                  "grant": null,
+                  "grant": {},
                   "harness": {
                     "arg": {
                       "Record": {}
                     },
                     "init": {},
+                    "result": "Json",
                     "state": {
                       "Record": {}
                     },
@@ -2156,12 +2167,13 @@
               },
               "system": {
                 "root": {
-                  "grant": null,
+                  "grant": {},
                   "harness": {
                     "arg": {
                       "Record": {}
                     },
                     "init": {},
+                    "result": "Json",
                     "state": {
                       "Record": {}
                     },
@@ -2467,7 +2479,7 @@
               }
             ],
             "grant": "sha256:f192c92f3aeac8e9398fb4e40a7802990f13a78467067fd77e22ea4f4c634dff",
-            "harness": "sha256:f9f4dd06b601a52ea910a47b045f9a20a280fb523843743b1f67df9eafc03c0c",
+            "harness": "sha256:8f3398ec28fae51350ab0f8a1ce9d772820ba867e494fe5fbae4f130eafd2ed6",
             "interface": "sha256:274ffd31ce52b0d63dd92c006422108acff2f175382d0f5d46aa5dfaba1beb21",
             "method": {
               "alphabet": [
@@ -2500,12 +2512,13 @@
                   },
                   "system": {
                     "root": {
-                      "grant": null,
+                      "grant": {},
                       "harness": {
                         "arg": {
                           "Record": {}
                         },
                         "init": {},
+                        "result": "Json",
                         "state": {
                           "Record": {}
                         },
@@ -2667,12 +2680,13 @@
                   },
                   "system": {
                     "root": {
-                      "grant": null,
+                      "grant": {},
                       "harness": {
                         "arg": {
                           "Record": {}
                         },
                         "init": {},
+                        "result": "Json",
                         "state": {
                           "Record": {}
                         },
@@ -2870,12 +2884,13 @@
                   },
                   "system": {
                     "root": {
-                      "grant": null,
+                      "grant": {},
                       "harness": {
                         "arg": {
                           "Record": {}
                         },
                         "init": {},
+                        "result": "Json",
                         "state": {
                           "Record": {}
                         },
@@ -3059,12 +3074,13 @@
                   },
                   "system": {
                     "root": {
-                      "grant": null,
+                      "grant": {},
                       "harness": {
                         "arg": {
                           "Record": {}
                         },
                         "init": {},
+                        "result": "Json",
                         "state": {
                           "Record": {}
                         },
@@ -3242,12 +3258,13 @@
                   },
                   "system": {
                     "root": {
-                      "grant": null,
+                      "grant": {},
                       "harness": {
                         "arg": {
                           "Record": {}
                         },
                         "init": {},
+                        "result": "Json",
                         "state": {
                           "Record": {}
                         },
@@ -3414,7 +3431,7 @@
             "property": "sha256:7ebaff759052c11146032c74dc68ae8f7b4519a76f795ad09d5412bc2317894c",
             "verdict": "holds"
           },
-          "key": "sha256:09e06b8d8258f76f7b7b88eeb28dd40a75daba986c43dcaebb301878af0a7a2b",
+          "key": "sha256:8eea5b38a7bcd38e9555147d2e6809b32d5103de11db9ca20c963b0d094549ca",
           "kind": "evidence"
         }
       }
@@ -3428,6 +3445,7 @@
           "init": {
             "n": 0
           },
+          "result": "Json",
           "state": {
             "Record": {
               "n": "Int"
@@ -3576,12 +3594,12 @@
                             },
                             "child": {
                               "Record": {
-                                "error": "Json"
+                                "error": "String"
                               }
                             },
                             "world": {
                               "Record": {
-                                "detail": "Json"
+                                "detail": "String"
                               }
                             }
                           },
@@ -3605,12 +3623,6 @@
                             "call": "Int",
                             "value": "Int"
                           }
-                        },
-                        "spawn": {
-                          "Record": {
-                            "call": "Int",
-                            "value": "Json"
-                          }
                         }
                       },
                       "tag": "op"
@@ -3628,7 +3640,7 @@
               }
             }
           ],
-          "text": "; Consecution: sat exactly where the invariant holds of a state and fails after one step.\n; A model is a counterexample to induction for the kernel to check; unsat is not a verdict.\n(set-option :produce-models true)\n(set-logic ALL)\n\n; Records and variants.\n; JSON values: a record is a chain of fields.\n(declare-datatypes ((|json:Json| 0) (|json:Fields| 0)) (((|json:null|) (|json:bool| (|json:bool.v| Bool)) (|json:number| (|json:number.v| Float64)) (|json:string| (|json:string.v| String)) (|json:list| (|json:list.v| (Seq |json:Json|))) (|json:record| (|json:record.v| |json:Fields|))) ((|json:end|) (|json:field| (|json:field.key| String) (|json:field.value| |json:Json|) (|json:field.rest| |json:Fields|)))))\n; Whether a record has a field, and its value (null if it has none).\n(define-funs-rec ((|json:has| ((f |json:Fields|) (k String)) Bool) (|json:get| ((f |json:Fields|) (k String)) |json:Json|)) ((ite ((_ is |json:field|) f) (or (= (|json:field.key| f) k) (|json:has| (|json:field.rest| f) k)) false) (ite ((_ is |json:field|) f) (ite (= (|json:field.key| f) k) (|json:field.value| f) (|json:get| (|json:field.rest| f) k)) |json:null|)))\n; Whether a term is a value the kernel could hold: finite numbers, and each record's keys once.\n(define-funs-rec ((|json:ok| ((j |json:Json|)) Bool) (|json:ok.items| ((s (Seq |json:Json|))) Bool) (|json:ok.fields| ((f |json:Fields|)) Bool)) ((and (ite ((_ is |json:number|) j) (not (or (fp.isNaN (|json:number.v| j)) (fp.isInfinite (|json:number.v| j)))) true) (ite ((_ is |json:list|) j) (|json:ok.items| (|json:list.v| j)) true) (ite ((_ is |json:record|) j) (|json:ok.fields| (|json:record.v| j)) true)) (ite (= (seq.len s) 0) true (and (|json:ok| (seq.nth s 0)) (|json:ok.items| (seq.extract s 1 (- (seq.len s) 1))))) (ite ((_ is |json:field|) f) (and (|json:ok| (|json:field.value| f)) (not (|json:has| (|json:field.rest| f) (|json:field.key| f))) (|json:ok.fields| (|json:field.rest| f))) true)))\n; {n: Int}\n(declare-datatype |record:d1a0623e| ((|record:d1a0623e| (|record:d1a0623e.n| Int))))\n; A variant with the cases cancelled, child, world.\n(declare-datatype |variant:7ec60edd| ((|variant:7ec60edd#cancelled|) (|variant:7ec60edd#child| (|variant:7ec60edd#child.error| |json:Json|)) (|variant:7ec60edd#world| (|variant:7ec60edd#world.detail| |json:Json|))))\n; A variant with the cases count, spawn.\n(declare-datatype |variant:96902820| ((|variant:96902820#count| (|variant:96902820#count.call| Int) (|variant:96902820#count.value| Int)) (|variant:96902820#spawn| (|variant:96902820#spawn.call| Int) (|variant:96902820#spawn.value| |json:Json|))))\n; {}\n(declare-datatype |record:49d8b93e| ((|record:49d8b93e|)))\n; A variant with the cases failed, refused, ret, start.\n(declare-datatype |variant:5e4106e1| ((|variant:5e4106e1#failed| (|variant:5e4106e1#failed.call| Int) (|variant:5e4106e1#failed.error| |variant:7ec60edd|) (|variant:5e4106e1#failed.op| String)) (|variant:5e4106e1#refused| (|variant:5e4106e1#refused.call| Int) (|variant:5e4106e1#refused.op| String)) (|variant:5e4106e1#ret| (|variant:5e4106e1#ret.| |variant:96902820|)) (|variant:5e4106e1#start| (|variant:5e4106e1#start.value| |record:49d8b93e|))))\n; {call: Int, value: Int}\n(declare-datatype |record:1fc44c8e| ((|record:1fc44c8e| (|record:1fc44c8e.call| Int) (|record:1fc44c8e.value| Int))))\n\n; Definitions.\n; The invariant, of a state.\n(define-fun |def:invariant| ((|v:state| |record:d1a0623e|)) Bool (>= (|record:d1a0623e.n| |v:state|) 0))\n; The state the step gives.\n(define-fun |def:next| ((|v:state| |record:d1a0623e|) (|v:input| |variant:5e4106e1|)) |record:d1a0623e| (let ((|c:1| |v:input|)) (ite ((_ is |variant:5e4106e1#failed|) |c:1|) |v:state| (ite ((_ is |variant:5e4106e1#refused|) |c:1|) |v:state| (ite ((_ is |variant:5e4106e1#ret|) |c:1|) (let ((|v:r| (|variant:5e4106e1#ret.| |c:1|))) (let ((|c:2| |v:r|)) (ite ((_ is |variant:96902820#count|) |c:2|) (let ((|v:c| (|record:1fc44c8e| (|variant:96902820#count.call| |c:2|) (|variant:96902820#count.value| |c:2|)))) (|record:d1a0623e| (+ (|record:d1a0623e.n| |v:state|) (|record:1fc44c8e.value| |v:c|)))) |v:state|))) |v:state|)))))\n; Where the kernel evaluates next without an error; elsewhere the function above is unconstrained.\n(define-fun |defined:next| ((|v:state| |record:d1a0623e|) (|v:input| |variant:5e4106e1|)) Bool (let ((|c:1| |v:input|)) (let ((|v:r| (|variant:5e4106e1#ret.| |c:1|))) (let ((|c:2| |v:r|)) (let ((|v:c| (|record:1fc44c8e| (|variant:96902820#count.call| |c:2|) (|variant:96902820#count.value| |c:2|)))) (=> (and ((_ is |variant:5e4106e1#ret|) |c:1|) ((_ is |variant:96902820#count|) |c:2|)) (and (<= (- 9007199254740991) (+ (|record:d1a0623e.n| |v:state|) (|record:1fc44c8e.value| |v:c|))) (<= (+ (|record:d1a0623e.n| |v:state|) (|record:1fc44c8e.value| |v:c|)) 9007199254740991))))))))\n\n; A counterexample to induction.\n(declare-const |q:state| |record:d1a0623e|)\n(declare-const |q:input| |variant:5e4106e1|)\n(assert (and (<= (- 9007199254740991) (|record:d1a0623e.n| |q:state|)) (<= (|record:d1a0623e.n| |q:state|) 9007199254740991)))\n(assert (and (=> ((_ is |variant:5e4106e1#failed|) |q:input|) (and (and (<= (- 9007199254740991) (|variant:5e4106e1#failed.call| |q:input|)) (<= (|variant:5e4106e1#failed.call| |q:input|) 9007199254740991)) (and (=> ((_ is |variant:7ec60edd#child|) (|variant:5e4106e1#failed.error| |q:input|)) (|json:ok| (|variant:7ec60edd#child.error| (|variant:5e4106e1#failed.error| |q:input|)))) (=> ((_ is |variant:7ec60edd#world|) (|variant:5e4106e1#failed.error| |q:input|)) (|json:ok| (|variant:7ec60edd#world.detail| (|variant:5e4106e1#failed.error| |q:input|))))))) (=> ((_ is |variant:5e4106e1#refused|) |q:input|) (and (<= (- 9007199254740991) (|variant:5e4106e1#refused.call| |q:input|)) (<= (|variant:5e4106e1#refused.call| |q:input|) 9007199254740991))) (=> ((_ is |variant:5e4106e1#ret|) |q:input|) (and (=> ((_ is |variant:96902820#count|) (|variant:5e4106e1#ret.| |q:input|)) (and (and (<= (- 9007199254740991) (|variant:96902820#count.call| (|variant:5e4106e1#ret.| |q:input|))) (<= (|variant:96902820#count.call| (|variant:5e4106e1#ret.| |q:input|)) 9007199254740991)) (and (<= (- 9007199254740991) (|variant:96902820#count.value| (|variant:5e4106e1#ret.| |q:input|))) (<= (|variant:96902820#count.value| (|variant:5e4106e1#ret.| |q:input|)) 9007199254740991)))) (=> ((_ is |variant:96902820#spawn|) (|variant:5e4106e1#ret.| |q:input|)) (and (and (<= (- 9007199254740991) (|variant:96902820#spawn.call| (|variant:5e4106e1#ret.| |q:input|))) (<= (|variant:96902820#spawn.call| (|variant:5e4106e1#ret.| |q:input|)) 9007199254740991)) (|json:ok| (|variant:96902820#spawn.value| (|variant:5e4106e1#ret.| |q:input|)))))))))\n(assert (|def:invariant| |q:state|))\n(assert (|defined:next| |q:state| |q:input|))\n(assert (not (|def:invariant| (|def:next| |q:state| |q:input|))))\n(check-sat)\n(get-value (|q:state| |q:input|))\n"
+          "text": "; Consecution: sat exactly where the invariant holds of a state and fails after one step.\n; A model is a counterexample to induction for the kernel to check; unsat is not a verdict.\n(set-option :produce-models true)\n(set-logic ALL)\n\n; Records and variants.\n; {n: Int}\n(declare-datatype |record:d1a0623e| ((|record:d1a0623e| (|record:d1a0623e.n| Int))))\n; A variant with the cases cancelled, child, world.\n(declare-datatype |variant:57725bf5| ((|variant:57725bf5#cancelled|) (|variant:57725bf5#child| (|variant:57725bf5#child.error| String)) (|variant:57725bf5#world| (|variant:57725bf5#world.detail| String))))\n; A variant with the cases count.\n(declare-datatype |variant:e84bfc6b| ((|variant:e84bfc6b#count| (|variant:e84bfc6b#count.call| Int) (|variant:e84bfc6b#count.value| Int))))\n; {}\n(declare-datatype |record:49d8b93e| ((|record:49d8b93e|)))\n; A variant with the cases failed, refused, ret, start.\n(declare-datatype |variant:11944920| ((|variant:11944920#failed| (|variant:11944920#failed.call| Int) (|variant:11944920#failed.error| |variant:57725bf5|) (|variant:11944920#failed.op| String)) (|variant:11944920#refused| (|variant:11944920#refused.call| Int) (|variant:11944920#refused.op| String)) (|variant:11944920#ret| (|variant:11944920#ret.| |variant:e84bfc6b|)) (|variant:11944920#start| (|variant:11944920#start.value| |record:49d8b93e|))))\n; {call: Int, value: Int}\n(declare-datatype |record:1fc44c8e| ((|record:1fc44c8e| (|record:1fc44c8e.call| Int) (|record:1fc44c8e.value| Int))))\n\n; Definitions.\n; The invariant, of a state.\n(define-fun |def:invariant| ((|v:state| |record:d1a0623e|)) Bool (>= (|record:d1a0623e.n| |v:state|) 0))\n; The state the step gives.\n(define-fun |def:next| ((|v:state| |record:d1a0623e|) (|v:input| |variant:11944920|)) |record:d1a0623e| (let ((|c:1| |v:input|)) (ite ((_ is |variant:11944920#failed|) |c:1|) |v:state| (ite ((_ is |variant:11944920#refused|) |c:1|) |v:state| (ite ((_ is |variant:11944920#ret|) |c:1|) (let ((|v:r| (|variant:11944920#ret.| |c:1|))) (let ((|c:2| |v:r|)) (let ((|v:c| (|record:1fc44c8e| (|variant:e84bfc6b#count.call| |c:2|) (|variant:e84bfc6b#count.value| |c:2|)))) (|record:d1a0623e| (+ (|record:d1a0623e.n| |v:state|) (|record:1fc44c8e.value| |v:c|)))))) |v:state|)))))\n; Where the kernel evaluates next without an error; elsewhere the function above is unconstrained.\n(define-fun |defined:next| ((|v:state| |record:d1a0623e|) (|v:input| |variant:11944920|)) Bool (let ((|c:1| |v:input|)) (let ((|v:r| (|variant:11944920#ret.| |c:1|))) (let ((|c:2| |v:r|)) (let ((|v:c| (|record:1fc44c8e| (|variant:e84bfc6b#count.call| |c:2|) (|variant:e84bfc6b#count.value| |c:2|)))) (=> (and ((_ is |variant:11944920#ret|) |c:1|) ((_ is |variant:e84bfc6b#count|) |c:2|)) (and (<= (- 9007199254740991) (+ (|record:d1a0623e.n| |v:state|) (|record:1fc44c8e.value| |v:c|))) (<= (+ (|record:d1a0623e.n| |v:state|) (|record:1fc44c8e.value| |v:c|)) 9007199254740991))))))))\n\n; A counterexample to induction.\n(declare-const |q:state| |record:d1a0623e|)\n(declare-const |q:input| |variant:11944920|)\n(assert (and (<= (- 9007199254740991) (|record:d1a0623e.n| |q:state|)) (<= (|record:d1a0623e.n| |q:state|) 9007199254740991)))\n(assert (and (=> ((_ is |variant:11944920#failed|) |q:input|) (and (<= (- 9007199254740991) (|variant:11944920#failed.call| |q:input|)) (<= (|variant:11944920#failed.call| |q:input|) 9007199254740991))) (=> ((_ is |variant:11944920#refused|) |q:input|) (and (<= (- 9007199254740991) (|variant:11944920#refused.call| |q:input|)) (<= (|variant:11944920#refused.call| |q:input|) 9007199254740991))) (=> ((_ is |variant:11944920#ret|) |q:input|) (=> ((_ is |variant:e84bfc6b#count|) (|variant:11944920#ret.| |q:input|)) (and (and (<= (- 9007199254740991) (|variant:e84bfc6b#count.call| (|variant:11944920#ret.| |q:input|))) (<= (|variant:e84bfc6b#count.call| (|variant:11944920#ret.| |q:input|)) 9007199254740991)) (and (<= (- 9007199254740991) (|variant:e84bfc6b#count.value| (|variant:11944920#ret.| |q:input|))) (<= (|variant:e84bfc6b#count.value| (|variant:11944920#ret.| |q:input|)) 9007199254740991)))))))\n(assert (|def:invariant| |q:state|))\n(assert (|defined:next| |q:state| |q:input|))\n(assert (not (|def:invariant| (|def:next| |q:state| |q:input|))))\n(check-sat)\n(get-value (|q:state| |q:input|))\n"
         }
       }
     },
@@ -3641,6 +3653,7 @@
           "init": {
             "n": 0
           },
+          "result": "Json",
           "state": {
             "Record": {
               "n": "Int"

@@ -20,16 +20,16 @@ Most of those values aren't untyped. Their type is decided by the interface the 
    - The checker's recovery after a problem stays as A3d made it: a binding with no type.
 2. **What no contract has typed is text: `String`, written as the kernel's `str` writes it.**
 
-   | Value                                                                   | Was    | Is       |
-   | ----------------------------------------------------------------------- | ------ | -------- |
-   | A world failure's `detail`                                              | `Json` | `String` |
-   | A failed child's step error                                             | `Json` | `String` |
-   | In a property's view: a withheld delivery's value, and what it expected | `Json` | `String` |
-   | In a property's view: a step error's details                            | `Json` | `String` |
-   | In a property's view: a child run's start value and halt value          | `Json` | `String` |
+   | Value                                                                     | Was    | Is       |
+   | ------------------------------------------------------------------------- | ------ | -------- |
+   | A world failure's `detail`                                                | `Json` | `String` |
+   | A failed child's step error                                               | `Json` | `String` |
+   | In a property's view: a withheld delivery's value, and what it expected   | `Json` | `String` |
+   | In a property's view: a step error's details                              | `Json` | `String` |
+   | In a property's view: a run's start and halt values, and a spawn's fields | `Json` | `String` |
 
-   The trace is recorded as before, so hashes and audits don't change. Only what a step and a property read changes.
-3. **Every spawn names a declared child.** Undeclared spawns, and their `spawn` result case, go. A child chosen at run time is one of the declared children.
+   One event type covers the root and its children, so a start or halt value is text for every run: a property reads the root's start value as the state's `arg`. The trace is recorded as before, so hashes and audits don't change. Only what a step and a property read changes.
+3. **Every spawn names a declared child.** Undeclared spawns, and their `spawn` result case, go. A child chosen at run time is one of the declared children. A spawn with no name isn't an action, and one naming a child the harness doesn't declare is refused.
 4. **A harness declares its result type,** with no default. An interface whose capabilities declare no part of the grant has the grant `{}`.
 5. **`Call`, a type resolved per interface like `Action`.** It is a variant over `op`, with one case per operation of the interface the step runs against, holding that operation's `args`. It is also `Action`'s `call` case, so a `Call` is a call action wherever one is wanted.
    - `Call` may appear in a harness's types and in an operation's output. It may not appear in an operation's input or a grant: an operation's input is part of `Call`, so `Call` would contain itself.
@@ -80,3 +80,4 @@ Each is a kernel PR with compliance vectors, released together as one breaking v
 1. **Matching on tags other than `kind` in source.** A performed result and a `Call` are tagged by `op`, and the surface language's `match` reads `kind`. A harness can read `r.op` and write `str(r)`, but can't `match` by operation.
 2. **Typed grants.** Recording approvals as text works under any prefix, and fails closed on extra fields. A grant typed per interface could record the `Call` itself, but a grant would then depend on the interface it is used with.
 3. **MCP tools.** An MCP tool's JSON Schema becomes Cronch types where it fits. Where it doesn't (`oneOf`, and open records), the tool takes and gives `String`, and the capability parses it. Where the line falls is the platform's to settle when it adds MCP.
+4. **Binary data.** A `String` is valid Unicode, so a capability that returns an image or a PDF has no type for it. Text stays right for what the kernel writes: it comes from JSON, and models, `prefix` and `contains` read it. Base64 inside a `String` would type-check, but invites a harness to read it as text. An opaque `Bytes` type, base64 on the wire and only ever held and passed on, would say what it is. It is additive, so it waits for the first capability that needs it.

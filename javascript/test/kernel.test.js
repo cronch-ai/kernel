@@ -18,6 +18,7 @@ const step = (actions) => ({
 /** Writes to the path its start value names, then halts with the result. */
 const writer = {
   arg: "String",
+  result: "Json",
   state: { Record: {} },
   init: {},
   step: {
