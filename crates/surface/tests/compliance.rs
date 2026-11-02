@@ -26,7 +26,7 @@ type Case = (&'static str, &'static str, fn() -> Vec<Value>);
 fn cases() -> Vec<Case> {
     vec![(
         "elaborate",
-        "The platform's approved-note harness elaborated from source, a source with problems, a turn that streams and can be interrupted, and a fan-out whose total a spawned child doubles.",
+        "The platform's approved-note harness elaborated from source, a source with problems, a turn that streams and can be interrupted, a fan-out whose total a spawned child doubles, and properties and invariants claimed in source.",
         || {
             let capabilities = json!({ "model": fixture("model"), "approve": fixture("approve"), "notes": fixture("notes") });
             let source = "\
@@ -44,6 +44,13 @@ return match saved {
 }
 
 otherwise return \"stopped\"
+";
+            let claims = "
+property no_effect_without_approval:
+  effect() implies once(returned(approve.ask, value in [\"once\", \"always\"]))
+
+invariant saved_only_after_a_yes:
+  saved.kind in [\"running\", \"ok\"] implies decision.kind == \"ok\" and decision.value != \"deny\"
 ";
             let broken = "\
 harness broken(prompt: String) -> String
@@ -98,6 +105,7 @@ return again
                 json!({ "op": "elaborate", "source": source, "capabilities": capabilities }),
                 json!({ "op": "elaborate", "source": broken, "capabilities": capabilities }),
                 json!({ "op": "elaborate", "source": turn, "capabilities": streaming }),
+                json!({ "op": "elaborate", "source": format!("{source}{claims}"), "capabilities": capabilities }),
                 json!({ "op": "elaborate", "source": child, "capabilities": math }),
                 json!({
                     "op": "elaborate", "source": parent, "capabilities": math,

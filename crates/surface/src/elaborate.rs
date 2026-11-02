@@ -9,6 +9,8 @@
 //! `running`, `ok`, `failed`, `refused` or `skipped`) says which of the other fields mean anything. It is a record
 //! rather than a variant because the kernel has no expression that builds a value at a variant type. `value` is
 //! carried from slot to slot, never rebuilt from a literal, so it keeps the operation's output type throughout.
+//! `error` is the failure's error as text (`str`), or `"cancelled"`: a failure's error is `Any`, and a state that
+//! holds `Any` has no SMT sort, so no induction obligation could be written for it.
 //!
 //! The generated step does three things, in order:
 //!
@@ -18,6 +20,7 @@
 //!    started. Each is a `let` over the state the one before produced, so one pass reaches every node that can
 //!    move. Once every slot has settled, it halts with `return`.
 
+use crate::claims::Invariant;
 use crate::lex::{Span, lex};
 use crate::parse::parse;
 use crate::syntax::{self, Binary, ExprKind, File, Pattern, TypeExpr, Unary};
@@ -27,6 +30,7 @@ use kernel::harness::{
     Harness, Installation, Interface, Mode, Narrowing, check_harness, install, narrow,
 };
 use kernel::ir::{Case, Expr as K, Type};
+use kernel::property::Property;
 use kernel::types::conforms;
 use serde::Serialize;
 use serde_json::{Value, json};
@@ -46,11 +50,24 @@ pub struct HarnessBinding {
     pub harness: String,
 }
 
+/// Where each named thing of the source is, so that what the kernel reports about the term (a counterexample's
+/// slots, a refused call, a violated property) can be read back as source lines.
+#[derive(Serialize, Clone, Debug, Default)]
+pub struct SourceMap {
+    pub nodes: BTreeMap<String, Span>,
+    pub properties: BTreeMap<String, Span>,
+    pub invariants: BTreeMap<String, Span>,
+}
+
 #[derive(Serialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct Elaborated {
     pub harness: Harness,
     pub uses: Vec<Binding>,
     pub harnesses: Vec<HarnessBinding>,
+    pub properties: Vec<Property>,
+    pub invariants: Vec<Invariant>,
+    pub source_map: SourceMap,
 }
 
 /// Functions an expression may call, each an operator of the kernel's but `label`.
@@ -60,7 +77,7 @@ const OUTCOMES: [&str; 4] = ["ok", "failed", "refused", "skipped"];
 
 /// What a name in an expression refers to, unless a local binding shadows it.
 #[derive(Clone, Copy, PartialEq)]
-enum Bound {
+pub(crate) enum Bound {
     Param,
     Node(usize),
     Capability,
@@ -70,7 +87,7 @@ enum Bound {
 
 /// How an expression reads a node: as its value, or through a `match` on its outcome.
 #[derive(Clone, Copy, PartialEq)]
-enum Read {
+pub(crate) enum Read {
     Value,
     /// Whether the `match` has arms for failure and refusal, explicitly or through `_`.
     Outcome {
@@ -78,7 +95,7 @@ enum Read {
     },
 }
 
-type Reads = Vec<(usize, Read)>;
+pub(crate) type Reads = Vec<(usize, Read)>;
 
 /// Everything a consumer needs bound: call nodes read as values, call nodes read through `match`, and pure nodes,
 /// each through any pure node it reads.
@@ -103,7 +120,7 @@ impl Needs {
 
 /// What fills a slot.
 #[derive(Clone, Copy, PartialEq)]
-enum Slotted {
+pub(crate) enum Slotted {
     /// A call that delivers one result.
     Single,
     /// A call that delivers items, then an end.
@@ -126,8 +143,8 @@ enum Input {
 }
 
 /// A node with a slot in the state: a call of an operation, or a receive on a channel.
-struct Call {
-    kind: Slotted,
+pub(crate) struct Call {
+    pub(crate) kind: Slotted,
     /// The operation called, or the channel received on.
     target: String,
     input: Type,
@@ -141,49 +158,49 @@ struct Call {
     until: Option<usize>,
 }
 
-struct Cx<'a> {
-    file: &'a File,
+pub(crate) struct Cx<'a> {
+    pub(crate) file: &'a File,
     /// The harnesses the header binds, by name.
     children: BTreeMap<String, Harness>,
-    problems: Vec<Problem>,
-    names: BTreeMap<String, Bound>,
-    /// The call nodes, by node index.
-    calls: BTreeMap<usize, Call>,
+    pub(crate) problems: Vec<Problem>,
+    pub(crate) names: BTreeMap<String, Bound>,
+    /// The nodes with slots, by node index.
+    pub(crate) calls: BTreeMap<usize, Call>,
     may_skip: BTreeSet<usize>,
     fresh: usize,
 }
 
-fn problem(span: Span, what: What) -> Problem {
+pub(crate) fn problem(span: Span, what: What) -> Problem {
     Problem { span, what }
 }
 
 // Builders for the kernel's terms.
 
-fn lit(v: Value) -> K {
+pub(crate) fn lit(v: Value) -> K {
     K::Lit { v }
 }
 
-fn var(name: &str) -> K {
+pub(crate) fn var(name: &str) -> K {
     K::Var {
         name: name.to_string(),
     }
 }
 
-fn get(of: K, field: &str) -> K {
+pub(crate) fn get(of: K, field: &str) -> K {
     K::Get {
         of: Box::new(of),
         field: field.to_string(),
     }
 }
 
-fn op(name: &str, args: Vec<K>) -> K {
+pub(crate) fn op(name: &str, args: Vec<K>) -> K {
     K::Op {
         op: name.to_string(),
         args,
     }
 }
 
-fn let_(name: &str, be: K, body: K) -> K {
+pub(crate) fn let_(name: &str, be: K, body: K) -> K {
     K::Let {
         name: name.to_string(),
         be: Box::new(be),
@@ -191,7 +208,7 @@ fn let_(name: &str, be: K, body: K) -> K {
     }
 }
 
-fn if_(cond: K, then: K, otherwise: K) -> K {
+pub(crate) fn if_(cond: K, then: K, otherwise: K) -> K {
     K::If {
         cond: Box::new(cond),
         then: Box::new(then),
@@ -199,36 +216,36 @@ fn if_(cond: K, then: K, otherwise: K) -> K {
     }
 }
 
-fn rec<S: Into<String>>(fields: Vec<(S, K)>) -> K {
+pub(crate) fn rec<S: Into<String>>(fields: Vec<(S, K)>) -> K {
     K::Record {
         fields: fields.into_iter().map(|(n, e)| (n.into(), e)).collect(),
     }
 }
 
-fn list(items: Vec<K>) -> K {
+pub(crate) fn list(items: Vec<K>) -> K {
     K::List { items }
 }
 
-fn eq(a: K, b: K) -> K {
+pub(crate) fn eq(a: K, b: K) -> K {
     op("eq", vec![a, b])
 }
 
 /// The strict conjunction: every operand here is total, so there is nothing to short-circuit.
-fn all(items: Vec<K>) -> K {
+pub(crate) fn all(items: Vec<K>) -> K {
     items
         .into_iter()
         .reduce(|a, b| op("and", vec![a, b]))
         .unwrap_or(lit(json!(true)))
 }
 
-fn any(items: Vec<K>) -> K {
+pub(crate) fn any(items: Vec<K>) -> K {
     items
         .into_iter()
         .reduce(|a, b| op("or", vec![a, b]))
         .unwrap_or(lit(json!(false)))
 }
 
-fn one_of(kinds: &[&str], of: K) -> K {
+pub(crate) fn one_of(kinds: &[&str], of: K) -> K {
     op("contains", vec![lit(json!(kinds)), of])
 }
 
@@ -273,7 +290,7 @@ fn slot_type(call: &Call) -> Type {
         ("kind".to_string(), Type::String),
         ("call".to_string(), Type::Int),
         ("value".to_string(), call.value.clone()),
-        ("error".to_string(), Type::Any),
+        ("error".to_string(), Type::String),
     ]);
     // A fan-out's calls have consecutive identifiers from `call`; `items` holds each one's kind.
     if call.kind == Slotted::FanOut {
@@ -284,7 +301,7 @@ fn slot_type(call: &Call) -> Type {
 
 fn initial_slot(call: &Call) -> Value {
     let mut slot =
-        json!({ "kind": "waiting", "call": 0, "value": default_value(&call.value), "error": null });
+        json!({ "kind": "waiting", "call": 0, "value": default_value(&call.value), "error": "" });
     if call.kind == Slotted::FanOut {
         slot["items"] = json!([]);
     }
@@ -330,7 +347,7 @@ fn fold_into(over: K, init: K, item: &str, body: K) -> K {
 }
 
 impl<'a> Cx<'a> {
-    fn report(&mut self, span: Span, what: What) {
+    pub(crate) fn report(&mut self, span: Span, what: What) {
         self.problems.push(problem(span, what));
     }
 
@@ -339,7 +356,7 @@ impl<'a> Cx<'a> {
         format!("@{}", self.fresh)
     }
 
-    fn node_name(&self, i: usize) -> &str {
+    pub(crate) fn node_name(&self, i: usize) -> &str {
         &self.file.nodes[i].name.text
     }
 
@@ -551,7 +568,7 @@ impl<'a> Cx<'a> {
     }
 
     /// `cap.a.b` as the operation `cap.a.b`, when `cap` is a capability no local shadows.
-    fn operation(&self, e: &syntax::Expr, locals: &[String]) -> Option<String> {
+    pub(crate) fn operation(&self, e: &syntax::Expr, locals: &[String]) -> Option<String> {
         let mut path = Vec::new();
         let mut at = e;
         while let ExprKind::Field(of, field) = &at.kind {
@@ -583,7 +600,7 @@ impl<'a> Cx<'a> {
     }
 
     /// Checks the names an expression uses, and records which nodes it reads and how.
-    fn walk(&mut self, e: &syntax::Expr, locals: &mut Vec<String>, reads: &mut Reads) {
+    pub(crate) fn walk(&mut self, e: &syntax::Expr, locals: &mut Vec<String>, reads: &mut Reads) {
         match &e.kind {
             ExprKind::Lit(_) => {}
             ExprKind::Name(n) => {
@@ -641,9 +658,26 @@ impl<'a> Cx<'a> {
                 }
             }
             ExprKind::Unary(_, a) => self.walk(a, locals, reads),
-            ExprKind::Binary(_, a, b) => {
-                self.walk(a, locals, reads);
-                self.walk(b, locals, reads);
+            ExprKind::Binary(b, x, y) => {
+                if *b == Binary::Since {
+                    self.report(
+                        e.span,
+                        What::PropertyOnly {
+                            construct: "since".to_string(),
+                        },
+                    );
+                }
+                self.walk(x, locals, reads);
+                self.walk(y, locals, reads);
+            }
+            ExprKind::Quantified { exists, .. } => {
+                let construct = if *exists { "exists" } else { "forall" };
+                self.report(
+                    e.span,
+                    What::PropertyOnly {
+                        construct: construct.to_string(),
+                    },
+                );
             }
             ExprKind::If(c, t, o) => {
                 self.walk(c, locals, reads);
@@ -771,7 +805,7 @@ impl<'a> Cx<'a> {
 
     // Lowering source expressions onto the kernel's.
 
-    fn lower(&mut self, e: &syntax::Expr, locals: &mut Vec<String>) -> K {
+    pub(crate) fn lower(&mut self, e: &syntax::Expr, locals: &mut Vec<String>) -> K {
         match &e.kind {
             ExprKind::Lit(v) => lit(v.clone()),
             ExprKind::Name(n) => var(n),
@@ -826,6 +860,9 @@ impl<'a> Cx<'a> {
                     Binary::Or => return if_(x, lit(json!(true)), y),
                     Binary::In => return op("contains", vec![y, x]),
                     Binary::NotIn => return op("not", vec![op("contains", vec![y, x])]),
+                    Binary::Implies => return if_(x, y, lit(json!(true))),
+                    // Reported by `walk`: only a property can say these.
+                    Binary::Since => return lit(Value::Null),
                     Binary::Eq => "eq",
                     Binary::Ne => "ne",
                     Binary::Lt => "lt",
@@ -850,10 +887,11 @@ impl<'a> Cx<'a> {
                 Some(i) => self.lower_outcome(e.span, i, arms, locals),
                 None => self.lower_match(e.span, scrutinee, arms, locals),
             },
-            // Reported by `walk`: these are only ever nodes.
-            ExprKind::Receive { .. } | ExprKind::ForEach { .. } | ExprKind::Spawn { .. } => {
-                lit(Value::Null)
-            }
+            // Reported by `walk`: these are only ever nodes, or only ever in properties.
+            ExprKind::Receive { .. }
+            | ExprKind::ForEach { .. }
+            | ExprKind::Spawn { .. }
+            | ExprKind::Quantified { .. } => lit(Value::Null),
             ExprKind::Fold {
                 over,
                 init,
@@ -1064,7 +1102,12 @@ impl<'a> Cx<'a> {
     }
 
     /// The kernel's type of a lowered expression, with its problems reported at the source's span.
-    fn type_of(&mut self, lowered: &K, span: Span, scope: &[(String, Type)]) -> Option<Type> {
+    pub(crate) fn type_of(
+        &mut self,
+        lowered: &K,
+        span: Span,
+        scope: &[(String, Type)],
+    ) -> Option<Type> {
         let (ty, problems) = infer(lowered, scope.to_vec());
         self.problems.extend(problems.into_iter().map(|p| {
             problem(
@@ -1077,7 +1120,7 @@ impl<'a> Cx<'a> {
         ty
     }
 
-    fn expect(&mut self, got: Option<Type>, expected: &Type, span: Span) {
+    pub(crate) fn expect(&mut self, got: Option<Type>, expected: &Type, span: Span) {
         if let Some(got) = got
             && !conforms(&got, expected)
         {
@@ -1204,7 +1247,7 @@ impl Cx<'_> {
                 actions,
             )
         };
-        let running = || self.moved("@state", n, "running", next.clone(), None, lit(Value::Null));
+        let running = || self.moved("@state", n, "running", next.clone(), None, lit(json!("")));
         let one = || lit(json!(1));
         match c.kind {
             // A receive starts listening; there is nothing to ask the world.
@@ -1213,7 +1256,7 @@ impl Cx<'_> {
                     "@state",
                     next.clone(),
                     n,
-                    self.moved("@state", n, "running", call, None, lit(Value::Null)),
+                    self.moved("@state", n, "running", call, None, lit(json!(""))),
                 ),
                 actions,
             ),
@@ -1269,7 +1312,7 @@ impl Cx<'_> {
                     ),
                     ("call", next.clone()),
                     ("value", defaults),
-                    ("error", lit(Value::Null)),
+                    ("error", lit(json!(""))),
                     ("items", kinds),
                 ]);
                 let item = c.binder.clone().unwrap_or_default();
@@ -1350,7 +1393,7 @@ impl Cx<'_> {
                     "@state",
                     next.clone(),
                     n,
-                    self.moved("@state", n, "skipped", call.clone(), None, lit(Value::Null)),
+                    self.moved("@state", n, "skipped", call.clone(), None, lit(json!(""))),
                 ),
                 get(var("@acc"), "actions"),
             );
@@ -1397,7 +1440,7 @@ impl Cx<'_> {
         out
     }
 
-    /// `@pre` after cancelling every call whose `until` node has returned: its slot fails with `{"cancelled": true}`,
+    /// `@pre` after cancelling every call whose `until` node has returned: its slot fails with the error `"cancelled"`,
     /// and if it was running, the world is asked to stop it. Its results, if any still come, find no slot running it.
     fn cancellations(&self, plan: &Plan, body: K) -> K {
         let mut out = let_("@state", get(var("@pre"), "state"), body);
@@ -1417,7 +1460,7 @@ impl Cx<'_> {
                 "failed",
                 call.clone(),
                 None,
-                lit(json!({ "cancelled": true })),
+                lit(json!("cancelled")),
             );
             let actions = if_(
                 eq(kind, lit(json!("running"))),
@@ -1487,9 +1530,9 @@ impl Cx<'_> {
                 (Input::Refused, _) => ("refused", None),
             };
             let error = if input == Input::Failed {
-                get(var("@in"), "error")
+                op("str", vec![get(var("@in"), "error")])
             } else {
-                lit(Value::Null)
+                lit(json!(""))
             };
             let settled = self.moved("@r", n, kind, call.clone(), value, error);
             self.with_slot("@r", get(var("@r"), "next"), n, settled)
@@ -1512,7 +1555,7 @@ impl Cx<'_> {
             _ => get(slot(), "value"),
         };
         let error = match input {
-            Input::Failed => get(var("@in"), "error"),
+            Input::Failed => op("str", vec![get(var("@in"), "error")]),
             _ => get(slot(), "error"),
         };
         let has = |k: &str| op("contains", vec![var("@kinds"), lit(json!(k))]);
@@ -1562,7 +1605,7 @@ impl Cx<'_> {
         let then = |n| {
             let call = get(self.slot("@r", n), "call");
             let value = Some(get(var("@in"), "value"));
-            let settled = self.moved("@r", n, "ok", call, value, lit(Value::Null));
+            let settled = self.moved("@r", n, "ok", call, value, lit(json!("")));
             self.with_slot("@r", get(var("@r"), "next"), n, settled)
         };
         self.each(nodes, hit, then)
@@ -1638,22 +1681,36 @@ impl Cx<'_> {
             bind: "@in".to_string(),
             body,
         };
-        let cases = BTreeMap::from([
+        let mut cases = BTreeMap::from([
             ("start".to_string(), case(started)),
             ("ret".to_string(), case(results)),
-            ("end".to_string(), case(ends)),
-            ("msg".to_string(), case(messages)),
-            ("failed".to_string(), case(self.record(&ops, Input::Failed))),
             (
                 "refused".to_string(),
                 case(self.record(&ops, Input::Refused)),
             ),
         ]);
+        // Only the inputs the harness can use are named. An induction obligation drops the cases of the input that
+        // have no SMT sort, a failure's among them (its error is `Any`), and a step that named one would be refused.
+        if !streams.is_empty() {
+            cases.insert("end".to_string(), case(ends));
+        }
+        if !receives.is_empty() {
+            cases.insert("msg".to_string(), case(messages));
+        }
+        let failures = let_(
+            "@in",
+            var("input"),
+            if_(
+                eq(get(var("input"), "kind"), lit(json!("failed"))),
+                self.record(&ops, Input::Failed),
+                var("state"),
+            ),
+        );
         let recorded = K::Match {
             of: Box::new(var("input")),
             on: "kind".to_string(),
             cases,
-            otherwise: None,
+            otherwise: Some(Box::new(failures)),
         };
         let step_fn = let_(
             "@state",
@@ -2163,10 +2220,58 @@ pub fn elaborate(
     if !problems.is_empty() {
         return Err(vec![problem(file.name.span, What::Internal { problems })]);
     }
+
+    // What is claimed about it.
+    let mut source_map = SourceMap::default();
+    for node in &file.nodes {
+        source_map
+            .nodes
+            .insert(node.name.text.clone(), node.name.span);
+    }
+    let mut properties = Vec::new();
+    for (name, body) in &file.properties {
+        if source_map
+            .properties
+            .insert(name.text.clone(), name.span)
+            .is_some()
+        {
+            cx.report(
+                name.span,
+                What::Duplicate {
+                    name: name.text.clone(),
+                },
+            );
+        } else if let Some(p) = cx.property(name, body, &interface) {
+            properties.push(p);
+        }
+    }
+    let mut invariants = Vec::new();
+    for (name, body) in &file.invariants {
+        if source_map
+            .invariants
+            .insert(name.text.clone(), name.span)
+            .is_some()
+        {
+            cx.report(
+                name.span,
+                What::Duplicate {
+                    name: name.text.clone(),
+                },
+            );
+        } else if let Some(i) = cx.invariant(name, body, &harness.state) {
+            invariants.push(i);
+        }
+    }
+    if !cx.problems.is_empty() {
+        return Err(cx.problems);
+    }
     Ok(Elaborated {
         harness,
         uses,
         harnesses: spawned,
+        properties,
+        invariants,
+        source_map,
     })
 }
 

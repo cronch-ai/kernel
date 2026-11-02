@@ -6,6 +6,7 @@
 //!         | "type" name "=" (variant | type) NL
 //!         | "return" expr NL
 //!         | "otherwise" "return" expr NL
+//!         | ("property" | "invariant") name ":" NL? expr NL
 //!         | name "=" (expr | receive | spawn | each) ("when" expr)? ("until" name)? NL
 //! receive = "receive" name? "from" path
 //! spawn   = "spawn" name "(" expr ")" ("only" path ("," path)*)? ("without" path ("," path)*)?
@@ -14,12 +15,14 @@
 //! use     = name ("=" "harness"? string)?
 //! type    = "List" "[" type "]" | "{" (name ":" type),* "}" | name
 //! variant = case ("|" case)*          case = name ("{" (name ":" type),* "}")?
-//! expr    = "if" expr "then" expr "else" expr | "fold" or "from" expr "with" "(" name "," name ")" "=>" expr | or
+//! expr    = "if" expr "then" expr "else" expr | "fold" or "from" expr "with" "(" name "," name ")" "=>" expr | implies
+//! implies = since ("implies" implies)?  since = or ("since" or)*
 //! or      = and ("or" and)*           and = not ("and" not)*        not = "not" not | compare
 //! compare = sum (("==" | "!=" | "<" | "<=" | ">" | ">=" | "in" | "not" "in") sum)?
 //! sum     = term (("+" | "-") term)*  term = unary (("*" | "/" | "//" | "%") unary)*
 //! unary   = "-" unary | postfix       postfix = primary ("." name | "(" args ")")*
 //! primary = literal | name | "(" expr ")" | "[" expr,* "]" | "{" (name ":" expr),* "}" | "match" expr "{" arm* "}"
+//!         | ("exists" | "forall") name "in" or ":" expr
 //! arm     = ("_" | name ("(" name ")")? | literal ("|" literal)*) "=>" expr ","?
 //! ```
 
@@ -29,7 +32,7 @@ use crate::{Problem, What};
 use serde_json::{Value, json};
 
 /// Words that can't name a node, a parameter or a binding. A field may still be called any of them.
-pub const KEYWORDS: [&str; 22] = [
+pub const KEYWORDS: [&str; 28] = [
     "harness",
     "uses",
     "type",
@@ -40,6 +43,12 @@ pub const KEYWORDS: [&str; 22] = [
     "receive",
     "spawn",
     "for",
+    "property",
+    "invariant",
+    "implies",
+    "since",
+    "exists",
+    "forall",
     "if",
     "then",
     "else",
@@ -215,6 +224,8 @@ impl Parser {
             nodes: Vec::new(),
             returns: Vec::new(),
             otherwise: Vec::new(),
+            properties: Vec::new(),
+            invariants: Vec::new(),
         };
         while *self.peek() != Tok::Eof {
             self.decl(&mut file)?;
@@ -254,6 +265,22 @@ impl Parser {
             file.types.push((name, ty));
         } else if self.eat_word("return") {
             file.returns.push(self.expr()?);
+        } else if self.is_word("property") || self.is_word("invariant") {
+            let property = self.eat_word("property");
+            if !property {
+                self.word("invariant")?;
+            }
+            let name = self.name()?;
+            self.sym(":")?;
+            if *self.peek() == Tok::Newline {
+                self.advance();
+            }
+            let body = self.expr()?;
+            if property {
+                file.properties.push((name, body));
+            } else {
+                file.invariants.push((name, body));
+            }
         } else if self.eat_word("otherwise") {
             self.word("return")?;
             file.otherwise.push(self.expr()?);
@@ -453,7 +480,24 @@ impl Parser {
                 span,
             });
         }
-        self.or()
+        self.implies()
+    }
+
+    fn implies(&mut self) -> Parsed<Expr> {
+        let e = self.since()?;
+        if self.eat_word("implies") {
+            let rhs = self.implies()?;
+            return Ok(Self::binary(Binary::Implies, e, rhs));
+        }
+        Ok(e)
+    }
+
+    fn since(&mut self) -> Parsed<Expr> {
+        let mut e = self.or()?;
+        while self.eat_word("since") {
+            e = Self::binary(Binary::Since, e, self.or()?);
+        }
+        Ok(e)
     }
 
     fn binary(op: Binary, a: Expr, b: Expr) -> Expr {
@@ -634,6 +678,27 @@ impl Parser {
                 Ok((name, p.expr()?))
             })?;
             return Ok(at(ExprKind::Record(fields), self));
+        }
+        if self.is_word("exists") || self.is_word("forall") {
+            let exists = self.eat_word("exists");
+            if !exists {
+                self.word("forall")?;
+            }
+            let var = self.name()?;
+            self.word("in")?;
+            let over = self.or()?;
+            self.sym(":")?;
+            let body = self.expr()?;
+            let span = start.to(body.span);
+            return Ok(Expr {
+                kind: ExprKind::Quantified {
+                    exists,
+                    var,
+                    over: Box::new(over),
+                    body: Box::new(body),
+                },
+                span,
+            });
         }
         if self.eat_word("match") {
             let of = self.expr()?;
