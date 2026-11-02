@@ -15,7 +15,7 @@
 //! it: what the interpreter makes up, a spawned child's result and a failure's error, is `Json`, which has a sort.
 
 use crate::check::{Problem, infer};
-use crate::harness::{Harness, Interface, input_type, resolved_step};
+use crate::harness::{Harness, Interface, input_type, resolved_state, resolved_step};
 use crate::ir::{Case, Expr, Type};
 use crate::labeled::{self, LValue};
 use crate::smtlib::{self, Floats, Refusal};
@@ -358,10 +358,10 @@ pub enum ObligationError {
     Refused { refusal: Refusal },
 }
 
-fn invariant_problems(harness: &Harness, invariant: &Expr) -> Vec<Problem> {
+fn invariant_problems(harness: &Harness, interface: &Interface, invariant: &Expr) -> Vec<Problem> {
     let (ty, mut problems) = infer(
         invariant,
-        vec![("state".to_string(), harness.state.clone())],
+        vec![("state".to_string(), resolved_state(harness, interface))],
     );
     if let Some(got) = ty
         && !crate::types::conforms(&got, &Type::Bool)
@@ -390,12 +390,12 @@ pub fn obligation(
     invariant: &Expr,
     floats: Floats,
 ) -> Result<Obligation, ObligationError> {
-    let problems = invariant_problems(harness, invariant);
+    let problems = invariant_problems(harness, interface, invariant);
     if !problems.is_empty() {
         return Err(ObligationError::Invariant { problems });
     }
     let input = inhabited(&input_type(harness, interface));
-    let state = inhabited(&harness.state);
+    let state = inhabited(&resolved_state(harness, interface));
     let next = project(&resolved_step(harness, interface), "state");
     let text = smtlib::induction(&state, &input, invariant, &next, floats)
         .map_err(|refusal| ObligationError::Refused { refusal })?;
@@ -440,11 +440,12 @@ pub fn check_step(
     state: &Value,
     input: &Value,
 ) -> Result<Induction, InductionError> {
-    let problems = invariant_problems(harness, invariant);
+    let problems = invariant_problems(harness, interface, invariant);
     if !problems.is_empty() {
         return Err(InductionError::Invariant { problems });
     }
-    if !inhabits(state, &harness.state) {
+    let declared = resolved_state(harness, interface);
+    if !inhabits(state, &declared) {
         return Err(InductionError::State);
     }
     if !inhabits(input, &input_type(harness, interface)) {
@@ -461,7 +462,7 @@ pub fn check_step(
         .ok()
         .and_then(|r| r.field("state"))
         .map(|s| s.value())
-        .filter(|s| inhabits(s, &harness.state))
+        .filter(|s| inhabits(s, &declared))
         .ok_or(InductionError::Step)?;
     Ok(if holds(invariant, &next) {
         Induction::Preserved { next }

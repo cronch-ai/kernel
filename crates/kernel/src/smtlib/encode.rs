@@ -56,6 +56,7 @@ fn describe(ty: &Type) -> String {
     match ty {
         Type::Action => "Action".into(),
         Type::Call => "Call".into(),
+        Type::Returned => "Returned".into(),
         Type::Int => "Int".into(),
         Type::Float => "Float".into(),
         Type::String => "String".into(),
@@ -193,6 +194,7 @@ fn plain_equality(ty: &Type) -> bool {
         Type::Float
         | Type::Json
         | Type::Action
+        | Type::Returned
         | Type::Call
         | Type::Record(_)
         | Type::Variant { .. } => false,
@@ -693,6 +695,41 @@ impl Encoder {
                 let f = self.map("coerce", a, b, |e, x| e.coerce(x, a, b))?;
                 Ok(Term::app(f, vec![term]))
             }
+            (
+                Type::Variant { tag, cases: have },
+                Type::Variant {
+                    tag: to_tag,
+                    cases: want,
+                },
+            ) if tag == to_tag => {
+                let (from_name, to_name) = (self.variant(tag, have)?, self.variant(to_tag, want)?);
+                let x = self.fresh();
+                let mut branches = Vec::new();
+                for (case, have_ty) in have {
+                    let want_ty = want.get(case).ok_or(NoReading::Unchecked)?;
+                    let wanted = case_fields(want_ty)?;
+                    let had: BTreeMap<String, Type> = case_fields(have_ty)?.into_iter().collect();
+                    let mut args = Vec::new();
+                    for (field, t) in wanted {
+                        let have_t = had.get(&field).ok_or(NoReading::UndeclaredField {
+                            field: field.clone(),
+                        })?;
+                        let read =
+                            Term::app(case_selector(&from_name, case, &field)?, vec![x.clone()]);
+                        args.push(self.coerce(read, have_t, &t)?);
+                    }
+                    let built = Term::app(case_constructor(&to_name, case)?, args);
+                    branches.push((tester(&from_name, case, x.clone())?, built));
+                }
+                let (_, last) = branches.pop().ok_or(NoReading::Unchecked)?;
+                let chained = branches
+                    .into_iter()
+                    .rev()
+                    .fold(last, |rest, (test, built)| {
+                        Term::call("ite", vec![test, built, rest])
+                    });
+                Ok(Term::bind(x, term, chained))
+            }
             (_, Type::Json) => self.json_of(term, from),
             _ => Err(NoReading::Unchecked),
         }
@@ -737,7 +774,7 @@ impl Encoder {
     fn json_of(&mut self, term: Term, from: &Type) -> Read<Term> {
         self.sort(&Type::Json)?;
         match from {
-            Type::Action | Type::Call => Err(NoReading::Unchecked),
+            Type::Action | Type::Call | Type::Returned => Err(NoReading::Unchecked),
             Type::Json => Ok(term),
             Type::Int | Type::Float => json::wrap("number", as_float(self.floats, term, from)),
             Type::String => json::wrap("string", term),
@@ -818,7 +855,7 @@ impl Encoder {
     fn json_is(&mut self, ty: &Type, j: Term) -> Read<Term> {
         let number = || json::select("number.v", j.clone());
         Ok(match ty {
-            Type::Action | Type::Call => return Err(NoReading::Unchecked),
+            Type::Action | Type::Call | Type::Returned => return Err(NoReading::Unchecked),
             Type::Json => Term::atom("true"),
             Type::Bool => json::tester("bool", j)?,
             Type::String => json::tester("string", j)?,
@@ -900,7 +937,7 @@ impl Encoder {
     fn json_as(&mut self, ty: &Type, j: Term) -> Read<Term> {
         let number = || json::select("number.v", j.clone());
         match ty {
-            Type::Action | Type::Call => Err(NoReading::Unchecked),
+            Type::Action | Type::Call | Type::Returned => Err(NoReading::Unchecked),
             Type::Json => Ok(j),
             Type::Bool => json::select("bool.v", j),
             Type::String => json::select("string.v", j),

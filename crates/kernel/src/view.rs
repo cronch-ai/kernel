@@ -23,7 +23,7 @@
 //! evaluate, and the atom is false: read it where `origin` is empty.
 
 use crate::check::infer;
-use crate::harness::{Harness, Interface, action_type, input_type};
+use crate::harness::{Harness, Interface, input_type, resolution};
 use crate::ir::Type;
 use crate::ops::text;
 use crate::run::Event;
@@ -146,7 +146,7 @@ fn flatten(labels: &mut Value, names: &[&str]) {
 
 /// What a property may read of `event` in a run of this harness against this interface.
 pub fn event_type(harness: &Harness, interface: &Interface) -> Type {
-    exact(harness, interface).resolved(&action_type(&harness.result, interface))
+    exact(harness, interface).resolved(&resolution(&harness.result, &harness.spawns, interface))
 }
 
 fn record(fields: Vec<(&str, Type)>) -> Type {

@@ -14,6 +14,8 @@ export type Type =
   | "Action"
   /** A call of one of the interface's operations: `Action` with only its `call` case. Resolved where `Action` is, and in operation outputs. */
   | "Call"
+  /** What a call chosen at run time returned: a variant over `op`, with `@none` for one that hasn't. Resolved where `Call` is. */
+  | "Returned"
   | { readonly List: Type }
   | { readonly Record: Readonly<Record<string, Type>> }
   /** A record whose `tag` field names its case, and which has that case's type. */
@@ -320,6 +322,8 @@ export type SourceProblem = { readonly span: Span } & (
   | { readonly kind: "nestedAlways" }
   | { readonly kind: "needsOtherwise"; readonly node: string }
   | { readonly kind: "otherwiseReadsNode"; readonly node: string }
+  | { readonly kind: "notPerformable"; readonly got: Type }
+  | { readonly kind: "noInitialValue"; readonly name: string; readonly ty: Type }
   | { readonly kind: "carryReads"; readonly name: string }
   | { readonly kind: "notACarry"; readonly name: string }
   | { readonly kind: "nextWithoutLoop" }
@@ -474,7 +478,7 @@ export type Formula =
   | { readonly f: "and"; readonly of: readonly Formula[] }
   | { readonly f: "or"; readonly of: readonly Formula[] }
   | { readonly f: "implies"; readonly if: Formula; readonly then: Formula }
-  /** `var` ranges over the values `of` gave at the events so far. */
+  /** `var` ranges over the items of the lists `of` gave at the events so far: `of` is empty at an event with nothing to offer. */
   | { readonly f: "exists"; readonly var: string; readonly of: Expr; readonly body: Formula }
   | { readonly f: "forall"; readonly var: string; readonly of: Expr; readonly body: Formula }
   | { readonly f: "prev"; readonly of: Formula }

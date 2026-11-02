@@ -9,7 +9,7 @@
 //! None are built in: every one comes from an installed capability.
 
 use crate::check::{Problem, check, infer};
-use crate::ir::{Expr, Type};
+use crate::ir::{Expr, Resolution, Type};
 use crate::labeled::Label;
 use crate::types::{conforms, inhabits};
 use serde::{Deserialize, Serialize};
@@ -411,21 +411,71 @@ fn check_update(
     check_part(place, expr, vars, Some(Type::Record(changed)), problems);
 }
 
-/// Whether a type mentions `Call` or `Action`, which are resolved from the interface.
+/// Whether a type mentions a type among those `decided` says the interface decides.
+fn mentions(ty: &Type, decided: &impl Fn(&Type) -> bool) -> bool {
+    decided(ty)
+        || match ty {
+            Type::List(t) => mentions(t, decided),
+            Type::Record(fields) => fields.values().any(|t| mentions(t, decided)),
+            Type::Variant { cases, .. } => cases.values().any(|t| mentions(t, decided)),
+            _ => false,
+        }
+}
+
+/// Whether a type mentions anything resolved from an interface's inputs.
 fn resolvable(ty: &Type) -> bool {
-    match ty {
-        Type::Call | Type::Action => true,
-        Type::List(t) => resolvable(t),
-        Type::Record(fields) => fields.values().any(resolvable),
-        Type::Variant { cases, .. } => cases.values().any(resolvable),
-        _ => false,
-    }
+    mentions(ty, &|t| {
+        matches!(t, Type::Call | Type::Action | Type::Returned)
+    })
 }
 
 /// An operation's output as the interface it is called in reads it: `Call` and `Action` resolved against that
 /// interface, for a harness whose result type is `result`.
 pub fn output_type(output: &Type, result: &Type, interface: &Interface) -> Type {
-    output.resolved(&action_type(result, interface))
+    output.resolved(&Resolution {
+        action: action_type(result, interface),
+        returned: Type::Returned,
+    })
+}
+
+/// What the types an interface decides are, for a harness with this result type and these children.
+pub fn resolution(
+    result: &Type,
+    spawns: &BTreeMap<String, Signature>,
+    interface: &Interface,
+) -> Resolution {
+    let answered = |value: Type| {
+        Type::Record(BTreeMap::from([
+            ("call".to_string(), Type::Int),
+            ("value".to_string(), value),
+        ]))
+    };
+    let mut cases: BTreeMap<String, Type> = interface
+        .operations
+        .iter()
+        .map(|(name, o)| {
+            let output = output_type(&o.output, result, interface);
+            (name.clone(), answered(output))
+        })
+        .collect();
+    for (name, signature) in spawns {
+        cases.insert(spawn_op(name), answered(signature.result.clone()));
+    }
+    cases.insert("@none".to_string(), Type::Record(BTreeMap::new()));
+    Resolution {
+        action: action_type(result, interface),
+        returned: Type::Variant {
+            tag: "op".to_string(),
+            cases,
+        },
+    }
+}
+
+/// The harness's state type against this interface.
+pub fn resolved_state(harness: &Harness, interface: &Interface) -> Type {
+    harness
+        .state
+        .resolved(&resolution(&harness.result, &harness.spawns, interface))
 }
 
 /// Problems with the expressions of an interface's contracts. Each of an operation's contracts reads `op`, the name
@@ -447,6 +497,12 @@ pub fn check_interface(interface: &Interface) -> Vec<HarnessProblem> {
         };
         if resolvable(&o.input) {
             problems.push(HarnessProblem::SelfReference { place: at("input") });
+        }
+        // A result can't hold the results of calls, which include its own.
+        if mentions(&o.output, &|t| *t == Type::Returned) {
+            problems.push(HarnessProblem::SelfReference {
+                place: at("output"),
+            });
         }
         let result = output_type(&o.output, &Type::Bool, interface);
         let (args, result) = (&o.input, &result);
@@ -512,11 +568,11 @@ pub fn check_interface(interface: &Interface) -> Vec<HarnessProblem> {
     problems
 }
 
-/// The step as it runs against this interface: `Action` in its types is the interface's action type.
+/// The step as it runs against this interface, with the types the interface decides resolved.
 pub fn resolved_step(harness: &Harness, interface: &Interface) -> Expr {
     harness
         .step
-        .resolved(&action_type(&harness.result, interface))
+        .resolved(&resolution(&harness.result, &harness.spawns, interface))
 }
 
 /// What `δ` must give: the next state and the actions, each of type `action`.
@@ -659,9 +715,10 @@ pub fn error_type() -> Type {
 /// `action_type` gives.
 pub fn check_harness(harness: &Harness, interface: &Interface) -> Vec<HarnessProblem> {
     let mut problems = Vec::new();
-    if !inhabits(&harness.init, &harness.state) {
+    let state = resolved_state(harness, interface);
+    if !inhabits(&harness.init, &state) {
         problems.push(HarnessProblem::Init {
-            expected: harness.state.clone(),
+            expected: state.clone(),
             got: harness.init.clone(),
         });
     }
@@ -672,13 +729,13 @@ pub fn check_harness(harness: &Harness, interface: &Interface) -> Vec<HarnessPro
     }
     let input = input_type(harness, interface);
     let scope = vec![
-        ("state".to_string(), harness.state.clone()),
+        ("state".to_string(), state.clone()),
         ("input".to_string(), input),
     ];
     // The step is checked against its type, so the state it builds can hold variants.
     let action = action_type(&harness.result, interface);
-    let step = harness.step.resolved(&action);
-    let (_, found) = check(&step, &step_type(&harness.state, &action), scope);
+    let step = resolved_step(harness, interface);
+    let (_, found) = check(&step, &step_type(&state, &action), scope);
     for problem in found {
         problems.push(match problem {
             // The step as a whole has the wrong type.

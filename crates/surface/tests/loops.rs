@@ -17,12 +17,12 @@ fn fixture(name: &str) -> Value {
     serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap()
 }
 
-/// A model that answers or chooses a call, whose `call` case is shaped like an action.
+/// A model that answers or chooses a call of whatever the interface it is called in allows.
 fn brain() -> Value {
     let message = json!({ "Record": { "role": "String", "content": "String" } });
     let reply = json!({ "Variant": { "tag": "kind", "cases": {
         "answer": { "Record": { "text": "String" } },
-        "call": { "Record": { "op": "String", "args": "Json" } },
+        "call": "Call",
     }}});
     json!({ "operations": { "choose": {
         "input": { "Record": { "messages": { "List": message } } },
@@ -62,7 +62,7 @@ stop   = receive said from session.user when said == "stop"
 reply  = brain.choose(messages: history) until stop
 choice = reply
 wants  = match choice { call(c) => c.op, answer(a) => "" }
-asked  = approve.ask(action: wants, args: match choice { call(c) => c.args, answer(a) => {} }) when wants != "" until stop
+asked  = approve.ask(op: wants, call: str(choice)) when wants != "" until stop
 result = perform choice when (match asked { ok(a) => a != "deny", _ => false }) until stop
 
 answer = match choice { answer(a) => a.text, call(c) => "" }
@@ -197,7 +197,11 @@ fn the_agent_goes_round_until_the_model_answers() {
         .unwrap();
     let history = &second["action"]["args"]["messages"];
     assert_eq!(history.as_array().unwrap().len(), 3);
-    assert_eq!(history[2], json!({ "role": "tool", "content": "note-1" }));
+    // What came of it is the result as it arrived, with the operation that gave it.
+    assert_eq!(history[2]["role"], "tool");
+    let result: Value = serde_json::from_str(history[2]["content"].as_str().unwrap()).unwrap();
+    assert_eq!(result["op"], "notes.append");
+    assert_eq!(result["value"], "note-1");
     assert_eq!(system["root"]["outcome"]["value"], json!("noted"));
 }
 
@@ -218,22 +222,14 @@ fn a_choice_that_is_denied_or_not_an_action_is_not_performed() {
         actions(&events),
         ["call brain.choose", "call approve.ask", "call brain.choose"]
     );
-    // Not an action: the interface has no `notes.delete`, so nothing is issued, whatever the owner says.
-    let (events, _) = run(
-        &harness,
-        no_grant(),
-        &[
-            start(),
-            ret(0, chooses("notes.delete", json!({}))),
-            ret(1, json!("always")),
-        ],
-    );
-    assert_eq!(
-        actions(&events),
-        ["call brain.choose", "call approve.ask", "call brain.choose"]
-    );
-    let messages = &events.last().unwrap()["action"]["args"]["messages"];
-    assert_eq!(messages[2]["content"], "denied");
+    // Not a call the interface has: its result type says so, so it is withheld, and the harness never hears of it.
+    let system = run(&harness, no_grant(), &[start()]).1;
+    let delivered = call(json!({
+        "op": "deliver", "system": system,
+        "delivery": { "input": ret(0, chooses("notes.delete", json!({}))) },
+    }));
+    assert_eq!(delivered["events"][0]["kind"], "withheld", "{delivered}");
+    assert_eq!(delivered["events"][0]["reason"]["kind"], "mismatch");
 }
 
 #[test]
@@ -467,9 +463,20 @@ fn loops_are_checked() {
     // A performed call may be skipped, so the end of a round reads it through `match`.
     assert_eq!(
         kinds(
-            "carry k: String = \"\"\nx = perform n\nnext k = str(x)\nreturn \"\" when true\notherwise return \"\"\n"
+            "carry k: String = \"\"\nr = brain.choose(messages: [])\nx = perform r\nnext k = str(x)\nreturn \"\" when true\notherwise return \"\"\n"
         ),
         ["mayBeSkipped"]
+    );
+    // Only a call can be performed: a value of any other type has nothing to say what it would do.
+    assert_eq!(
+        kinds("x = perform n\ny = match x { ok(v) => 1, _ => 0 }\nreturn str(y)\n"),
+        ["notPerformable"]
+    );
+    assert_eq!(
+        kinds(
+            "x = perform {kind: \"call\", op: \"notes.read\", args: {}}\ny = match x { ok(v) => 1, _ => 0 }\nreturn str(y)\n"
+        ),
+        ["notPerformable"]
     );
     assert_eq!(kinds("x = 1 + perform n\nreturn \"\"\n"), ["syntax"]);
     // A receive read through `match` hasn't always heard anything.
@@ -502,8 +509,8 @@ invariant small: k <= 3
         json!({ "Record": { "k": "Int" } })
     );
 
-    // The agent's too: a performed call's result is read as `Json` whichever operation gave it, including
-    // `notes.read`'s list, and `str` of it is text a solver chooses.
+    // The agent's too. Its state and input are typed, including what it performs and what comes back, so `Json` is
+    // nowhere in the query. Only `str` of a typed value is text a solver chooses.
     let agent = elaborated(AGENT);
     let obligation = call(json!({
         "op": "obligation", "harness": agent["harness"], "interface": interface(),
@@ -511,6 +518,6 @@ invariant small: k <= 3
     }));
     assert_eq!(obligation["kind"], "obligation", "{obligation}");
     let text = obligation["text"].as_str().unwrap();
-    assert!(text.contains("(define-funs-rec ((|map:json."), "{text}");
+    assert!(!text.contains("|json:"), "{text}");
     assert!(text.contains("(declare-fun |fn:text."), "{text}");
 }

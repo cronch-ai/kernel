@@ -395,7 +395,7 @@ impl<'s> Reader<'s> {
         }
         let wrong = || Self::mismatch(ty, s);
         match ty {
-            Type::Action | Type::Call => Err(wrong()),
+            Type::Action | Type::Call | Type::Returned => Err(wrong()),
             Type::Json => self.json(s, scope, depth),
             Type::Bool => match s {
                 Sexp::Atom(a) if a == "true" => Ok(Value::Bool(true)),

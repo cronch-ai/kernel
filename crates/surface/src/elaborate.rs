@@ -31,7 +31,7 @@ use crate::{Problem, What};
 use kernel::check::infer;
 use kernel::harness::{
     Harness, Installation, Interface, Mode, Narrowing, Signature, action_type, check_harness,
-    install, narrow, spawn_op, step_type,
+    install, narrow, resolution, spawn_op, step_type,
 };
 use kernel::ir::{Case, Expr as K, Type};
 use kernel::property::Property;
@@ -280,6 +280,17 @@ fn halt(value: K) -> K {
     rec(vec![("kind", lit(json!("halt"))), ("value", value)])
 }
 
+/// Whether the type has a value to start from under any interface. Only a `Call` has none: which calls there are depends
+/// on the interface, and a narrowing can take any of them away.
+fn initial(ty: &Type) -> bool {
+    match ty {
+        Type::Call => false,
+        Type::Record(fields) => fields.values().all(initial),
+        Type::Variant { cases, .. } => cases.values().any(initial),
+        _ => true,
+    }
+}
+
 /// A value of the type, for slots and the start value before anything has filled them.
 fn default_value(ty: &Type) -> Value {
     match ty {
@@ -288,6 +299,7 @@ fn default_value(ty: &Type) -> Value {
         Type::String => json!(""),
         Type::Bool => json!(false),
         Type::Json | Type::Action | Type::Call => Value::Null,
+        Type::Returned => json!({ "op": "@none" }),
         Type::List(_) => json!([]),
         Type::Record(fields) => Value::Object(
             fields
@@ -295,7 +307,7 @@ fn default_value(ty: &Type) -> Value {
                 .map(|(n, t)| (n.clone(), default_value(t)))
                 .collect(),
         ),
-        Type::Variant { tag, cases } => match cases.iter().next() {
+        Type::Variant { tag, cases } => match cases.iter().find(|(_, t)| initial(t)) {
             Some((case, t)) => {
                 let mut v = default_value(t);
                 if let Value::Object(fields) = &mut v {
@@ -1268,6 +1280,8 @@ struct Lowered {
     guards: BTreeMap<usize, K>,
     /// Each fan-out's list.
     overs: BTreeMap<usize, K>,
+    /// The performs of a bare `Call`, rather than of a variant holding one.
+    bare_calls: BTreeSet<usize>,
     /// Each receive's filter, over its message and the parameter.
     filters: BTreeMap<usize, K>,
     pures: BTreeMap<usize, K>,
@@ -1467,24 +1481,29 @@ impl Cx<'_> {
                 ]);
                 issued(one(), running(), op("append", vec![actions, action]))
             }
-            // Issued only if what the expression gives is an action of the interface the harness runs against, and a
-            // call: halting, cancelling and spawning stay the harness's.
+            // Issued as it is, or, of a variant holding a call among other things, only if it is the call. Halting,
+            // cancelling and spawning stay the harness's: the type says it can only be a call.
             Slotted::Perform => {
-                let issue = if_(
-                    eq(get(var("@chosen"), "kind"), lit(json!("call"))),
-                    issued(
-                        one(),
-                        running(),
-                        op("append", vec![actions, var("@chosen")]),
-                    ),
-                    skip.clone(),
+                let issue = issued(
+                    one(),
+                    running(),
+                    op("append", vec![actions, var("@chosen")]),
                 );
-                K::Is {
-                    of: Box::new(lowered.args[&n].clone()),
-                    ty: Type::Action,
-                    bind: "@chosen".to_string(),
-                    then: Box::new(issue),
-                    otherwise: Box::new(skip.clone()),
+                let chosen = lowered.args[&n].clone();
+                if lowered.bare_calls.contains(&n) {
+                    return let_("@chosen", chosen, issue);
+                }
+                K::Match {
+                    of: Box::new(chosen),
+                    on: "kind".to_string(),
+                    cases: BTreeMap::from([(
+                        "call".to_string(),
+                        Case {
+                            bind: "@chosen".to_string(),
+                            body: issue,
+                        },
+                    )]),
+                    otherwise: Some(Box::new(skip.clone())),
                 }
             }
             Slotted::Spawn => {
@@ -1800,10 +1819,8 @@ impl Cx<'_> {
             }
             let slot = get(self.slot("@r", n), "value");
             let item = match self.calls[&n].kind {
-                // Any operation may answer a performed call, so what arrived is read as `Json`.
-                Slotted::Perform => {
-                    typed_let("@v", &Type::Json, get(var("@in"), "value"), var("@v"))
-                }
+                // Whichever operation answered, what arrived is the result, kept with its operation.
+                Slotted::Perform => typed_let("@v", &Type::Returned, var("@in"), var("@v")),
                 _ => get(var("@in"), "value"),
             };
             let (kind, value) = match (input, self.calls[&n].kind) {
@@ -2302,8 +2319,8 @@ pub fn elaborate(
             ExprKind::Perform(_) => Call {
                 kind: Slotted::Perform,
                 target: "perform".to_string(),
-                input: Type::Json,
-                value: Type::Json,
+                input: Type::Record(BTreeMap::new()),
+                value: Type::Returned,
                 binder: None,
                 child: None,
                 until: None,
@@ -2527,28 +2544,73 @@ pub fn elaborate(
         cx.report(w.span, What::RoundNeedsOtherwise);
     }
 
-    // Lowering and typing.
+    // Every slot and carried value starts from a value, whatever the interface.
+    for (&i, c) in &cx.calls {
+        if !initial(&c.value) {
+            let (name, ty) = (cx.node_name(i).to_string(), Box::new(c.value.clone()));
+            cx.problems.push(problem(
+                file.nodes[i].name.span,
+                What::NoInitialValue { name, ty },
+            ));
+        }
+    }
+    for carry in &file.carries {
+        if let Some((name, ty)) = cx.carries.iter().find(|(n, _)| *n == carry.name.text)
+            && !initial(ty)
+        {
+            let (name, ty) = (name.clone(), Box::new(ty.clone()));
+            cx.problems
+                .push(problem(carry.name.span, What::NoInitialValue { name, ty }));
+        }
+    }
+
+    // Lowering and typing. Expressions are typed against what the header installs, the widest interface the harness
+    // can run against: the term doesn't depend on it, and the kernel checks it against any other.
+    let declared_spawns: BTreeMap<String, Signature> = cx
+        .calls
+        .values()
+        .filter_map(|c| {
+            let (child, _) = c.child.as_ref()?;
+            let signature = Signature {
+                arg: child.arg.clone(),
+                result: child.result.clone(),
+            };
+            Some((c.target.strip_prefix("spawn.")?.to_string(), signature))
+        })
+        .collect();
+    let resolved = resolution(&result, &declared_spawns, &interface);
     let nodes_type = Type::Record(
         cx.calls
             .iter()
-            .map(|(&i, c)| (cx.node_name(i).to_string(), slot_type(c)))
+            .map(|(&i, c)| {
+                (
+                    cx.node_name(i).to_string(),
+                    slot_type(c).resolved(&resolved),
+                )
+            })
             .collect(),
     );
     let mut scope = vec![
         ("@nodes".to_string(), nodes_type),
-        (file.param.text.clone(), arg.clone()),
+        (file.param.text.clone(), arg.resolved(&resolved)),
     ];
-    scope.extend(cx.carries.clone());
+    let carried: Vec<(String, Type)> = cx
+        .carries
+        .iter()
+        .map(|(n, t)| (n.clone(), t.resolved(&resolved)))
+        .collect();
+    scope.extend(carried.clone());
     // What the parameter and the carried values are, for expressions that read no node.
-    let mut fixed = vec![(file.param.text.clone(), arg.clone())];
-    fixed.extend(cx.carries.clone());
+    let mut fixed = vec![(file.param.text.clone(), arg.resolved(&resolved))];
+    fixed.extend(carried);
     for (&i, c) in &cx.calls {
-        scope.push((cx.node_name(i).to_string(), c.value.clone()));
+        scope.push((cx.node_name(i).to_string(), c.value.resolved(&resolved)));
     }
     let mut lowered = Lowered {
         args: BTreeMap::new(),
         guards: BTreeMap::new(),
         overs: BTreeMap::new(),
+        bare_calls: BTreeSet::new(),
         filters: BTreeMap::new(),
         pures: BTreeMap::new(),
         ret: lit(Value::Null),
@@ -2561,9 +2623,9 @@ pub fn elaborate(
         let e = cx.lower(&c.init, &mut Vec::new());
         cx.checked(
             &e,
-            &ty,
+            &ty.resolved(&resolved),
             c.init.span,
-            &[(file.param.text.clone(), arg.clone())],
+            &[(file.param.text.clone(), arg.resolved(&resolved))],
         );
         lowered.inits.push(e);
     }
@@ -2576,7 +2638,7 @@ pub fn elaborate(
             let mut filter_scope = fixed.clone();
             let mut locals = Vec::new();
             if let Some(b) = binder {
-                filter_scope.push((b.text.clone(), call.value.clone()));
+                filter_scope.push((b.text.clone(), call.value.resolved(&resolved)));
                 locals.push(b.text.clone());
             }
             let f = cx.lower(w, &mut locals);
@@ -2627,7 +2689,24 @@ pub fn elaborate(
             }
             ExprKind::Perform(action) => {
                 let e = cx.lower(action, &mut Vec::new());
-                cx.type_of(&e, action.span, &scope);
+                let t = cx.type_of(&e, action.span, &scope);
+                let call = Type::Call.resolved(&resolved);
+                let holds_call = |t: &Type| match t {
+                    Type::Variant { tag, cases } if tag == "kind" => {
+                        cases.get("call").is_some_and(|c| conforms(c, &call))
+                    }
+                    _ => false,
+                };
+                match t {
+                    Some(t) if conforms(&t, &call) => {
+                        lowered.bare_calls.insert(i);
+                    }
+                    Some(t) if holds_call(&t) => {}
+                    Some(got) => {
+                        cx.report(action.span, What::NotPerformable { got: Box::new(got) })
+                    }
+                    None => {}
+                }
                 lowered.args.insert(i, e);
             }
             _ => {}
@@ -2660,7 +2739,7 @@ pub fn elaborate(
             continue;
         };
         let lowered_next = cx.lower(e, &mut Vec::new());
-        cx.checked(&lowered_next, &ty, e.span, &scope);
+        cx.checked(&lowered_next, &ty.resolved(&resolved), e.span, &scope);
         lowered.nexts.insert(name.text.clone(), lowered_next);
     }
     if let Some(o) = file.otherwise.first() {
@@ -2741,7 +2820,7 @@ pub fn elaborate(
                     name: name.text.clone(),
                 },
             );
-        } else if let Some(i) = cx.invariant(name, body, &harness.state) {
+        } else if let Some(i) = cx.invariant(name, body, &harness.state.resolved(&resolved)) {
             invariants.push(i);
         }
     }

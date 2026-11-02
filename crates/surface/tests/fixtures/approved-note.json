@@ -118,22 +118,41 @@
                           "args": {
                             "e": "record",
                             "fields": {
-                              "action": {
+                              "op": {
                                 "e": "lit",
                                 "v": "notes.append"
                               },
-                              "args": {
-                                "e": "record",
-                                "fields": {
-                                  "text": {
-                                    "e": "get",
-                                    "of": {
-                                      "e": "var",
-                                      "name": "m"
-                                    },
-                                    "field": "value"
+                              "call": {
+                                "e": "op",
+                                "op": "str",
+                                "args": [
+                                  {
+                                    "e": "record",
+                                    "fields": {
+                                      "kind": {
+                                        "e": "lit",
+                                        "v": "call"
+                                      },
+                                      "op": {
+                                        "e": "lit",
+                                        "v": "notes.append"
+                                      },
+                                      "args": {
+                                        "e": "record",
+                                        "fields": {
+                                          "text": {
+                                            "e": "get",
+                                            "of": {
+                                              "e": "var",
+                                              "name": "m"
+                                            },
+                                            "field": "value"
+                                          }
+                                        }
+                                      }
+                                    }
                                   }
-                                }
+                                ]
                               }
                             }
                           }

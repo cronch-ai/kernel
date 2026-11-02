@@ -3,8 +3,8 @@
     "ask": {
       "input": {
         "Record": {
-          "action": "String",
-          "args": "Json"
+          "op": "String",
+          "call": "String"
         }
       },
       "output": "String",
@@ -63,7 +63,7 @@
                     "e": "var",
                     "name": "args"
                   },
-                  "field": "action"
+                  "field": "op"
                 }
               ]
             },
@@ -117,8 +117,12 @@
                     "field": "once"
                   },
                   {
-                    "e": "var",
-                    "name": "args"
+                    "e": "get",
+                    "of": {
+                      "e": "var",
+                      "name": "args"
+                    },
+                    "field": "call"
                   }
                 ]
               }
@@ -138,12 +142,7 @@
         "List": "String"
       },
       "once": {
-        "List": {
-          "Record": {
-            "action": "String",
-            "args": "Json"
-          }
-        }
+        "List": "String"
       }
     }
   }

@@ -4,6 +4,30 @@
     {
       "request": {
         "capabilities": {
+          "brain": {
+            "operations": {
+              "choose": {
+                "input": {
+                  "Record": {
+                    "total": "Int"
+                  }
+                },
+                "output": {
+                  "Variant": {
+                    "cases": {
+                      "answer": {
+                        "Record": {
+                          "text": "String"
+                        }
+                      },
+                      "call": "Call"
+                    },
+                    "tag": "kind"
+                  }
+                }
+              }
+            }
+          },
           "math": {
             "operations": {
               "double": {
@@ -18,7 +42,7 @@
           }
         },
         "op": "elaborate",
-        "source": "harness climb(goal: Int) -> Int\nuses m = \"math\"\ncarry total: Int = 0\nstep = m.double(n: total + 1)\nmore = perform {kind: \"call\", op: \"m.double\", args: {n: step}}\ngot  = match more { ok(v) => if v is Int as i then i else 0, _ => 0 }\nnext total = total + got\nreturn total when total >= goal\notherwise return total\n"
+        "source": "harness climb(goal: Int) -> Int\nuses m = \"math\", b = \"brain\"\ncarry total: Int = 0\nchoice = b.choose(total: total)\nmore = perform choice\nsaid = match more { ok(r) => str(r), _ => \"\" }\nnext total = total + len(said) + 1\nreturn total when total >= goal\notherwise return total\n"
       },
       "response": {
         "ok": true,
@@ -32,17 +56,22 @@
               },
               "next": 0,
               "nodes": {
+                "choice": {
+                  "call": 0,
+                  "error": "",
+                  "kind": "waiting",
+                  "value": {
+                    "kind": "answer",
+                    "text": ""
+                  }
+                },
                 "more": {
                   "call": 0,
                   "error": "",
                   "kind": "waiting",
-                  "value": null
-                },
-                "step": {
-                  "call": 0,
-                  "error": "",
-                  "kind": "waiting",
-                  "value": 0
+                  "value": {
+                    "op": "@none"
+                  }
                 }
               }
             },
@@ -58,20 +87,32 @@
                 "next": "Int",
                 "nodes": {
                   "Record": {
+                    "choice": {
+                      "Record": {
+                        "call": "Int",
+                        "error": "String",
+                        "kind": "String",
+                        "value": {
+                          "Variant": {
+                            "cases": {
+                              "answer": {
+                                "Record": {
+                                  "text": "String"
+                                }
+                              },
+                              "call": "Call"
+                            },
+                            "tag": "kind"
+                          }
+                        }
+                      }
+                    },
                     "more": {
                       "Record": {
                         "call": "Int",
                         "error": "String",
                         "kind": "String",
-                        "value": "Json"
-                      }
-                    },
-                    "step": {
-                      "Record": {
-                        "call": "Int",
-                        "error": "String",
-                        "kind": "String",
-                        "value": "Int"
+                        "value": "Returned"
                       }
                     }
                   }
@@ -100,7 +141,7 @@
                                     "field": "kind",
                                     "of": {
                                       "e": "get",
-                                      "field": "step",
+                                      "field": "choice",
                                       "of": {
                                         "e": "get",
                                         "field": "nodes",
@@ -126,7 +167,7 @@
                                     "field": "call",
                                     "of": {
                                       "e": "get",
-                                      "field": "step",
+                                      "field": "choice",
                                       "of": {
                                         "e": "get",
                                         "field": "nodes",
@@ -188,19 +229,7 @@
                               "nodes": {
                                 "e": "record",
                                 "fields": {
-                                  "more": {
-                                    "e": "get",
-                                    "field": "more",
-                                    "of": {
-                                      "e": "get",
-                                      "field": "nodes",
-                                      "of": {
-                                        "e": "var",
-                                        "name": "@r"
-                                      }
-                                    }
-                                  },
-                                  "step": {
+                                  "choice": {
                                     "e": "record",
                                     "fields": {
                                       "call": {
@@ -232,7 +261,7 @@
                                         "field": "value",
                                         "of": {
                                           "e": "get",
-                                          "field": "step",
+                                          "field": "choice",
                                           "of": {
                                             "e": "get",
                                             "field": "nodes",
@@ -242,6 +271,18 @@
                                             }
                                           }
                                         }
+                                      }
+                                    }
+                                  },
+                                  "more": {
+                                    "e": "get",
+                                    "field": "more",
+                                    "of": {
+                                      "e": "get",
+                                      "field": "nodes",
+                                      "of": {
+                                        "e": "var",
+                                        "name": "@r"
                                       }
                                     }
                                   }
@@ -350,6 +391,18 @@
                                 "nodes": {
                                   "e": "record",
                                   "fields": {
+                                    "choice": {
+                                      "e": "get",
+                                      "field": "choice",
+                                      "of": {
+                                        "e": "get",
+                                        "field": "nodes",
+                                        "of": {
+                                          "e": "var",
+                                          "name": "@r"
+                                        }
+                                      }
+                                    },
                                     "more": {
                                       "e": "record",
                                       "fields": {
@@ -394,18 +447,6 @@
                                           }
                                         }
                                       }
-                                    },
-                                    "step": {
-                                      "e": "get",
-                                      "field": "step",
-                                      "of": {
-                                        "e": "get",
-                                        "field": "nodes",
-                                        "of": {
-                                          "e": "var",
-                                          "name": "@r"
-                                        }
-                                      }
                                     }
                                   }
                                 }
@@ -443,7 +484,7 @@
                                     "field": "kind",
                                     "of": {
                                       "e": "get",
-                                      "field": "step",
+                                      "field": "choice",
                                       "of": {
                                         "e": "get",
                                         "field": "nodes",
@@ -469,7 +510,7 @@
                                     "field": "call",
                                     "of": {
                                       "e": "get",
-                                      "field": "step",
+                                      "field": "choice",
                                       "of": {
                                         "e": "get",
                                         "field": "nodes",
@@ -531,19 +572,7 @@
                               "nodes": {
                                 "e": "record",
                                 "fields": {
-                                  "more": {
-                                    "e": "get",
-                                    "field": "more",
-                                    "of": {
-                                      "e": "get",
-                                      "field": "nodes",
-                                      "of": {
-                                        "e": "var",
-                                        "name": "@r"
-                                      }
-                                    }
-                                  },
-                                  "step": {
+                                  "choice": {
                                     "e": "record",
                                     "fields": {
                                       "call": {
@@ -567,7 +596,7 @@
                                         "field": "value",
                                         "of": {
                                           "e": "get",
-                                          "field": "step",
+                                          "field": "choice",
                                           "of": {
                                             "e": "get",
                                             "field": "nodes",
@@ -577,6 +606,18 @@
                                             }
                                           }
                                         }
+                                      }
+                                    }
+                                  },
+                                  "more": {
+                                    "e": "get",
+                                    "field": "more",
+                                    "of": {
+                                      "e": "get",
+                                      "field": "nodes",
+                                      "of": {
+                                        "e": "var",
+                                        "name": "@r"
                                       }
                                     }
                                   }
@@ -685,6 +726,18 @@
                                 "nodes": {
                                   "e": "record",
                                   "fields": {
+                                    "choice": {
+                                      "e": "get",
+                                      "field": "choice",
+                                      "of": {
+                                        "e": "get",
+                                        "field": "nodes",
+                                        "of": {
+                                          "e": "var",
+                                          "name": "@r"
+                                        }
+                                      }
+                                    },
                                     "more": {
                                       "e": "record",
                                       "fields": {
@@ -719,18 +772,6 @@
                                               }
                                             }
                                           }
-                                        }
-                                      }
-                                    },
-                                    "step": {
-                                      "e": "get",
-                                      "field": "step",
-                                      "of": {
-                                        "e": "get",
-                                        "field": "nodes",
-                                        "of": {
-                                          "e": "var",
-                                          "name": "@r"
                                         }
                                       }
                                     }
@@ -859,6 +900,18 @@
                                 "nodes": {
                                   "e": "record",
                                   "fields": {
+                                    "choice": {
+                                      "e": "get",
+                                      "field": "choice",
+                                      "of": {
+                                        "e": "get",
+                                        "field": "nodes",
+                                        "of": {
+                                          "e": "var",
+                                          "name": "@r"
+                                        }
+                                      }
+                                    },
                                     "more": {
                                       "e": "record",
                                       "fields": {
@@ -880,12 +933,8 @@
                                         },
                                         "value": {
                                           "be": {
-                                            "e": "get",
-                                            "field": "value",
-                                            "of": {
-                                              "e": "var",
-                                              "name": "@in"
-                                            }
+                                            "e": "var",
+                                            "name": "@in"
                                           },
                                           "e": "let",
                                           "in": {
@@ -893,19 +942,7 @@
                                             "name": "@v"
                                           },
                                           "name": "@v",
-                                          "type": "Json"
-                                        }
-                                      }
-                                    },
-                                    "step": {
-                                      "e": "get",
-                                      "field": "step",
-                                      "of": {
-                                        "e": "get",
-                                        "field": "nodes",
-                                        "of": {
-                                          "e": "var",
-                                          "name": "@r"
+                                          "type": "Returned"
                                         }
                                       }
                                     }
@@ -926,7 +963,7 @@
                       "e": "let",
                       "in": {
                         "cases": {
-                          "m.double": {
+                          "b.choose": {
                             "bind": "@in",
                             "body": {
                               "be": {
@@ -945,7 +982,7 @@
                                             "field": "kind",
                                             "of": {
                                               "e": "get",
-                                              "field": "step",
+                                              "field": "choice",
                                               "of": {
                                                 "e": "get",
                                                 "field": "nodes",
@@ -971,7 +1008,7 @@
                                             "field": "call",
                                             "of": {
                                               "e": "get",
-                                              "field": "step",
+                                              "field": "choice",
                                               "of": {
                                                 "e": "get",
                                                 "field": "nodes",
@@ -1033,19 +1070,7 @@
                                       "nodes": {
                                         "e": "record",
                                         "fields": {
-                                          "more": {
-                                            "e": "get",
-                                            "field": "more",
-                                            "of": {
-                                              "e": "get",
-                                              "field": "nodes",
-                                              "of": {
-                                                "e": "var",
-                                                "name": "@r"
-                                              }
-                                            }
-                                          },
-                                          "step": {
+                                          "choice": {
                                             "e": "record",
                                             "fields": {
                                               "call": {
@@ -1071,6 +1096,18 @@
                                                   "e": "var",
                                                   "name": "@in"
                                                 }
+                                              }
+                                            }
+                                          },
+                                          "more": {
+                                            "e": "get",
+                                            "field": "more",
+                                            "of": {
+                                              "e": "get",
+                                              "field": "nodes",
+                                              "of": {
+                                                "e": "var",
+                                                "name": "@r"
                                               }
                                             }
                                           }
@@ -1215,7 +1252,7 @@
                           "field": "kind",
                           "of": {
                             "e": "get",
-                            "field": "step",
+                            "field": "choice",
                             "of": {
                               "e": "get",
                               "field": "nodes",
@@ -1281,7 +1318,7 @@
                                         "field": "kind",
                                         "of": {
                                           "e": "get",
-                                          "field": "step",
+                                          "field": "choice",
                                           "of": {
                                             "e": "get",
                                             "field": "nodes",
@@ -1362,19 +1399,9 @@
                                                 "args": {
                                                   "e": "record",
                                                   "fields": {
-                                                    "n": {
-                                                      "args": [
-                                                        {
-                                                          "e": "var",
-                                                          "name": "total"
-                                                        },
-                                                        {
-                                                          "e": "lit",
-                                                          "v": 1
-                                                        }
-                                                      ],
-                                                      "e": "op",
-                                                      "op": "add"
+                                                    "total": {
+                                                      "e": "var",
+                                                      "name": "total"
                                                     }
                                                   }
                                                 },
@@ -1384,7 +1411,7 @@
                                                 },
                                                 "op": {
                                                   "e": "lit",
-                                                  "v": "m.double"
+                                                  "v": "b.choose"
                                                 }
                                               }
                                             }
@@ -1432,19 +1459,7 @@
                                             "nodes": {
                                               "e": "record",
                                               "fields": {
-                                                "more": {
-                                                  "e": "get",
-                                                  "field": "more",
-                                                  "of": {
-                                                    "e": "get",
-                                                    "field": "nodes",
-                                                    "of": {
-                                                      "e": "var",
-                                                      "name": "@state"
-                                                    }
-                                                  }
-                                                },
-                                                "step": {
+                                                "choice": {
                                                   "e": "record",
                                                   "fields": {
                                                     "call": {
@@ -1468,7 +1483,7 @@
                                                       "field": "value",
                                                       "of": {
                                                         "e": "get",
-                                                        "field": "step",
+                                                        "field": "choice",
                                                         "of": {
                                                           "e": "get",
                                                           "field": "nodes",
@@ -1478,6 +1493,18 @@
                                                           }
                                                         }
                                                       }
+                                                    }
+                                                  }
+                                                },
+                                                "more": {
+                                                  "e": "get",
+                                                  "field": "more",
+                                                  "of": {
+                                                    "e": "get",
+                                                    "field": "nodes",
+                                                    "of": {
+                                                      "e": "var",
+                                                      "name": "@state"
                                                     }
                                                   }
                                                 }
@@ -1532,19 +1559,7 @@
                                         "nodes": {
                                           "e": "record",
                                           "fields": {
-                                            "more": {
-                                              "e": "get",
-                                              "field": "more",
-                                              "of": {
-                                                "e": "get",
-                                                "field": "nodes",
-                                                "of": {
-                                                  "e": "var",
-                                                  "name": "@state"
-                                                }
-                                              }
-                                            },
-                                            "step": {
+                                            "choice": {
                                               "e": "record",
                                               "fields": {
                                                 "call": {
@@ -1552,7 +1567,7 @@
                                                   "field": "call",
                                                   "of": {
                                                     "e": "get",
-                                                    "field": "step",
+                                                    "field": "choice",
                                                     "of": {
                                                       "e": "get",
                                                       "field": "nodes",
@@ -1576,7 +1591,7 @@
                                                   "field": "value",
                                                   "of": {
                                                     "e": "get",
-                                                    "field": "step",
+                                                    "field": "choice",
                                                     "of": {
                                                       "e": "get",
                                                       "field": "nodes",
@@ -1586,6 +1601,18 @@
                                                       }
                                                     }
                                                   }
+                                                }
+                                              }
+                                            },
+                                            "more": {
+                                              "e": "get",
+                                              "field": "more",
+                                              "of": {
+                                                "e": "get",
+                                                "field": "nodes",
+                                                "of": {
+                                                  "e": "var",
+                                                  "name": "@state"
                                                 }
                                               }
                                             }
@@ -1663,7 +1690,7 @@
                                           "field": "kind",
                                           "of": {
                                             "e": "get",
-                                            "field": "step",
+                                            "field": "choice",
                                             "of": {
                                               "e": "get",
                                               "field": "nodes",
@@ -1695,7 +1722,7 @@
                                         "field": "kind",
                                         "of": {
                                           "e": "get",
-                                          "field": "step",
+                                          "field": "choice",
                                           "of": {
                                             "e": "get",
                                             "field": "nodes",
@@ -1731,7 +1758,7 @@
                                         "field": "value",
                                         "of": {
                                           "e": "get",
-                                          "field": "step",
+                                          "field": "choice",
                                           "of": {
                                             "e": "get",
                                             "field": "nodes",
@@ -1744,9 +1771,133 @@
                                       },
                                       "e": "let",
                                       "in": {
-                                        "bind": "@chosen",
-                                        "e": "is",
-                                        "else": {
+                                        "cases": {
+                                          "call": {
+                                            "bind": "@chosen",
+                                            "body": {
+                                              "e": "record",
+                                              "fields": {
+                                                "actions": {
+                                                  "args": [
+                                                    {
+                                                      "e": "get",
+                                                      "field": "actions",
+                                                      "of": {
+                                                        "e": "var",
+                                                        "name": "@acc"
+                                                      }
+                                                    },
+                                                    {
+                                                      "e": "var",
+                                                      "name": "@chosen"
+                                                    }
+                                                  ],
+                                                  "e": "op",
+                                                  "op": "append"
+                                                },
+                                                "state": {
+                                                  "e": "record",
+                                                  "fields": {
+                                                    "arg": {
+                                                      "e": "get",
+                                                      "field": "arg",
+                                                      "of": {
+                                                        "e": "var",
+                                                        "name": "@state"
+                                                      }
+                                                    },
+                                                    "carry": {
+                                                      "e": "get",
+                                                      "field": "carry",
+                                                      "of": {
+                                                        "e": "var",
+                                                        "name": "@state"
+                                                      }
+                                                    },
+                                                    "next": {
+                                                      "args": [
+                                                        {
+                                                          "e": "get",
+                                                          "field": "next",
+                                                          "of": {
+                                                            "e": "var",
+                                                            "name": "@state"
+                                                          }
+                                                        },
+                                                        {
+                                                          "e": "lit",
+                                                          "v": 1
+                                                        }
+                                                      ],
+                                                      "e": "op",
+                                                      "op": "add"
+                                                    },
+                                                    "nodes": {
+                                                      "e": "record",
+                                                      "fields": {
+                                                        "choice": {
+                                                          "e": "get",
+                                                          "field": "choice",
+                                                          "of": {
+                                                            "e": "get",
+                                                            "field": "nodes",
+                                                            "of": {
+                                                              "e": "var",
+                                                              "name": "@state"
+                                                            }
+                                                          }
+                                                        },
+                                                        "more": {
+                                                          "e": "record",
+                                                          "fields": {
+                                                            "call": {
+                                                              "e": "get",
+                                                              "field": "next",
+                                                              "of": {
+                                                                "e": "var",
+                                                                "name": "@state"
+                                                              }
+                                                            },
+                                                            "error": {
+                                                              "e": "lit",
+                                                              "v": ""
+                                                            },
+                                                            "kind": {
+                                                              "e": "lit",
+                                                              "v": "running"
+                                                            },
+                                                            "value": {
+                                                              "e": "get",
+                                                              "field": "value",
+                                                              "of": {
+                                                                "e": "get",
+                                                                "field": "more",
+                                                                "of": {
+                                                                  "e": "get",
+                                                                  "field": "nodes",
+                                                                  "of": {
+                                                                    "e": "var",
+                                                                    "name": "@state"
+                                                                  }
+                                                                }
+                                                              }
+                                                            }
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        },
+                                        "e": "match",
+                                        "of": {
+                                          "e": "var",
+                                          "name": "choice"
+                                        },
+                                        "otherwise": {
                                           "e": "record",
                                           "fields": {
                                             "actions": {
@@ -1787,6 +1938,18 @@
                                                 "nodes": {
                                                   "e": "record",
                                                   "fields": {
+                                                    "choice": {
+                                                      "e": "get",
+                                                      "field": "choice",
+                                                      "of": {
+                                                        "e": "get",
+                                                        "field": "nodes",
+                                                        "of": {
+                                                          "e": "var",
+                                                          "name": "@state"
+                                                        }
+                                                      }
+                                                    },
                                                     "more": {
                                                       "e": "record",
                                                       "fields": {
@@ -1831,291 +1994,15 @@
                                                           }
                                                         }
                                                       }
-                                                    },
-                                                    "step": {
-                                                      "e": "get",
-                                                      "field": "step",
-                                                      "of": {
-                                                        "e": "get",
-                                                        "field": "nodes",
-                                                        "of": {
-                                                          "e": "var",
-                                                          "name": "@state"
-                                                        }
-                                                      }
                                                     }
                                                   }
                                                 }
                                               }
                                             }
                                           }
-                                        },
-                                        "of": {
-                                          "e": "record",
-                                          "fields": {
-                                            "args": {
-                                              "e": "record",
-                                              "fields": {
-                                                "n": {
-                                                  "e": "var",
-                                                  "name": "step"
-                                                }
-                                              }
-                                            },
-                                            "kind": {
-                                              "e": "lit",
-                                              "v": "call"
-                                            },
-                                            "op": {
-                                              "e": "lit",
-                                              "v": "m.double"
-                                            }
-                                          }
-                                        },
-                                        "then": {
-                                          "cond": {
-                                            "args": [
-                                              {
-                                                "e": "get",
-                                                "field": "kind",
-                                                "of": {
-                                                  "e": "var",
-                                                  "name": "@chosen"
-                                                }
-                                              },
-                                              {
-                                                "e": "lit",
-                                                "v": "call"
-                                              }
-                                            ],
-                                            "e": "op",
-                                            "op": "eq"
-                                          },
-                                          "e": "if",
-                                          "else": {
-                                            "e": "record",
-                                            "fields": {
-                                              "actions": {
-                                                "e": "get",
-                                                "field": "actions",
-                                                "of": {
-                                                  "e": "var",
-                                                  "name": "@acc"
-                                                }
-                                              },
-                                              "state": {
-                                                "e": "record",
-                                                "fields": {
-                                                  "arg": {
-                                                    "e": "get",
-                                                    "field": "arg",
-                                                    "of": {
-                                                      "e": "var",
-                                                      "name": "@state"
-                                                    }
-                                                  },
-                                                  "carry": {
-                                                    "e": "get",
-                                                    "field": "carry",
-                                                    "of": {
-                                                      "e": "var",
-                                                      "name": "@state"
-                                                    }
-                                                  },
-                                                  "next": {
-                                                    "e": "get",
-                                                    "field": "next",
-                                                    "of": {
-                                                      "e": "var",
-                                                      "name": "@state"
-                                                    }
-                                                  },
-                                                  "nodes": {
-                                                    "e": "record",
-                                                    "fields": {
-                                                      "more": {
-                                                        "e": "record",
-                                                        "fields": {
-                                                          "call": {
-                                                            "e": "get",
-                                                            "field": "call",
-                                                            "of": {
-                                                              "e": "get",
-                                                              "field": "more",
-                                                              "of": {
-                                                                "e": "get",
-                                                                "field": "nodes",
-                                                                "of": {
-                                                                  "e": "var",
-                                                                  "name": "@state"
-                                                                }
-                                                              }
-                                                            }
-                                                          },
-                                                          "error": {
-                                                            "e": "lit",
-                                                            "v": ""
-                                                          },
-                                                          "kind": {
-                                                            "e": "lit",
-                                                            "v": "skipped"
-                                                          },
-                                                          "value": {
-                                                            "e": "get",
-                                                            "field": "value",
-                                                            "of": {
-                                                              "e": "get",
-                                                              "field": "more",
-                                                              "of": {
-                                                                "e": "get",
-                                                                "field": "nodes",
-                                                                "of": {
-                                                                  "e": "var",
-                                                                  "name": "@state"
-                                                                }
-                                                              }
-                                                            }
-                                                          }
-                                                        }
-                                                      },
-                                                      "step": {
-                                                        "e": "get",
-                                                        "field": "step",
-                                                        "of": {
-                                                          "e": "get",
-                                                          "field": "nodes",
-                                                          "of": {
-                                                            "e": "var",
-                                                            "name": "@state"
-                                                          }
-                                                        }
-                                                      }
-                                                    }
-                                                  }
-                                                }
-                                              }
-                                            }
-                                          },
-                                          "then": {
-                                            "e": "record",
-                                            "fields": {
-                                              "actions": {
-                                                "args": [
-                                                  {
-                                                    "e": "get",
-                                                    "field": "actions",
-                                                    "of": {
-                                                      "e": "var",
-                                                      "name": "@acc"
-                                                    }
-                                                  },
-                                                  {
-                                                    "e": "var",
-                                                    "name": "@chosen"
-                                                  }
-                                                ],
-                                                "e": "op",
-                                                "op": "append"
-                                              },
-                                              "state": {
-                                                "e": "record",
-                                                "fields": {
-                                                  "arg": {
-                                                    "e": "get",
-                                                    "field": "arg",
-                                                    "of": {
-                                                      "e": "var",
-                                                      "name": "@state"
-                                                    }
-                                                  },
-                                                  "carry": {
-                                                    "e": "get",
-                                                    "field": "carry",
-                                                    "of": {
-                                                      "e": "var",
-                                                      "name": "@state"
-                                                    }
-                                                  },
-                                                  "next": {
-                                                    "args": [
-                                                      {
-                                                        "e": "get",
-                                                        "field": "next",
-                                                        "of": {
-                                                          "e": "var",
-                                                          "name": "@state"
-                                                        }
-                                                      },
-                                                      {
-                                                        "e": "lit",
-                                                        "v": 1
-                                                      }
-                                                    ],
-                                                    "e": "op",
-                                                    "op": "add"
-                                                  },
-                                                  "nodes": {
-                                                    "e": "record",
-                                                    "fields": {
-                                                      "more": {
-                                                        "e": "record",
-                                                        "fields": {
-                                                          "call": {
-                                                            "e": "get",
-                                                            "field": "next",
-                                                            "of": {
-                                                              "e": "var",
-                                                              "name": "@state"
-                                                            }
-                                                          },
-                                                          "error": {
-                                                            "e": "lit",
-                                                            "v": ""
-                                                          },
-                                                          "kind": {
-                                                            "e": "lit",
-                                                            "v": "running"
-                                                          },
-                                                          "value": {
-                                                            "e": "get",
-                                                            "field": "value",
-                                                            "of": {
-                                                              "e": "get",
-                                                              "field": "more",
-                                                              "of": {
-                                                                "e": "get",
-                                                                "field": "nodes",
-                                                                "of": {
-                                                                  "e": "var",
-                                                                  "name": "@state"
-                                                                }
-                                                              }
-                                                            }
-                                                          }
-                                                        }
-                                                      },
-                                                      "step": {
-                                                        "e": "get",
-                                                        "field": "step",
-                                                        "of": {
-                                                          "e": "get",
-                                                          "field": "nodes",
-                                                          "of": {
-                                                            "e": "var",
-                                                            "name": "@state"
-                                                          }
-                                                        }
-                                                      }
-                                                    }
-                                                  }
-                                                }
-                                              }
-                                            }
-                                          }
-                                        },
-                                        "type": "Action"
+                                        }
                                       },
-                                      "name": "step"
+                                      "name": "choice"
                                     },
                                     "name": "goal"
                                   },
@@ -2160,6 +2047,18 @@
                                           "nodes": {
                                             "e": "record",
                                             "fields": {
+                                              "choice": {
+                                                "e": "get",
+                                                "field": "choice",
+                                                "of": {
+                                                  "e": "get",
+                                                  "field": "nodes",
+                                                  "of": {
+                                                    "e": "var",
+                                                    "name": "@state"
+                                                  }
+                                                }
+                                              },
                                               "more": {
                                                 "e": "record",
                                                 "fields": {
@@ -2202,18 +2101,6 @@
                                                         }
                                                       }
                                                     }
-                                                  }
-                                                }
-                                              },
-                                              "step": {
-                                                "e": "get",
-                                                "field": "step",
-                                                "of": {
-                                                  "e": "get",
-                                                  "field": "nodes",
-                                                  "of": {
-                                                    "e": "var",
-                                                    "name": "@state"
                                                   }
                                                 }
                                               }
@@ -2264,7 +2151,7 @@
                                           "field": "kind",
                                           "of": {
                                             "e": "get",
-                                            "field": "step",
+                                            "field": "choice",
                                             "of": {
                                               "e": "get",
                                               "field": "nodes",
@@ -2371,7 +2258,7 @@
                                           "e": "if",
                                           "else": {
                                             "e": "lit",
-                                            "v": 0
+                                            "v": ""
                                           },
                                           "then": {
                                             "be": {
@@ -2384,23 +2271,16 @@
                                             },
                                             "e": "let",
                                             "in": {
-                                              "bind": "i",
-                                              "e": "is",
-                                              "else": {
-                                                "e": "lit",
-                                                "v": 0
-                                              },
-                                              "of": {
-                                                "e": "var",
-                                                "name": "v"
-                                              },
-                                              "then": {
-                                                "e": "var",
-                                                "name": "i"
-                                              },
-                                              "type": "Int"
+                                              "args": [
+                                                {
+                                                  "e": "var",
+                                                  "name": "r"
+                                                }
+                                              ],
+                                              "e": "op",
+                                              "op": "str"
                                             },
-                                            "name": "v"
+                                            "name": "r"
                                           }
                                         },
                                         "name": "@1"
@@ -2452,12 +2332,28 @@
                                                         "be": {
                                                           "args": [
                                                             {
-                                                              "e": "var",
-                                                              "name": "total"
+                                                              "args": [
+                                                                {
+                                                                  "e": "var",
+                                                                  "name": "total"
+                                                                },
+                                                                {
+                                                                  "args": [
+                                                                    {
+                                                                      "e": "var",
+                                                                      "name": "said"
+                                                                    }
+                                                                  ],
+                                                                  "e": "op",
+                                                                  "op": "len"
+                                                                }
+                                                              ],
+                                                              "e": "op",
+                                                              "op": "add"
                                                             },
                                                             {
-                                                              "e": "var",
-                                                              "name": "got"
+                                                              "e": "lit",
+                                                              "v": 1
                                                             }
                                                           ],
                                                           "e": "op",
@@ -2484,6 +2380,36 @@
                                                   "nodes": {
                                                     "e": "record",
                                                     "fields": {
+                                                      "choice": {
+                                                        "e": "record",
+                                                        "fields": {
+                                                          "call": {
+                                                            "e": "lit",
+                                                            "v": 0
+                                                          },
+                                                          "error": {
+                                                            "e": "lit",
+                                                            "v": ""
+                                                          },
+                                                          "kind": {
+                                                            "e": "lit",
+                                                            "v": "waiting"
+                                                          },
+                                                          "value": {
+                                                            "e": "record",
+                                                            "fields": {
+                                                              "kind": {
+                                                                "e": "lit",
+                                                                "v": "answer"
+                                                              },
+                                                              "text": {
+                                                                "e": "lit",
+                                                                "v": ""
+                                                              }
+                                                            }
+                                                          }
+                                                        }
+                                                      },
                                                       "more": {
                                                         "e": "record",
                                                         "fields": {
@@ -2500,29 +2426,13 @@
                                                             "v": "waiting"
                                                           },
                                                           "value": {
-                                                            "e": "lit",
-                                                            "v": null
-                                                          }
-                                                        }
-                                                      },
-                                                      "step": {
-                                                        "e": "record",
-                                                        "fields": {
-                                                          "call": {
-                                                            "e": "lit",
-                                                            "v": 0
-                                                          },
-                                                          "error": {
-                                                            "e": "lit",
-                                                            "v": ""
-                                                          },
-                                                          "kind": {
-                                                            "e": "lit",
-                                                            "v": "waiting"
-                                                          },
-                                                          "value": {
-                                                            "e": "lit",
-                                                            "v": 0
+                                                            "e": "record",
+                                                            "fields": {
+                                                              "op": {
+                                                                "e": "lit",
+                                                                "v": "@none"
+                                                              }
+                                                            }
                                                           }
                                                         }
                                                       }
@@ -2564,7 +2474,7 @@
                                                             "field": "kind",
                                                             "of": {
                                                               "e": "get",
-                                                              "field": "step",
+                                                              "field": "choice",
                                                               "of": {
                                                                 "e": "get",
                                                                 "field": "nodes",
@@ -2645,19 +2555,9 @@
                                                                     "args": {
                                                                       "e": "record",
                                                                       "fields": {
-                                                                        "n": {
-                                                                          "args": [
-                                                                            {
-                                                                              "e": "var",
-                                                                              "name": "total"
-                                                                            },
-                                                                            {
-                                                                              "e": "lit",
-                                                                              "v": 1
-                                                                            }
-                                                                          ],
-                                                                          "e": "op",
-                                                                          "op": "add"
+                                                                        "total": {
+                                                                          "e": "var",
+                                                                          "name": "total"
                                                                         }
                                                                       }
                                                                     },
@@ -2667,7 +2567,7 @@
                                                                     },
                                                                     "op": {
                                                                       "e": "lit",
-                                                                      "v": "m.double"
+                                                                      "v": "b.choose"
                                                                     }
                                                                   }
                                                                 }
@@ -2715,19 +2615,7 @@
                                                                 "nodes": {
                                                                   "e": "record",
                                                                   "fields": {
-                                                                    "more": {
-                                                                      "e": "get",
-                                                                      "field": "more",
-                                                                      "of": {
-                                                                        "e": "get",
-                                                                        "field": "nodes",
-                                                                        "of": {
-                                                                          "e": "var",
-                                                                          "name": "@state"
-                                                                        }
-                                                                      }
-                                                                    },
-                                                                    "step": {
+                                                                    "choice": {
                                                                       "e": "record",
                                                                       "fields": {
                                                                         "call": {
@@ -2751,7 +2639,7 @@
                                                                           "field": "value",
                                                                           "of": {
                                                                             "e": "get",
-                                                                            "field": "step",
+                                                                            "field": "choice",
                                                                             "of": {
                                                                               "e": "get",
                                                                               "field": "nodes",
@@ -2761,6 +2649,18 @@
                                                                               }
                                                                             }
                                                                           }
+                                                                        }
+                                                                      }
+                                                                    },
+                                                                    "more": {
+                                                                      "e": "get",
+                                                                      "field": "more",
+                                                                      "of": {
+                                                                        "e": "get",
+                                                                        "field": "nodes",
+                                                                        "of": {
+                                                                          "e": "var",
+                                                                          "name": "@state"
                                                                         }
                                                                       }
                                                                     }
@@ -2815,19 +2715,7 @@
                                                             "nodes": {
                                                               "e": "record",
                                                               "fields": {
-                                                                "more": {
-                                                                  "e": "get",
-                                                                  "field": "more",
-                                                                  "of": {
-                                                                    "e": "get",
-                                                                    "field": "nodes",
-                                                                    "of": {
-                                                                      "e": "var",
-                                                                      "name": "@state"
-                                                                    }
-                                                                  }
-                                                                },
-                                                                "step": {
+                                                                "choice": {
                                                                   "e": "record",
                                                                   "fields": {
                                                                     "call": {
@@ -2835,7 +2723,7 @@
                                                                       "field": "call",
                                                                       "of": {
                                                                         "e": "get",
-                                                                        "field": "step",
+                                                                        "field": "choice",
                                                                         "of": {
                                                                           "e": "get",
                                                                           "field": "nodes",
@@ -2859,7 +2747,7 @@
                                                                       "field": "value",
                                                                       "of": {
                                                                         "e": "get",
-                                                                        "field": "step",
+                                                                        "field": "choice",
                                                                         "of": {
                                                                           "e": "get",
                                                                           "field": "nodes",
@@ -2869,6 +2757,18 @@
                                                                           }
                                                                         }
                                                                       }
+                                                                    }
+                                                                  }
+                                                                },
+                                                                "more": {
+                                                                  "e": "get",
+                                                                  "field": "more",
+                                                                  "of": {
+                                                                    "e": "get",
+                                                                    "field": "nodes",
+                                                                    "of": {
+                                                                      "e": "var",
+                                                                      "name": "@state"
                                                                     }
                                                                   }
                                                                 }
@@ -2951,7 +2851,7 @@
                                                               "field": "kind",
                                                               "of": {
                                                                 "e": "get",
-                                                                "field": "step",
+                                                                "field": "choice",
                                                                 "of": {
                                                                   "e": "get",
                                                                   "field": "nodes",
@@ -2983,7 +2883,7 @@
                                                             "field": "kind",
                                                             "of": {
                                                               "e": "get",
-                                                              "field": "step",
+                                                              "field": "choice",
                                                               "of": {
                                                                 "e": "get",
                                                                 "field": "nodes",
@@ -3019,7 +2919,7 @@
                                                             "field": "value",
                                                             "of": {
                                                               "e": "get",
-                                                              "field": "step",
+                                                              "field": "choice",
                                                               "of": {
                                                                 "e": "get",
                                                                 "field": "nodes",
@@ -3032,9 +2932,133 @@
                                                           },
                                                           "e": "let",
                                                           "in": {
-                                                            "bind": "@chosen",
-                                                            "e": "is",
-                                                            "else": {
+                                                            "cases": {
+                                                              "call": {
+                                                                "bind": "@chosen",
+                                                                "body": {
+                                                                  "e": "record",
+                                                                  "fields": {
+                                                                    "actions": {
+                                                                      "args": [
+                                                                        {
+                                                                          "e": "get",
+                                                                          "field": "actions",
+                                                                          "of": {
+                                                                            "e": "var",
+                                                                            "name": "@acc"
+                                                                          }
+                                                                        },
+                                                                        {
+                                                                          "e": "var",
+                                                                          "name": "@chosen"
+                                                                        }
+                                                                      ],
+                                                                      "e": "op",
+                                                                      "op": "append"
+                                                                    },
+                                                                    "state": {
+                                                                      "e": "record",
+                                                                      "fields": {
+                                                                        "arg": {
+                                                                          "e": "get",
+                                                                          "field": "arg",
+                                                                          "of": {
+                                                                            "e": "var",
+                                                                            "name": "@state"
+                                                                          }
+                                                                        },
+                                                                        "carry": {
+                                                                          "e": "get",
+                                                                          "field": "carry",
+                                                                          "of": {
+                                                                            "e": "var",
+                                                                            "name": "@state"
+                                                                          }
+                                                                        },
+                                                                        "next": {
+                                                                          "args": [
+                                                                            {
+                                                                              "e": "get",
+                                                                              "field": "next",
+                                                                              "of": {
+                                                                                "e": "var",
+                                                                                "name": "@state"
+                                                                              }
+                                                                            },
+                                                                            {
+                                                                              "e": "lit",
+                                                                              "v": 1
+                                                                            }
+                                                                          ],
+                                                                          "e": "op",
+                                                                          "op": "add"
+                                                                        },
+                                                                        "nodes": {
+                                                                          "e": "record",
+                                                                          "fields": {
+                                                                            "choice": {
+                                                                              "e": "get",
+                                                                              "field": "choice",
+                                                                              "of": {
+                                                                                "e": "get",
+                                                                                "field": "nodes",
+                                                                                "of": {
+                                                                                  "e": "var",
+                                                                                  "name": "@state"
+                                                                                }
+                                                                              }
+                                                                            },
+                                                                            "more": {
+                                                                              "e": "record",
+                                                                              "fields": {
+                                                                                "call": {
+                                                                                  "e": "get",
+                                                                                  "field": "next",
+                                                                                  "of": {
+                                                                                    "e": "var",
+                                                                                    "name": "@state"
+                                                                                  }
+                                                                                },
+                                                                                "error": {
+                                                                                  "e": "lit",
+                                                                                  "v": ""
+                                                                                },
+                                                                                "kind": {
+                                                                                  "e": "lit",
+                                                                                  "v": "running"
+                                                                                },
+                                                                                "value": {
+                                                                                  "e": "get",
+                                                                                  "field": "value",
+                                                                                  "of": {
+                                                                                    "e": "get",
+                                                                                    "field": "more",
+                                                                                    "of": {
+                                                                                      "e": "get",
+                                                                                      "field": "nodes",
+                                                                                      "of": {
+                                                                                        "e": "var",
+                                                                                        "name": "@state"
+                                                                                      }
+                                                                                    }
+                                                                                  }
+                                                                                }
+                                                                              }
+                                                                            }
+                                                                          }
+                                                                        }
+                                                                      }
+                                                                    }
+                                                                  }
+                                                                }
+                                                              }
+                                                            },
+                                                            "e": "match",
+                                                            "of": {
+                                                              "e": "var",
+                                                              "name": "choice"
+                                                            },
+                                                            "otherwise": {
                                                               "e": "record",
                                                               "fields": {
                                                                 "actions": {
@@ -3075,6 +3099,18 @@
                                                                     "nodes": {
                                                                       "e": "record",
                                                                       "fields": {
+                                                                        "choice": {
+                                                                          "e": "get",
+                                                                          "field": "choice",
+                                                                          "of": {
+                                                                            "e": "get",
+                                                                            "field": "nodes",
+                                                                            "of": {
+                                                                              "e": "var",
+                                                                              "name": "@state"
+                                                                            }
+                                                                          }
+                                                                        },
                                                                         "more": {
                                                                           "e": "record",
                                                                           "fields": {
@@ -3119,291 +3155,15 @@
                                                                               }
                                                                             }
                                                                           }
-                                                                        },
-                                                                        "step": {
-                                                                          "e": "get",
-                                                                          "field": "step",
-                                                                          "of": {
-                                                                            "e": "get",
-                                                                            "field": "nodes",
-                                                                            "of": {
-                                                                              "e": "var",
-                                                                              "name": "@state"
-                                                                            }
-                                                                          }
                                                                         }
                                                                       }
                                                                     }
                                                                   }
                                                                 }
                                                               }
-                                                            },
-                                                            "of": {
-                                                              "e": "record",
-                                                              "fields": {
-                                                                "args": {
-                                                                  "e": "record",
-                                                                  "fields": {
-                                                                    "n": {
-                                                                      "e": "var",
-                                                                      "name": "step"
-                                                                    }
-                                                                  }
-                                                                },
-                                                                "kind": {
-                                                                  "e": "lit",
-                                                                  "v": "call"
-                                                                },
-                                                                "op": {
-                                                                  "e": "lit",
-                                                                  "v": "m.double"
-                                                                }
-                                                              }
-                                                            },
-                                                            "then": {
-                                                              "cond": {
-                                                                "args": [
-                                                                  {
-                                                                    "e": "get",
-                                                                    "field": "kind",
-                                                                    "of": {
-                                                                      "e": "var",
-                                                                      "name": "@chosen"
-                                                                    }
-                                                                  },
-                                                                  {
-                                                                    "e": "lit",
-                                                                    "v": "call"
-                                                                  }
-                                                                ],
-                                                                "e": "op",
-                                                                "op": "eq"
-                                                              },
-                                                              "e": "if",
-                                                              "else": {
-                                                                "e": "record",
-                                                                "fields": {
-                                                                  "actions": {
-                                                                    "e": "get",
-                                                                    "field": "actions",
-                                                                    "of": {
-                                                                      "e": "var",
-                                                                      "name": "@acc"
-                                                                    }
-                                                                  },
-                                                                  "state": {
-                                                                    "e": "record",
-                                                                    "fields": {
-                                                                      "arg": {
-                                                                        "e": "get",
-                                                                        "field": "arg",
-                                                                        "of": {
-                                                                          "e": "var",
-                                                                          "name": "@state"
-                                                                        }
-                                                                      },
-                                                                      "carry": {
-                                                                        "e": "get",
-                                                                        "field": "carry",
-                                                                        "of": {
-                                                                          "e": "var",
-                                                                          "name": "@state"
-                                                                        }
-                                                                      },
-                                                                      "next": {
-                                                                        "e": "get",
-                                                                        "field": "next",
-                                                                        "of": {
-                                                                          "e": "var",
-                                                                          "name": "@state"
-                                                                        }
-                                                                      },
-                                                                      "nodes": {
-                                                                        "e": "record",
-                                                                        "fields": {
-                                                                          "more": {
-                                                                            "e": "record",
-                                                                            "fields": {
-                                                                              "call": {
-                                                                                "e": "get",
-                                                                                "field": "call",
-                                                                                "of": {
-                                                                                  "e": "get",
-                                                                                  "field": "more",
-                                                                                  "of": {
-                                                                                    "e": "get",
-                                                                                    "field": "nodes",
-                                                                                    "of": {
-                                                                                      "e": "var",
-                                                                                      "name": "@state"
-                                                                                    }
-                                                                                  }
-                                                                                }
-                                                                              },
-                                                                              "error": {
-                                                                                "e": "lit",
-                                                                                "v": ""
-                                                                              },
-                                                                              "kind": {
-                                                                                "e": "lit",
-                                                                                "v": "skipped"
-                                                                              },
-                                                                              "value": {
-                                                                                "e": "get",
-                                                                                "field": "value",
-                                                                                "of": {
-                                                                                  "e": "get",
-                                                                                  "field": "more",
-                                                                                  "of": {
-                                                                                    "e": "get",
-                                                                                    "field": "nodes",
-                                                                                    "of": {
-                                                                                      "e": "var",
-                                                                                      "name": "@state"
-                                                                                    }
-                                                                                  }
-                                                                                }
-                                                                              }
-                                                                            }
-                                                                          },
-                                                                          "step": {
-                                                                            "e": "get",
-                                                                            "field": "step",
-                                                                            "of": {
-                                                                              "e": "get",
-                                                                              "field": "nodes",
-                                                                              "of": {
-                                                                                "e": "var",
-                                                                                "name": "@state"
-                                                                              }
-                                                                            }
-                                                                          }
-                                                                        }
-                                                                      }
-                                                                    }
-                                                                  }
-                                                                }
-                                                              },
-                                                              "then": {
-                                                                "e": "record",
-                                                                "fields": {
-                                                                  "actions": {
-                                                                    "args": [
-                                                                      {
-                                                                        "e": "get",
-                                                                        "field": "actions",
-                                                                        "of": {
-                                                                          "e": "var",
-                                                                          "name": "@acc"
-                                                                        }
-                                                                      },
-                                                                      {
-                                                                        "e": "var",
-                                                                        "name": "@chosen"
-                                                                      }
-                                                                    ],
-                                                                    "e": "op",
-                                                                    "op": "append"
-                                                                  },
-                                                                  "state": {
-                                                                    "e": "record",
-                                                                    "fields": {
-                                                                      "arg": {
-                                                                        "e": "get",
-                                                                        "field": "arg",
-                                                                        "of": {
-                                                                          "e": "var",
-                                                                          "name": "@state"
-                                                                        }
-                                                                      },
-                                                                      "carry": {
-                                                                        "e": "get",
-                                                                        "field": "carry",
-                                                                        "of": {
-                                                                          "e": "var",
-                                                                          "name": "@state"
-                                                                        }
-                                                                      },
-                                                                      "next": {
-                                                                        "args": [
-                                                                          {
-                                                                            "e": "get",
-                                                                            "field": "next",
-                                                                            "of": {
-                                                                              "e": "var",
-                                                                              "name": "@state"
-                                                                            }
-                                                                          },
-                                                                          {
-                                                                            "e": "lit",
-                                                                            "v": 1
-                                                                          }
-                                                                        ],
-                                                                        "e": "op",
-                                                                        "op": "add"
-                                                                      },
-                                                                      "nodes": {
-                                                                        "e": "record",
-                                                                        "fields": {
-                                                                          "more": {
-                                                                            "e": "record",
-                                                                            "fields": {
-                                                                              "call": {
-                                                                                "e": "get",
-                                                                                "field": "next",
-                                                                                "of": {
-                                                                                  "e": "var",
-                                                                                  "name": "@state"
-                                                                                }
-                                                                              },
-                                                                              "error": {
-                                                                                "e": "lit",
-                                                                                "v": ""
-                                                                              },
-                                                                              "kind": {
-                                                                                "e": "lit",
-                                                                                "v": "running"
-                                                                              },
-                                                                              "value": {
-                                                                                "e": "get",
-                                                                                "field": "value",
-                                                                                "of": {
-                                                                                  "e": "get",
-                                                                                  "field": "more",
-                                                                                  "of": {
-                                                                                    "e": "get",
-                                                                                    "field": "nodes",
-                                                                                    "of": {
-                                                                                      "e": "var",
-                                                                                      "name": "@state"
-                                                                                    }
-                                                                                  }
-                                                                                }
-                                                                              }
-                                                                            }
-                                                                          },
-                                                                          "step": {
-                                                                            "e": "get",
-                                                                            "field": "step",
-                                                                            "of": {
-                                                                              "e": "get",
-                                                                              "field": "nodes",
-                                                                              "of": {
-                                                                                "e": "var",
-                                                                                "name": "@state"
-                                                                              }
-                                                                            }
-                                                                          }
-                                                                        }
-                                                                      }
-                                                                    }
-                                                                  }
-                                                                }
-                                                              }
-                                                            },
-                                                            "type": "Action"
+                                                            }
                                                           },
-                                                          "name": "step"
+                                                          "name": "choice"
                                                         },
                                                         "name": "goal"
                                                       },
@@ -3448,6 +3208,18 @@
                                                               "nodes": {
                                                                 "e": "record",
                                                                 "fields": {
+                                                                  "choice": {
+                                                                    "e": "get",
+                                                                    "field": "choice",
+                                                                    "of": {
+                                                                      "e": "get",
+                                                                      "field": "nodes",
+                                                                      "of": {
+                                                                        "e": "var",
+                                                                        "name": "@state"
+                                                                      }
+                                                                    }
+                                                                  },
                                                                   "more": {
                                                                     "e": "record",
                                                                     "fields": {
@@ -3490,18 +3262,6 @@
                                                                             }
                                                                           }
                                                                         }
-                                                                      }
-                                                                    }
-                                                                  },
-                                                                  "step": {
-                                                                    "e": "get",
-                                                                    "field": "step",
-                                                                    "of": {
-                                                                      "e": "get",
-                                                                      "field": "nodes",
-                                                                      "of": {
-                                                                        "e": "var",
-                                                                        "name": "@state"
                                                                       }
                                                                     }
                                                                   }
@@ -3557,7 +3317,7 @@
                                                               "field": "kind",
                                                               "of": {
                                                                 "e": "get",
-                                                                "field": "step",
+                                                                "field": "choice",
                                                                 "of": {
                                                                   "e": "get",
                                                                   "field": "nodes",
@@ -3698,20 +3458,32 @@
                                                       "next": "Int",
                                                       "nodes": {
                                                         "Record": {
+                                                          "choice": {
+                                                            "Record": {
+                                                              "call": "Int",
+                                                              "error": "String",
+                                                              "kind": "String",
+                                                              "value": {
+                                                                "Variant": {
+                                                                  "cases": {
+                                                                    "answer": {
+                                                                      "Record": {
+                                                                        "text": "String"
+                                                                      }
+                                                                    },
+                                                                    "call": "Call"
+                                                                  },
+                                                                  "tag": "kind"
+                                                                }
+                                                              }
+                                                            }
+                                                          },
                                                           "more": {
                                                             "Record": {
                                                               "call": "Int",
                                                               "error": "String",
                                                               "kind": "String",
-                                                              "value": "Json"
-                                                            }
-                                                          },
-                                                          "step": {
-                                                            "Record": {
-                                                              "call": "Int",
-                                                              "error": "String",
-                                                              "kind": "String",
-                                                              "value": "Int"
+                                                              "value": "Returned"
                                                             }
                                                           }
                                                         }
@@ -3738,20 +3510,32 @@
                                                     "next": "Int",
                                                     "nodes": {
                                                       "Record": {
+                                                        "choice": {
+                                                          "Record": {
+                                                            "call": "Int",
+                                                            "error": "String",
+                                                            "kind": "String",
+                                                            "value": {
+                                                              "Variant": {
+                                                                "cases": {
+                                                                  "answer": {
+                                                                    "Record": {
+                                                                      "text": "String"
+                                                                    }
+                                                                  },
+                                                                  "call": "Call"
+                                                                },
+                                                                "tag": "kind"
+                                                              }
+                                                            }
+                                                          }
+                                                        },
                                                         "more": {
                                                           "Record": {
                                                             "call": "Int",
                                                             "error": "String",
                                                             "kind": "String",
-                                                            "value": "Json"
-                                                          }
-                                                        },
-                                                        "step": {
-                                                          "Record": {
-                                                            "call": "Int",
-                                                            "error": "String",
-                                                            "kind": "String",
-                                                            "value": "Int"
+                                                            "value": "Returned"
                                                           }
                                                         }
                                                       }
@@ -3778,20 +3562,32 @@
                                                   "next": "Int",
                                                   "nodes": {
                                                     "Record": {
+                                                      "choice": {
+                                                        "Record": {
+                                                          "call": "Int",
+                                                          "error": "String",
+                                                          "kind": "String",
+                                                          "value": {
+                                                            "Variant": {
+                                                              "cases": {
+                                                                "answer": {
+                                                                  "Record": {
+                                                                    "text": "String"
+                                                                  }
+                                                                },
+                                                                "call": "Call"
+                                                              },
+                                                              "tag": "kind"
+                                                            }
+                                                          }
+                                                        }
+                                                      },
                                                       "more": {
                                                         "Record": {
                                                           "call": "Int",
                                                           "error": "String",
                                                           "kind": "String",
-                                                          "value": "Json"
-                                                        }
-                                                      },
-                                                      "step": {
-                                                        "Record": {
-                                                          "call": "Int",
-                                                          "error": "String",
-                                                          "kind": "String",
-                                                          "value": "Int"
+                                                          "value": "Returned"
                                                         }
                                                       }
                                                     }
@@ -3838,7 +3634,7 @@
                                           }
                                         }
                                       },
-                                      "name": "got"
+                                      "name": "said"
                                     },
                                     "name": "total"
                                   },
@@ -3866,20 +3662,32 @@
                                   "next": "Int",
                                   "nodes": {
                                     "Record": {
+                                      "choice": {
+                                        "Record": {
+                                          "call": "Int",
+                                          "error": "String",
+                                          "kind": "String",
+                                          "value": {
+                                            "Variant": {
+                                              "cases": {
+                                                "answer": {
+                                                  "Record": {
+                                                    "text": "String"
+                                                  }
+                                                },
+                                                "call": "Call"
+                                              },
+                                              "tag": "kind"
+                                            }
+                                          }
+                                        }
+                                      },
                                       "more": {
                                         "Record": {
                                           "call": "Int",
                                           "error": "String",
                                           "kind": "String",
-                                          "value": "Json"
-                                        }
-                                      },
-                                      "step": {
-                                        "Record": {
-                                          "call": "Int",
-                                          "error": "String",
-                                          "kind": "String",
-                                          "value": "Int"
+                                          "value": "Returned"
                                         }
                                       }
                                     }
@@ -3906,20 +3714,32 @@
                                 "next": "Int",
                                 "nodes": {
                                   "Record": {
+                                    "choice": {
+                                      "Record": {
+                                        "call": "Int",
+                                        "error": "String",
+                                        "kind": "String",
+                                        "value": {
+                                          "Variant": {
+                                            "cases": {
+                                              "answer": {
+                                                "Record": {
+                                                  "text": "String"
+                                                }
+                                              },
+                                              "call": "Call"
+                                            },
+                                            "tag": "kind"
+                                          }
+                                        }
+                                      }
+                                    },
                                     "more": {
                                       "Record": {
                                         "call": "Int",
                                         "error": "String",
                                         "kind": "String",
-                                        "value": "Json"
-                                      }
-                                    },
-                                    "step": {
-                                      "Record": {
-                                        "call": "Int",
-                                        "error": "String",
-                                        "kind": "String",
-                                        "value": "Int"
+                                        "value": "Returned"
                                       }
                                     }
                                   }
@@ -3946,20 +3766,32 @@
                               "next": "Int",
                               "nodes": {
                                 "Record": {
+                                  "choice": {
+                                    "Record": {
+                                      "call": "Int",
+                                      "error": "String",
+                                      "kind": "String",
+                                      "value": {
+                                        "Variant": {
+                                          "cases": {
+                                            "answer": {
+                                              "Record": {
+                                                "text": "String"
+                                              }
+                                            },
+                                            "call": "Call"
+                                          },
+                                          "tag": "kind"
+                                        }
+                                      }
+                                    }
+                                  },
                                   "more": {
                                     "Record": {
                                       "call": "Int",
                                       "error": "String",
                                       "kind": "String",
-                                      "value": "Json"
-                                    }
-                                  },
-                                  "step": {
-                                    "Record": {
-                                      "call": "Int",
-                                      "error": "String",
-                                      "kind": "String",
-                                      "value": "Int"
+                                      "value": "Returned"
                                     }
                                   }
                                 }
@@ -4053,20 +3885,32 @@
                         "next": "Int",
                         "nodes": {
                           "Record": {
+                            "choice": {
+                              "Record": {
+                                "call": "Int",
+                                "error": "String",
+                                "kind": "String",
+                                "value": {
+                                  "Variant": {
+                                    "cases": {
+                                      "answer": {
+                                        "Record": {
+                                          "text": "String"
+                                        }
+                                      },
+                                      "call": "Call"
+                                    },
+                                    "tag": "kind"
+                                  }
+                                }
+                              }
+                            },
                             "more": {
                               "Record": {
                                 "call": "Int",
                                 "error": "String",
                                 "kind": "String",
-                                "value": "Json"
-                              }
-                            },
-                            "step": {
-                              "Record": {
-                                "call": "Int",
-                                "error": "String",
-                                "kind": "String",
-                                "value": "Int"
+                                "value": "Returned"
                               }
                             }
                           }
@@ -4086,14 +3930,14 @@
           "sourceMap": {
             "invariants": {},
             "nodes": {
-              "got": {
+              "choice": {
                 "end": {
-                  "column": 4,
-                  "line": 6
+                  "column": 7,
+                  "line": 4
                 },
                 "start": {
                   "column": 1,
-                  "line": 6
+                  "line": 4
                 }
               },
               "more": {
@@ -4106,14 +3950,14 @@
                   "line": 5
                 }
               },
-              "step": {
+              "said": {
                 "end": {
                   "column": 5,
-                  "line": 4
+                  "line": 6
                 },
                 "start": {
                   "column": 1,
-                  "line": 4
+                  "line": 6
                 }
               }
             },
@@ -4123,6 +3967,10 @@
             {
               "capability": "math",
               "name": "m"
+            },
+            {
+              "capability": "brain",
+              "name": "b"
             }
           ]
         }

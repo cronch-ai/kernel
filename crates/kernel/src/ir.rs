@@ -27,6 +27,10 @@ pub enum Type {
     /// conforms to `Action`, so a `Call` is a call action wherever one is wanted. Resolved where `Action` is, and where
     /// an operation's output is read, so a model's chosen call is typed by whatever its interface allows.
     Call,
+    /// What a call chosen at run time returned: a variant over `op` with a case for each thing that can answer a call in
+    /// the interface the harness runs against, holding its `call` and `value`, and the case `@none`, for a call that
+    /// hasn't returned. Resolved where `Call` is, so one term records a result whichever operation gave it.
+    Returned,
     List(Box<Type>),
     Record(BTreeMap<String, Type>),
     /// A tagged union: a record whose `tag` field names its case, and which has that case's type. A case is a record
@@ -35,6 +39,13 @@ pub enum Type {
         tag: String,
         cases: BTreeMap<String, Type>,
     },
+}
+
+/// What the types an interface decides are, against one interface.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Resolution {
+    pub action: Type,
+    pub returned: Type,
 }
 
 /// A named, typed parameter.
@@ -140,11 +151,13 @@ fn is_default_tag(tag: &str) -> bool {
 }
 
 impl Type {
-    /// This type with `Action` as `action`, and `Call` as `action` with only its `call` case.
-    pub fn resolved(&self, action: &Type) -> Type {
+    /// This type with `Action`, `Call` and `Returned` as they are against one interface. `Call` is `Action` with only
+    /// its `call` case.
+    pub fn resolved(&self, with: &Resolution) -> Type {
         match self {
-            Type::Action => action.clone(),
-            Type::Call => match action {
+            Type::Action => with.action.clone(),
+            Type::Returned => with.returned.clone(),
+            Type::Call => match &with.action {
                 Type::Variant { tag, cases } => Type::Variant {
                     tag: tag.clone(),
                     cases: cases
@@ -155,18 +168,18 @@ impl Type {
                 },
                 _ => Type::Call,
             },
-            Type::List(t) => Type::List(Box::new(t.resolved(action))),
+            Type::List(t) => Type::List(Box::new(t.resolved(with))),
             Type::Record(fields) => Type::Record(
                 fields
                     .iter()
-                    .map(|(n, t)| (n.clone(), t.resolved(action)))
+                    .map(|(n, t)| (n.clone(), t.resolved(with)))
                     .collect(),
             ),
             Type::Variant { tag, cases } => Type::Variant {
                 tag: tag.clone(),
                 cases: cases
                     .iter()
-                    .map(|(n, t)| (n.clone(), t.resolved(action)))
+                    .map(|(n, t)| (n.clone(), t.resolved(with)))
                     .collect(),
             },
             other => other.clone(),
@@ -175,20 +188,20 @@ impl Type {
 }
 
 impl Expr {
-    /// This expression with `Action` in its types as `action`.
-    pub fn resolved(&self, action: &Type) -> Expr {
-        let again = |e: &Expr| Box::new(e.resolved(action));
+    /// This expression with the types an interface decides as they are against one interface.
+    pub fn resolved(&self, with: &Resolution) -> Expr {
+        let again = |e: &Expr| Box::new(e.resolved(with));
         match self {
             Expr::Lit { .. } | Expr::Var { .. } => self.clone(),
             Expr::Op { op, args } => Expr::Op {
                 op: op.clone(),
-                args: args.iter().map(|a| a.resolved(action)).collect(),
+                args: args.iter().map(|a| a.resolved(with)).collect(),
             },
             Expr::Let { name, be, body, ty } => Expr::Let {
                 name: name.clone(),
                 be: again(be),
                 body: again(body),
-                ty: ty.as_ref().map(|t| t.resolved(action)),
+                ty: ty.as_ref().map(|t| t.resolved(with)),
             },
             Expr::If {
                 cond,
@@ -202,11 +215,11 @@ impl Expr {
             Expr::Record { fields } => Expr::Record {
                 fields: fields
                     .iter()
-                    .map(|(n, e)| (n.clone(), e.resolved(action)))
+                    .map(|(n, e)| (n.clone(), e.resolved(with)))
                     .collect(),
             },
             Expr::List { items } => Expr::List {
-                items: items.iter().map(|e| e.resolved(action)).collect(),
+                items: items.iter().map(|e| e.resolved(with)).collect(),
             },
             Expr::Get { of, field } => Expr::Get {
                 of: again(of),
@@ -221,7 +234,7 @@ impl Expr {
                 otherwise,
             } => Expr::Is {
                 of: again(of),
-                ty: ty.resolved(action),
+                ty: ty.resolved(with),
                 bind: bind.clone(),
                 then: again(then),
                 otherwise: again(otherwise),
@@ -239,7 +252,7 @@ impl Expr {
                     .map(|(n, c)| {
                         let case = Case {
                             bind: c.bind.clone(),
-                            body: c.body.resolved(action),
+                            body: c.body.resolved(with),
                         };
                         (n.clone(), case)
                     })
@@ -259,7 +272,7 @@ impl Expr {
                 acc: acc.clone(),
                 item: item.clone(),
                 body: again(body),
-                ty: ty.as_ref().map(|t| t.resolved(action)),
+                ty: ty.as_ref().map(|t| t.resolved(with)),
             },
         }
     }

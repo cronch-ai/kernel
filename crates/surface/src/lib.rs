@@ -152,6 +152,15 @@ pub enum What {
     OtherwiseReadsNode {
         node: String,
     },
+    /// `perform` of a value that isn't a `Call`, or a variant over `kind` with a `call` case holding one.
+    NotPerformable {
+        got: Box<Type>,
+    },
+    /// A slot or a carried value whose type has no value to start from whatever the interface: a bare `Call`.
+    NoInitialValue {
+        name: String,
+        ty: Box<Type>,
+    },
     /// A carried value's start reads something other than the parameter.
     CarryReads {
         name: String,

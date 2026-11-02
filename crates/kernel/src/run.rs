@@ -41,7 +41,7 @@
 
 use crate::harness::{
     Harness, HarnessProblem, Interface, Mode, Narrowing, Operation, check_harness, check_interface,
-    narrow, output_type, resolved_step, spawn_op,
+    narrow, output_type, resolved_state, resolved_step, spawn_op,
 };
 use crate::ir::{Expr, Type};
 use crate::labeled::{self, EvalError, LValue, Label};
@@ -759,7 +759,10 @@ impl Run {
             let got = result.value();
             return self.fail(origin, inbound.input, StepError::NotAStep { got }, events);
         };
-        if !inhabits(&state.value(), &self.harness.state) {
+        if !inhabits(
+            &state.value(),
+            &resolved_state(&self.harness, &self.interface),
+        ) {
             let got = result.value();
             return self.fail(origin, inbound.input, StepError::NotAStep { got }, events);
         }

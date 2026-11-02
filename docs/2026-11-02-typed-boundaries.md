@@ -31,13 +31,17 @@ Most of those values aren't untyped. Their type is decided by the interface the 
    One event type covers the root and its children, so a start or halt value is text for every run: a property reads the root's start value as the state's `arg`. The trace is recorded as before, so hashes and audits don't change. Only what a step and a property read changes.
 3. **Every spawn names a declared child.** Undeclared spawns, and their `spawn` result case, go. A child chosen at run time is one of the declared children. A spawn with no name isn't an action, and one naming a child the harness doesn't declare is refused.
 4. **A harness declares its result type,** with no default. An interface whose capabilities declare no part of the grant has the grant `{}`.
-5. **`Call`, a type resolved per interface like `Action`.** It is a variant over `op`, with one case per operation of the interface the step runs against, holding that operation's `args`. It is also `Action`'s `call` case, so a `Call` is a call action wherever one is wanted.
+5. **`Call`, a type resolved per interface like `Action`.** It is `Action` with only its `call` case: a variant over `kind` whose one case is a variant over `op`, with one case per operation of the interface the step runs against, holding that operation's `args`. So its values carry `kind: "call"`, and it conforms to `Action`: a `Call` is a call action wherever one is wanted.
    - `Call` may appear in a harness's types and in an operation's output. It may not appear in an operation's input or a grant: an operation's input is part of `Call`, so `Call` would contain itself.
    - An operation's output is resolved against the interface the call is made in. That happens where the kernel reads an output type: the step's input type, the check of a delivered result, and the contracts that read `result`.
    - Under a narrowed interface, a child's model can only return calls the child may make. A result naming any other operation is withheld as a mismatch. A capability whose output holds a `Call` therefore offers the model only the interface's operations, and turns an invalid choice into a failure. That is its publisher's promise under A1.
-6. **`perform e` takes a `Call`,** or a variant over `kind` whose `call` case is a `Call`. It is lowered to a `match`: the `call` case is performed, and any other case skips the slot. A `perform` of any other type is a problem with the source.
+6. **`perform e` takes a `Call`,** or a variant over `kind` whose `call` case is a `Call`. In a variant, the `call` case is performed, and any other case skips the slot. A `perform` of any other type is a problem with the source (`notPerformable`). A chosen operation outside the interface never reaches `perform`: its result is withheld on delivery (decision 5).
    - The platform's `model` operation answers `answer {text: String} | call Call` (part of L3). With L2, it also answers `calls: List(Call)`.
-7. **A performed call's value is the variant over `op` of `{value: Out}`,** for each operation in the interface the header installs. It is recorded in the `ret` case of the operation that answered, from a literal tag, at its precise type.
+7. **A performed call's value is `Returned`, a type resolved per interface like `Call`.** It is the `ret` input's variant over `op`, holding `call` and `value`, and the case `@none` for a call that hasn't returned. The slot keeps the input as it arrived.
+   - Recording it per operation, as this decision first said, would name every operation the header installs, and `match` refuses a case its variant lacks. So a child with one dropped wouldn't check. One type and one term work under every narrowing.
+   - A slot's initial value can't depend on the interface, which is what `@none` is for. A bare `Call` has no value that exists under every narrowing, so a slot or a carried value of that type is a problem (`noInitialValue`). A variant holding one starts from another case.
+   - `Call` and `Returned` in a state are resolved wherever the state is read. An operation's output can't hold `Returned`, since it would hold its own result.
+   - `str` of a performed result writes all of it: `{"call":2,"kind":"ret","op":"notes.append","value":"note-1"}`. `.value` can't be read across operations whose outputs have no join. See open question 1.
 8. **Contracts read their own operation's name, `op`,** the name it was installed under. Approvals record calls as text:
    - `approve.ask` takes `{op: String, call: String}`. A harness passes `op: c.op` and `call: str(c)`.
    - `onResult` adds `op` to `allow` for `always`, and adds `call` to `once` for `once`. The grant's `once` is `List(String)`.
@@ -72,13 +76,24 @@ Each is a kernel PR with compliance vectors, released together as one breaking v
 - **B1:** `Call`, output types resolved against the call's interface, and `op` in contracts. This is additive, so it can merge first.
 - **B2:** text for what no contract typed, declared spawns only, required results, and the grant `{}`.
 - **B3:** properties over the exact event variant, and quantified variables typed by what they range over.
-- **B4:** `Json` and `is` deleted from the checker, the interpreter, labels and SMT-LIB.
-- **B5:** the surface language, with typed `perform` and the agent loop of `loops.rs` against the `model` contract of decision 6. Then After loops' spike runs again: the target is the counterexample to `turns <= 2` within the default `rlimit` of 5M.
+- **B5:** the surface language, with typed `perform`, `Returned`, and the agent loop of `loops.rs` against the `model` contract of decision 6. Then After loops' spike runs again: the target is the counterexample to `turns <= 2` within the default `rlimit` of 5M. This comes before B4, so the surface never depends on what B4 deletes.
+- **B4:** `Json` and `is` deleted from the checker, the interpreter, labels, SMT-LIB and the surface language.
 - **B6** (platform): the contracts and fixtures, as the first part of L3.
+
+## What the spike found
+
+After B5, on the agent loop of `crates/surface/tests/loops.rs`, with `@cronch/z3` v0.1.0 in Node. "Before" is [After loops](2026-11-02-after-loops.md).
+
+| Invariant    | Before, `rlimit` 5M | Before, `rlimit` 100M | After, `rlimit` 1M    | After, `rlimit` 5M    |
+| ------------ | ------------------- | --------------------- | --------------------- | --------------------- |
+| `turns <= 2` | `unknown`, 3 s      | `sat`, 11 s           | `sat`, about 110 ms   | `sat`, about 90 ms    |
+| `turns <= 3` | `unknown`, 4 s      | `unsat`, 4 s          | `unsat`, about 310 ms | `unsat`, about 180 ms |
+
+Each `sat` is a counterexample the kernel confirms as `notInductive`. Each `unsat` agrees with the invariant, and isn't a verdict. The query shrank only from about 262 KB to 218 KB, so the gain comes from losing `Json`'s recursive datatype, not from size. The target was met at the lowest budget tried, so L3's question of raising the default `rlimit` goes away for a loop this size.
 
 ## Open questions
 
-1. **Matching on tags other than `kind` in source.** A performed result and a `Call` are tagged by `op`, and the surface language's `match` reads `kind`. A harness can read `r.op` and write `str(r)`, but can't `match` by operation.
+1. **Reading a performed result by operation.** A performed result is tagged by `op`, and the surface language's `match` reads `kind`. A harness can read `r.op` and write `str(r)`, which gives a model the whole result, but can't `match` by operation or read `.value` alone. Giving `match` a tag would need a case per operation, which a narrowing can take away, so it needs either a `match` that allows absent cases or a text field on the slot. Left until a harness needs better than the whole result.
 2. **Typed grants.** Recording approvals as text works under any prefix, and fails closed on extra fields. A grant typed per interface could record the `Call` itself, but a grant would then depend on the interface it is used with.
 3. **MCP tools.** An MCP tool's JSON Schema becomes Cronch types where it fits. Where it doesn't (`oneOf`, and open records), the tool takes and gives `String`, and the capability parses it. Where the line falls is the platform's to settle when it adds MCP.
 4. **Binary data.** A `String` is valid Unicode, so a capability that returns an image or a PDF has no type for it. Text stays right for what the kernel writes: it comes from JSON, and models, `prefix` and `contains` read it. Base64 inside a `String` would type-check, but invites a harness to read it as text. An opaque `Bytes` type, base64 on the wire and only ever held and passed on, would say what it is. It is additive, so it waits for the first capability that needs it.

@@ -29,7 +29,7 @@ harness approved_note(prompt: String) -> Json
 uses model, approve, notes
 
 draft    = model.generate(messages: [{role: \"user\", content: prompt}])
-decision = approve.ask(action: \"notes.append\", args: {text: draft})
+decision = approve.ask(op: \"notes.append\", call: str({kind: \"call\", op: \"notes.append\", args: {text: draft}}))
 saved    = notes.append(text: draft) when decision != \"deny\"
 
 return match saved {
@@ -95,12 +95,12 @@ otherwise return -1
 
 const LOOP: &str = "\
 harness climb(goal: Int) -> Int
-uses m = \"math\"
+uses m = \"math\", b = \"brain\"
 carry total: Int = 0
-step = m.double(n: total + 1)
-more = perform {kind: \"call\", op: \"m.double\", args: {n: step}}
-got  = match more { ok(v) => if v is Int as i then i else 0, _ => 0 }
-next total = total + got
+choice = b.choose(total: total)
+more = perform choice
+said = match more { ok(r) => str(r), _ => \"\" }
+next total = total + len(said) + 1
 return total when total >= goal
 otherwise return total
 ";
@@ -172,7 +172,19 @@ fn cases() -> Vec<Case> {
         (
             "loops",
             "A harness that goes round, carrying a total and performing a call chosen at run time, and a loop with problems.",
-            || vec![elaborate(LOOP, math()), elaborate(BROKEN_LOOP, math())],
+            || {
+                let mut capabilities = math();
+                capabilities["brain"] = json!({ "operations": { "choose": {
+                    "input": { "Record": { "total": "Int" } },
+                    "output": { "Variant": { "tag": "kind", "cases": {
+                        "answer": { "Record": { "text": "String" } }, "call": "Call",
+                    }}},
+                }}});
+                vec![
+                    elaborate(LOOP, capabilities),
+                    elaborate(BROKEN_LOOP, math()),
+                ]
+            },
         ),
         (
             "spawn",
