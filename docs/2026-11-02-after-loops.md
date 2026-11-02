@@ -35,6 +35,8 @@ What comes after [agentic loops](2026-11-02-agentic-loops.md) (cronch-ai/kernel#
    - guards on receives, so one loop can wait for a prompt only after an answer;
    - streaming performs.
 
+Superseded in part on 2026-11-02 by [Typed boundaries](2026-11-02-typed-boundaries.md), which deletes `Json`. That deletes the list maps of decision 2 except the one between typed lists, and keeps 2a's text functions.
+
 ## Order
 
 1. Release v0.7.0 (kernel).
