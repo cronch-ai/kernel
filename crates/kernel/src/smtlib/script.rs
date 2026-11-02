@@ -157,6 +157,14 @@ pub enum Command {
         name: Term,
         constructors: Vec<(Term, Vec<(Term, Term)>)>,
     },
+    /// Datatypes that refer to each other: each sort with its constructors and their selectors.
+    DeclareDatatypes {
+        datatypes: Vec<(Term, Vec<Constructor>)>,
+    },
+    /// Functions defined by recursion, each over the others.
+    DefineFunsRec {
+        functions: Vec<RecursiveFunction>,
+    },
     DeclareFun {
         name: Term,
         params: Vec<Term>,
@@ -176,6 +184,12 @@ pub enum Command {
     CheckSat,
     GetValue(Vec<Term>),
 }
+
+/// A constructor and its selectors, each with its sort.
+pub type Constructor = (Term, Vec<(Term, Term)>);
+
+/// A function defined by recursion: its name, parameters with their sorts, sort and body.
+pub type RecursiveFunction = (Term, Vec<(Term, Term)>, Term, Term);
 
 fn pairs(items: &[(Term, Term)]) -> Term {
     Term::List(
@@ -212,6 +226,46 @@ impl Display for Command {
                         .collect(),
                 );
                 write!(f, "(declare-datatype {name} {constructors})")
+            }
+            Command::DeclareDatatypes { datatypes } => {
+                let sorts = Term::List(
+                    datatypes
+                        .iter()
+                        .map(|(name, _)| Term::List(vec![name.clone(), Term::atom("0")]))
+                        .collect(),
+                );
+                let bodies = Term::List(
+                    datatypes
+                        .iter()
+                        .map(|(_, constructors)| {
+                            Term::List(
+                                constructors
+                                    .iter()
+                                    .map(|(c, selectors)| {
+                                        Term::List(
+                                            std::iter::once(c.clone())
+                                                .chain(pairs(selectors).items())
+                                                .collect(),
+                                        )
+                                    })
+                                    .collect(),
+                            )
+                        })
+                        .collect(),
+                );
+                write!(f, "(declare-datatypes {sorts} {bodies})")
+            }
+            Command::DefineFunsRec { functions } => {
+                let heads = Term::List(
+                    functions
+                        .iter()
+                        .map(|(name, params, sort, _)| {
+                            Term::List(vec![name.clone(), pairs(params), sort.clone()])
+                        })
+                        .collect(),
+                );
+                let bodies = Term::List(functions.iter().map(|f| f.3.clone()).collect());
+                write!(f, "(define-funs-rec {heads} {bodies})")
             }
             Command::DeclareFun { name, params, sort } => {
                 write!(
