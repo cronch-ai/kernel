@@ -40,6 +40,7 @@ A model's answer is a variant of the tools it is offered, such as `answer {text}
 
 What it costs:
 
+- **A performed call's result reaches the model as text.** In the surface language, several operations may answer one `perform`, so `x` holds `str` of what arrived. A string stays as it is. Anything else is JSON text with its keys sorted. Equal values can still read differently: `0.5 + 0.5 == 1` holds, but `str` gives `1.0` and `1`. The model keeps every field and loses the type: `1` and `"1"` read the same, and so do a record and the string that spells it. A failure read through `failed(e)` gives its kind, `world`, without the world's detail, and `refused` carries no text. The text keeps the result's label, and the model's next answer is checked on arrival like any other. A rule reads contracts, not steps, so nothing it shows rests on this text.
 - **A model operation per set of tools.** A capability offering a narrower model declares that operation too.
 - **Adding a tool changes the harness.** It gains a case and an arm, so its hash changes. The surface language can write those arms. [Rules](2026-11-05-rules.md) aren't affected: they read contracts, not steps.
 - **The model's capability must answer in the variant.** Its implementation turns an answer it can't fit into a failure. A withheld result leaves the call pending.
