@@ -371,3 +371,191 @@ fn a_failure_says_whose_it_is() {
     assert_eq!(cases["world"], json!({ "Record": { "detail": "String" } }));
     assert_eq!(cases["child"], json!({ "Record": { "error": "String" } }));
 }
+
+/// A harness of this state and result, whose step is `step`.
+fn typed_step(state: Value, init: Value, result: Value, step: Value) -> Value {
+    json!({ "arg": "Int", "result": result, "state": state, "init": init, "step": step })
+}
+
+fn problem_kinds(harness: &Value) -> Vec<Value> {
+    let out = call(json!({ "op": "checkHarness", "harness": harness, "interface": {} }));
+    out["problems"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|p| p["problem"]["kind"].clone())
+        .collect()
+}
+
+/// Terms that gave a value outside their type, each with the static pass finding nothing.
+fn dishonest_terms() -> Vec<(&'static str, Value, Value)> {
+    let mixed = || lit(json!([1, "x"]));
+    let c = || is("msg");
+    let let_x = |be: Value| let_("x", be, var("x"));
+    let arm_else = || if_(c(), lit(json!(1)), list(vec![]));
+    let arm_then = || if_(c(), list(vec![]), lit(json!(1)));
+    let arm_case = || {
+        match_(
+            var("input"),
+            "kind",
+            vec![("start", "i", list(vec![]))],
+            Some(lit(json!(1))),
+        )
+    };
+    let arm_otherwise = || {
+        match_(
+            var("input"),
+            "kind",
+            vec![("start", "i", lit(json!(1)))],
+            Some(list(vec![])),
+        )
+    };
+    let ints = || json!({ "List": "Int" });
+    vec![
+        ("a list of mixed items", ints(), mixed()),
+        (
+            "[] after a non-list `then`",
+            json!("Int"),
+            let_x(arm_else()),
+        ),
+        (
+            "[] after a non-list `else`",
+            json!("Int"),
+            let_x(arm_then()),
+        ),
+        (
+            "[] beside a non-list otherwise",
+            json!("Int"),
+            let_x(arm_case()),
+        ),
+        (
+            "[] beside a non-list case",
+            json!("Int"),
+            let_x(arm_otherwise()),
+        ),
+    ]
+}
+
+#[test]
+fn a_literal_or_a_branch_with_no_honest_type_is_refused_as_a_state_or_a_result() {
+    for (what, ty, term) in dishonest_terms() {
+        let state = json!({ "Record": { "v": ty } });
+        let init = if ty == json!("Int") {
+            json!({ "v": 0 })
+        } else {
+            json!({ "v": [] })
+        };
+        let as_state = typed_step(
+            state,
+            init,
+            json!("Int"),
+            step(rec(vec![("v", term.clone())]), vec![]),
+        );
+        assert_ne!(
+            problem_kinds(&as_state),
+            Vec::<Value>::new(),
+            "state: {what}"
+        );
+        let refused = call(json!({ "op": "init", "harness": as_state, "interface": {} }));
+        assert_eq!(refused["kind"], "refused", "state: {what}");
+
+        let as_result = typed_step(
+            json!({ "Record": {} }),
+            json!({}),
+            ty,
+            step(var("state"), vec![halt(term)]),
+        );
+        assert_ne!(
+            problem_kinds(&as_result),
+            Vec::<Value>::new(),
+            "result: {what}"
+        );
+    }
+}
+
+#[test]
+fn a_child_with_no_honest_result_cant_start() {
+    for (what, ty, term) in dishonest_terms() {
+        let child = typed_step(
+            json!({ "Record": {} }),
+            json!({}),
+            ty.clone(),
+            step(var("state"), vec![halt(term)]),
+        );
+        let spawned = rec(vec![
+            ("kind", lit(json!("spawn"))),
+            ("name", lit(json!("kid"))),
+            ("harness", lit(child)),
+            ("arg", path("input", &["value"])),
+        ]);
+        let parent = json!({
+            "arg": "Int", "result": "String", "state": { "Record": {} }, "init": {},
+            "spawns": { "kid": { "arg": "Int", "result": ty } },
+            "step": on(vec![("start", step(var("state"), vec![spawned]))], step(var("state"), vec![])),
+        });
+        let (_, events) = deliver_all(init(parent, json!({})), vec![start(json!(1))]);
+        let last = events.last().unwrap();
+        assert_eq!(last["origin"], json!([]), "{what}: {events:#?}");
+        assert_eq!(last["input"]["kind"], "refused", "{what}: {events:#?}");
+    }
+}
+
+#[test]
+fn a_literal_list_has_the_join_of_its_items() {
+    let inferred = |v: Value| call(json!({ "op": "infer", "expr": lit(v) }));
+    let of = |v: Value| inferred(v)["type"].clone();
+    assert_eq!(of(json!([1, 2])), json!({ "List": "Int" }));
+    assert_eq!(of(json!([1, 1.5])), json!({ "List": "Float" }));
+    assert_eq!(of(json!([1.5, 1])), json!({ "List": "Float" }));
+    assert_eq!(of(json!([[1], []])), json!({ "List": { "List": "Int" } }));
+    assert_eq!(
+        of(json!([{ "a": 1, "b": 2 }, { "a": 3 }])),
+        json!({ "List": { "Record": { "a": "Int" } } })
+    );
+    for dishonest in [json!([1, "x"]), json!([1, null]), json!([[1], ["x"]])] {
+        let out = inferred(dishonest.clone());
+        assert_eq!(out["problems"][0]["kind"], "untyped", "{dishonest} {out}");
+    }
+}
+
+#[test]
+fn an_empty_branch_beside_a_list_or_with_an_expected_type_still_checks() {
+    let ints = || json!({ "List": "Int" });
+    let c = || is("msg");
+    let one = || lit(json!([1]));
+    let state = || json!({ "Record": { "v": ints() } });
+    let holding = |v: Value| step(rec(vec![("v", v)]), vec![]);
+    let terms = [
+        // Inferred, the other branch saying what the list holds.
+        let_("x", if_(c(), one(), list(vec![])), holding(var("x"))),
+        let_("x", if_(c(), list(vec![]), one()), holding(var("x"))),
+        let_(
+            "x",
+            match_(
+                var("input"),
+                "kind",
+                vec![("start", "i", list(vec![]))],
+                Some(one()),
+            ),
+            holding(var("x")),
+        ),
+        let_(
+            "x",
+            match_(
+                var("input"),
+                "kind",
+                vec![("start", "i", one())],
+                Some(list(vec![])),
+            ),
+            holding(var("x")),
+        ),
+        // Expected.
+        holding(if_(c(), list(vec![]), list(vec![]))),
+        holding(list(vec![])),
+        holding(lit(json!([]))),
+    ];
+    for term in terms {
+        let harness = typed_step(state(), json!({ "v": [] }), json!("Int"), term.clone());
+        assert_eq!(problem_kinds(&harness), Vec::<Value>::new(), "{term}");
+    }
+}
