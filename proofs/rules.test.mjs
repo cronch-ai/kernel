@@ -2,13 +2,32 @@
 // Run with `npm run test:proofs` after `scripts/install-proof-tools.sh` and `npm run build`.
 
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { instantiate } from "../javascript/index.js";
-import { check, forbidden } from "./check.mjs";
+import { check, forbidden, tools } from "./check.mjs";
 import { prove } from "./prove.mjs";
+
+/** What Ethos itself says of a proof against `queryPath`, with no allowlist: its last line, or an error. */
+function rawEthos(queryPath, proofText) {
+  const file = join(dir, `raw-${written++}.cpc`);
+  writeFileSync(file, `(reference "${queryPath}")\n${proofText}`);
+  const run = spawnSync(
+    join(tools, "ethos"),
+    [
+      `--include=${join(tools, "signatures/Cpc.eo")}`,
+      `--include=${join(tools, "signatures/expert/CpcExpert.eo")}`,
+      "--require-proof-of-false",
+      file,
+    ],
+    { encoding: "utf8" },
+  );
+  const lines = `${run.stdout}\n${run.stderr}`.split("\n").filter((l) => l.trim());
+  return { status: run.status, last: (lines.at(-1) ?? "no output").trim() };
+}
 
 const kernel = await instantiate(
   readFileSync(new URL("../javascript/kernel.wasm", import.meta.url)),
@@ -223,6 +242,49 @@ test("what a real selector's redefinition is rejected as", () => {
   const text = `(define ${selector} () 0)\n${proof}`;
   assert.match(forbidden(text), /a definition of/);
   assert.equal(check(query, text).ok, false);
+});
+
+// Ethos's `define` of an already-bound name overloads it; it never replaces it. An overload is used only where it is
+// selected when a term is parsed: for an applied symbol, the most recent overload that type-checks against the
+// arguments; for an unapplied one, the most recent. These tests pin what that does to a `(reference ...)` check, which
+// compares each level-zero assumption against the query's assertions by identity.
+const selector = readFileSync(query, "utf8").match(/\|record:[0-9a-f]+\.netAllow\|/)[0];
+
+test("Ethos accepts a nullary define of a selector ahead of a proof: it is inert", () => {
+  // The selector is only ever applied (to the grant). A nullary macro can't apply, so parsing falls back to the real
+  // selector and the assumptions are unchanged, so Ethos still says `correct`.
+  assert.deepEqual(rawEthos(query, `(define ${selector} () 0)\n${proof}`), {
+    status: 0,
+    last: "correct",
+  });
+});
+
+test("Ethos rejects a nullary define of a constant: the constant is used unapplied, so the macro is selected", () => {
+  // `|v:rule:result|` appears unapplied, so the nullary macro wins and the assumption becomes one over "deny", which
+  // is no longer among the query's assertions.
+  const out = rawEthos(query, `(define |v:rule:result| () "deny")\n${proof}`);
+  assert.notEqual(out.status, 0);
+  assert.match(out.last, /was not part of the referenced assertions/);
+});
+
+test("a define that is selected when the selector is applied breaks the proof, like the constant", () => {
+  // A unary macro matches the selector's use, so it is selected and changes the term: the distinction is whether the
+  // overload is selected, not selector versus constant.
+  const record = selector.replace(/\.netAllow\|$/, "|");
+  const out = rawEthos(query, `(define ${selector} ((x ${record})) "evil")\n${proof}`);
+  assert.notEqual(out.status, 0);
+});
+
+test("the selector define cannot make Ethos accept a proof against a false query", () => {
+  // `denyGrants` is sat: its obligation is false. The sound proof's assumptions aren't its assertions, so the
+  // reference check rejects it whether or not the inert define is present. No false statement is accepted.
+  const plain = rawEthos(denyGrants, proof);
+  const withDefine = rawEthos(denyGrants, `(define ${selector} () 0)\n${proof}`);
+  assert.notEqual(plain.status, 0);
+  assert.notEqual(withDefine.status, 0);
+  assert.match(withDefine.last, /was not part of the referenced assertions/);
+  // The allowlist rejects the define before Ethos runs, so it never reaches even this inert state through check.mjs.
+  assert.match(forbidden(`(define ${selector} () 0)\n${proof}`), /a definition of/);
 });
 
 test("cvc5's proofs hold nothing but what the verifier allows", () => {
