@@ -4,7 +4,7 @@
 //! expanded within a budget of nodes, since a few lines of sharing can describe a value exponentially larger than its
 //! text. A value read here is still only a proposal: the kernel re-checks the counterexample it is part of.
 
-use super::encode::{case_fields, record_names, variant_names};
+use super::encode::{case_fields, record_constructor, record_names, variant_names};
 use crate::ir::Type;
 use serde::Serialize;
 use serde_json::{Number, Value};
@@ -495,7 +495,7 @@ impl<'s> Reader<'s> {
                     Sexp::List(items) if !items.is_empty() => (&items[0], &items[1..]),
                     atom => (atom, &[]),
                 };
-                if *head != Sexp::Atom(name) || args.len() != fields.len() {
+                if *head != Sexp::Atom(record_constructor(&name)) || args.len() != fields.len() {
                     return Err(wrong());
                 }
                 let mut out = serde_json::Map::new();
@@ -610,7 +610,10 @@ mod tests {
         let fields = BTreeMap::from([("a".to_string(), Type::Int), ("b".to_string(), Type::Bool)]);
         let name = record_names(&fields);
         assert_eq!(
-            one(&format!("(|{name}| 3 false)"), Type::Record(fields)),
+            one(
+                &format!("(|{}| 3 false)", record_constructor(&name)),
+                Type::Record(fields)
+            ),
             Ok(json!({ "a": 3, "b": false }))
         );
     }

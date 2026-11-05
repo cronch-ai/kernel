@@ -156,7 +156,7 @@ fn cases() -> Vec<Case> {
                 );
                 let obligation =
                     r.call(json!({ "op": "obligation", "harness": keeper, "invariant": text }));
-                let reply = r#"((|q:state| (|record:953bcaaa| (|json:list| (as seq.empty (Seq |json:Json|))))) (|q:input| (|variant:1fef169b#start| (|json:record| (|json:field| "text" (|json:string| "") |json:end|)))))"#;
+                let reply = r#"((|q:state| (|record:953bcaaa#make| (|json:list| (as seq.empty (Seq |json:Json|))))) (|q:input| (|variant:1fef169b#start| (|json:record| (|json:field| "text" (|json:string| "") |json:end|)))))"#;
                 r.call(json!({ "op": "readValues", "reply": reply, "types": obligation["reads"] }));
             },
         ),
@@ -291,6 +291,45 @@ fn cases() -> Vec<Case> {
                 r.call(json!({ "op": "obligation", "harness": counter, "interface": count, "invariant": invariant }));
                 r.call(json!({ "op": "checkInduction", "harness": counter, "interface": count, "invariant": invariant,
                            "state": { "n": 0 }, "input": { "kind": "ret", "op": "count", "call": 0, "value": -1 } }));
+            },
+        ),
+        (
+            "rule-obligations",
+            "The queries a rule owes, whose proofs anyone can check: the initial grant, and each update that writes what the precondition reads.",
+            |r| {
+                let gated = |field: &str, key: &str| {
+                    let args = json!({ "Record": { key: "String" } });
+                    let allow = path("grant", &[field]);
+                    json!({
+                        "operations": {
+                            "act": { "input": args, "output": "String", "effect": true,
+                                     "pre": op("contains", vec![allow.clone(), path("args", &[key])]) },
+                            "ask": { "input": args, "output": "String", "ret": list(vec![]),
+                                     "onResult": if_(
+                                         eq(var("result"), lit(json!("always"))),
+                                         rec(vec![(field, op("append", vec![allow, path("args", &[key])]))]),
+                                         var("grant"),
+                                     ) },
+                        },
+                        "grant": { "Record": { field: { "List": "String" } } },
+                    })
+                };
+                let installed = call(json!({ "op": "install", "capabilities": [
+                    { "prefix": "net", "capability": gated("netAllow", "url") },
+                    { "prefix": "fs", "capability": gated("fsAllow", "path") },
+                ]}));
+                r.call(
+                    json!({ "op": "ruleObligations", "interface": installed["interface"],
+                        "grant": { "netAllow": [], "fsAllow": [] },
+                        "rule": { "op": "net.act", "approvedBy": [{
+                            "op": "net.ask",
+                            "when": op("and", vec![
+                                eq(var("result"), lit(json!("always"))),
+                                eq(path("approval", &["url"]), path("args", &["url"])),
+                            ]),
+                        }]},
+                    }),
+                );
             },
         ),
         ("keys", "Content keys of harness objects.", |r| {

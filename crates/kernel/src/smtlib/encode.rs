@@ -7,7 +7,7 @@ use super::script::{Command, Entry, Section, Term};
 use super::{Definition, ExportError, NoReading, Place};
 use crate::cbor;
 use crate::check::{Path, Problem};
-use crate::ir::{Expr, Type};
+use crate::ir::{Expr, Param, Type};
 use crate::ops::{self, Op};
 use crate::types::{conforms, join, of_value, record_view};
 use serde::{Deserialize, Serialize};
@@ -212,6 +212,11 @@ pub(super) fn record_names(fields: &BTreeMap<String, Type>) -> String {
         "record:{}",
         short_hash(&json!(Type::Record(fields.clone())))
     )
+}
+
+/// The record's constructor, named apart from its sort. A selector's name has a `.` here, so a field can't take it.
+pub(super) fn record_constructor(record: &str) -> String {
+    format!("{record}#make")
 }
 
 fn selector(record: &str, field: &str) -> Read<Term> {
@@ -588,7 +593,7 @@ impl Encoder {
 
     fn constructor(&mut self, fields: &BTreeMap<String, Type>) -> Read<Term> {
         let name = self.record(fields)?;
-        Term::symbol("", &name)
+        Term::symbol("", &record_constructor(&name))
     }
 
     fn select(&mut self, fields: &BTreeMap<String, Type>, field: &str, of: Term) -> Read<Term> {
@@ -605,7 +610,10 @@ impl Encoder {
         }
         match ty {
             Type::List(t) => Ok(Term::call("Seq", vec![self.sort(t)?])),
-            Type::Record(fields) => self.constructor(fields),
+            Type::Record(fields) => {
+                let name = self.record(fields)?;
+                Term::symbol("", &name)
+            }
             Type::Variant { tag, cases } => Term::symbol("", &self.variant(tag, cases)?),
             Type::Json => {
                 self.json = true;
@@ -1613,6 +1621,8 @@ impl Encoder {
                         comments: vec![describe(&Type::Record(fields))],
                         command: Some(Command::DeclareDatatype {
                             name: Term::symbol("", &name).map_err(&at)?,
+                            constructor: Term::symbol("", &record_constructor(&name))
+                                .map_err(&at)?,
                             selectors,
                         }),
                     }
@@ -1657,6 +1667,22 @@ impl Encoder {
 
     /// A definition as `define-fun`s: the function, and where the kernel's evaluation of it is defined, if that isn't
     /// everywhere.
+    /// Encode what follows with these variables in scope, as free constants of a query rather than parameters.
+    pub(super) fn free_variables(&mut self, params: &[Param]) {
+        self.scope = params
+            .iter()
+            .map(|p| (p.name.clone(), p.ty.clone()))
+            .collect();
+        self.guards.clear();
+        self.defined.clear();
+    }
+
+    /// Whether everything encoded since `free_variables` evaluates in the kernel without an error, whatever the
+    /// variables hold.
+    pub(super) fn total(&self) -> bool {
+        self.defined.is_empty()
+    }
+
     pub(super) fn definition(&mut self, def: &Definition) -> Result<Vec<Entry>, ExportError> {
         self.scope.clear();
         self.guards.clear();

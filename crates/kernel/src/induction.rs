@@ -101,7 +101,7 @@ pub fn project(expr: &Expr, field: &str) -> Expr {
 
 /// Visits every subexpression of `expr` in which `name` still means the binding being looked at, none under a
 /// binder that shadows it. `visit` says whether to look inside the one it is given.
-fn each_use(expr: &Expr, name: &str, visit: &mut impl FnMut(&Expr) -> bool) {
+pub(crate) fn each_use(expr: &Expr, name: &str, visit: &mut impl FnMut(&Expr) -> bool) {
     if !visit(expr) {
         return;
     }

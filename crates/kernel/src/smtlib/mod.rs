@@ -89,6 +89,9 @@ pub enum NoReading {
     Character { code: u32 },
     /// A value that doesn't inhabit the type it is read at.
     Value { expected: Type, got: Value },
+    /// A formula the kernel can fail to evaluate. A refutation doesn't assume it evaluates: that would prove less
+    /// than it says.
+    Partial,
 }
 
 /// Why a definition wasn't exported.
@@ -289,6 +292,89 @@ pub fn induction(
             },
             script::Section {
                 heading: "A counterexample to induction.",
+                entries: query,
+            },
+        ],
+    };
+    Ok(script.to_string())
+}
+
+/// A formula over free constants, as a query a solver can refute and a proof checker can compare a proof with: every
+/// assertion is written out, with no definitions, so a proof's assumptions are the query's own. `unsat` means the
+/// formula holds of no values these types and `fixed` allow. It isn't the kernel's verdict: see `crate::rules`.
+pub fn refutation(
+    description: &str,
+    params: &[Param],
+    fixed: &[(&str, &Value)],
+    formula: &Expr,
+    floats: Floats,
+) -> Result<String, Refusal> {
+    let refused = |error| Refusal {
+        definition: String::new(),
+        error: Box::new(error),
+    };
+    let at = |reason| {
+        refused(ExportError::NoReading {
+            place: Place::Body { at: String::new() },
+            reason: Box::new(reason),
+        })
+    };
+    let scope = params
+        .iter()
+        .map(|p| (p.name.clone(), p.ty.clone()))
+        .collect();
+    let (_, problems) = check(formula, &Type::Bool, scope);
+    if !problems.is_empty() {
+        return Err(refused(ExportError::IllFormed { problems }));
+    }
+    let mut encoder = Encoder::new().reading(floats);
+    encoder.free_variables(params);
+    let command = |c| script::Entry {
+        comments: vec![],
+        command: Some(c),
+    };
+    let mut query = Vec::new();
+    let mut held = Vec::new();
+    for p in params {
+        let name = encode::local(&p.name).map_err(at)?;
+        query.push(command(script::Command::DeclareConst {
+            name: name.clone(),
+            sort: encoder.sort(&p.ty).map_err(at)?,
+        }));
+        // What a query quantifies over is a value the kernel could hold.
+        held.extend(encoder.well_formed(&p.ty, name).map_err(at)?);
+    }
+    let (body, _) = encoder.expr_as(formula, &Type::Bool, "").map_err(refused)?;
+    if !encoder.total() {
+        return Err(at(NoReading::Partial));
+    }
+    for (name, v) in fixed {
+        let p = params.iter().find(|p| p.name == *name);
+        let ty = p.map(|p| &p.ty).expect("a fixed value names a parameter");
+        let term = script::Term::call(
+            "=",
+            vec![
+                encode::local(name).map_err(at)?,
+                encoder.value(v, ty).map_err(at)?,
+            ],
+        );
+        held.push(term);
+    }
+    held.push(body);
+    query.extend(
+        held.into_iter()
+            .map(|a| command(script::Command::Assert(a))),
+    );
+    query.push(command(script::Command::CheckSat));
+    let records = encoder.records().map_err(refused)?;
+    let script = Script {
+        preamble: description.lines().map(str::to_string).collect(),
+        options: vec![],
+        logic: "ALL",
+        sections: vec![
+            records,
+            script::Section {
+                heading: "The query.",
                 entries: query,
             },
         ],
