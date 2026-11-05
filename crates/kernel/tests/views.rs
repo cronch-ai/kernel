@@ -106,3 +106,125 @@ fn an_operations_footprint_is_on_its_call() {
     let out = seen.iter().find(|e| e["kind"] == "out").unwrap();
     assert_eq!(out["action"]["footprint"], json!({ "writes": "/a" }));
 }
+
+/// Fails on `failing`'s kind of input and otherwise does nothing: its step divides by zero there.
+fn failing_on(kind: &str) -> Value {
+    let idle = || step(var("state"), vec![]);
+    let by_zero = let_("x", op("idiv", vec![lit(json!(1)), lit(json!(0))]), idle());
+    json!({
+        "arg": "Int", "result": "String", "state": { "Record": {} }, "init": {},
+        "step": on(vec![(kind, by_zero)], idle()),
+    })
+}
+
+/// A property that fails where `holds` does, accepted by the checker of this harness: the event it first fails at.
+fn first_where(holds: Value, harness: &Value, interface: &Value, trace: &[Value]) -> Option<u64> {
+    let property = json!({ "name": "never", "always": not(atom(holds)) });
+    let problems = call(
+        json!({ "op": "checkProperty", "property": property, "harness": harness, "interface": interface }),
+    );
+    assert_eq!(problems["problems"], json!([]), "{property}");
+    call(json!({ "op": "monitor", "property": property, "trace": trace }))["at"].as_u64()
+}
+
+/// `then`, at a failed step's input of the kind `kind`, its case bound as `i`.
+fn at_failed_input(kind: &str, then: Value) -> Value {
+    at_event(
+        "failed",
+        when_case(path("e", &["input"]), "kind", kind, "i", then),
+    )
+}
+
+#[test]
+fn a_failed_step_s_start_value_is_text() {
+    let harness = failing_on("start");
+    let interface = json!({});
+    let (_, trace) = deliver_all(
+        init(harness.clone(), interface.clone()),
+        vec![start(json!(1))],
+    );
+    assert_eq!(shape(&trace), ["failed:"]);
+
+    // The trace keeps what it recorded; a property reads what `eventType` says.
+    assert_eq!(trace[0]["input"]["value"], 1);
+    assert_eq!(
+        views(&trace)[0]["input"],
+        json!({ "kind": "start", "value": "1" })
+    );
+    let ty = call(json!({ "op": "eventType", "harness": harness, "interface": interface }))["type"]
+        .clone();
+    assert_eq!(
+        ty["Variant"]["cases"]["failed"]["Record"]["input"]["Variant"]["cases"]["start"]["Record"]
+            ["value"],
+        "String"
+    );
+    let reads = |value: Value| {
+        let holds = at_failed_input("start", eq(path("i", &["value"]), lit(value)));
+        first_where(holds, &harness, &interface, &trace)
+    };
+    assert_eq!(reads(json!("1")), Some(0));
+    let extends = at_failed_input(
+        "start",
+        eq(
+            op("concat", vec![path("i", &["value"]), lit(json!("!"))]),
+            lit(json!("1!")),
+        ),
+    );
+    assert_eq!(first_where(extends, &harness, &interface, &trace), Some(0));
+}
+
+#[test]
+fn a_failed_child_s_start_value_is_text() {
+    let child = failing_on("start");
+    let spawned = rec(vec![
+        ("kind", lit(json!("spawn"))),
+        ("name", lit(json!("kid"))),
+        ("harness", lit(child)),
+        ("arg", path("input", &["value"])),
+    ]);
+    let idle = || step(var("state"), vec![]);
+    let parent = json!({
+        "arg": "Int", "result": "String", "state": { "Record": {} }, "init": {},
+        "spawns": { "kid": { "arg": "Int", "result": "String" } },
+        "step": on(vec![("start", step(var("state"), vec![spawned]))], idle()),
+    });
+    let interface = json!({});
+    let (_, trace) = deliver_all(
+        init(parent.clone(), interface.clone()),
+        vec![start(json!(1))],
+    );
+    let failed = trace.iter().position(|e| e["kind"] == "failed").unwrap();
+    assert_eq!(trace[failed]["origin"], json!([0]));
+    let holds = at_failed_input("start", eq(path("i", &["value"]), lit(json!("1"))));
+    assert_eq!(
+        first_where(holds, &parent, &interface, &trace),
+        Some(failed as u64)
+    );
+}
+
+#[test]
+fn a_failed_step_s_other_inputs_keep_their_exact_types() {
+    // The same as at an `in` event: only a start value crosses between runs.
+    let harness = failing_on("msg");
+    let interface = json!({ "channels": { "count": { "type": "Int" } } });
+    let (_, trace) = deliver_all(
+        init(harness.clone(), interface.clone()),
+        vec![start(json!(1)), msg("count", json!(5))],
+    );
+    assert_eq!(shape(&trace), ["in:start", "failed:"]);
+    assert_eq!(views(&trace)[1]["input"]["value"], 5);
+    let over_four = at_failed_input(
+        "msg",
+        when_case(
+            var("i"),
+            "channel",
+            "count",
+            "m",
+            op("gt", vec![path("m", &["value"]), lit(json!(4))]),
+        ),
+    );
+    assert_eq!(
+        first_where(over_four, &harness, &interface, &trace),
+        Some(1)
+    );
+}
