@@ -145,6 +145,19 @@ fn cases() -> Vec<Case> {
             },
         ),
         (
+            "withheld-then-failed",
+            "A result withheld leaves the configuration as it was, a failure on the same call ends it, and nothing can answer it after that.",
+            |r| {
+                let failed = || json!({ "input": { "kind": "failed", "call": 0, "error": "no result that fits" } });
+                let system = r.init(leaky(), interface(), Value::Null);
+                let (system, _) = r.deliver(system, start(json!({})));
+                let (system, _) = r.deliver(system, ret(0, json!(3)));
+                let (system, _) = r.deliver(system, failed());
+                let (system, _) = r.deliver(system, ret(0, json!("page")));
+                r.deliver(system, failed());
+            },
+        ),
+        (
             "grants",
             "A child narrowed and approved: an \"always\" in the child widens its parent.",
             |r| {

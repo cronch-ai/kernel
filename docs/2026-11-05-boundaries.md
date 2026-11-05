@@ -42,7 +42,7 @@ What it costs:
 
 - **A model operation per set of tools.** A capability offering a narrower model declares that operation too.
 - **Adding a tool changes the harness.** It gains a case and an arm, so its hash changes. The surface language can write those arms. [Rules](2026-11-05-rules.md) aren't affected: they read contracts, not steps.
-- **The model's capability must answer in the variant.** Its implementation turns an answer it can't fit into a failure. A withheld result leaves the call pending.
+- **The model's capability must end every call.** Proposed, not yet agreed. A result that doesn't fit is withheld: the call stays pending, the configuration doesn't change, and the host sees the `withheld` event. A compliant capability then delivers a result that fits, or `failed`. A kernel step with no `failed` arm hears the failure and waits, with no call pending. A surface harness doesn't wait: a failure it doesn't handle halts the run through `otherwise`, or with `{"failed": "<node>"}` without one, and a harness whose result type can't hold that doesn't elaborate (`needsOtherwise`). The kernel enforces none of this. It is a capability spec (F7), and a run that waits breaks no safety property (F8). [chosen_call.rs](../crates/kernel/tests/chosen_call.rs) pins what the kernel does.
 
 `Action` as a model's answer was the alternative. Its cases would offer a model `halt` and `cancel` as well. That type is gone: a step's actions are checked against the interface's action type, which is plain data.
 
@@ -68,4 +68,11 @@ The closed stack's `Call`, `Returned`, `@none`, approvals as text, and `op` in c
 ## Open
 
 - **Update → grant is only checked statically.** The interpreter merges an update's fields without checking them again. That is sound while the checker is, and a second interpreter has nothing to compare against.
+- **A `ret` label that can't evaluate withholds `failed` too.** `admit` needs the label for a failure as it does for a result. `init` accepts an operation whose `ret` is `[str(div(1, 0))]`. A `failed` on its call is then withheld as `returnLabel` and the call stays pending, so a compliant host can't end that call.
+- **A record's undeclared fields cross.** `inhabits` reads only the declared fields, so `{url: "u", x: 1}` has the type `{url: String}`. "What doesn't fit doesn't cross" doesn't say this. The owner decided on 2026-11-06 that a model's answer drops or rejects such fields, and a fix is in progress on `fix/extra-fields`. What was observed before it:
+  - On a message with such a field, to a channel of that type, `str` writes the field, and `m == {url: m.url}` is false.
+  - A property that compares `str` of the message with its declared fields holds without the field, and is violated with it.
+  - A step that passes the record whole as a call's arguments sends the field to the capability. A `pre` of `args != {url: "evil"}` holds for `{url: "evil", x: 1}`, and the call is performed. A `pre` of `args.url != "evil"` refuses it.
+  - The encoder has no reading of record equality because of these fields ([smtlib/mod.rs](../crates/kernel/src/smtlib/mod.rs)). It does read `str` of a record. With `flag` as the invariant and `str(m) == str({url: m.url})` as its next value, cvc5 says `unsat` for consecution, and the message makes `flag` false. The encoder's comment says an `unsat` that rests on `str` says nothing. `ruleObligations` accepts a `pre` that reads `str(args)`.
+  - `perform` builds a call's arguments from the declared fields, so a field a model added doesn't reach the call. It does reach a `str(choice)`.
 - **`Float` in a query.** Ethos reads `Float64` no more than it did under `Json`, so a rule over a `Float` probably still can't be checked. Nothing needs one yet.
