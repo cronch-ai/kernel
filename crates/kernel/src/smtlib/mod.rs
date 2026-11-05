@@ -15,7 +15,6 @@
 //! | `Float`                  | `Float64`, rounding to nearest, ties to even, as the kernel does  |
 //! | `List(t)`                | `(Seq t)`                                                         |
 //! | a record type            | a one-constructor `declare-datatype`, named by its shape's hash   |
-//! | `Json`                   | a recursive datatype of JSON values, its records chains of fields |
 //! | a definition             | `(define-fun def:name (params) sort body)`                        |
 //! | where it is defined      | `(define-fun defined:name (params) Bool ...)`                     |
 //!
@@ -24,7 +23,6 @@
 //! an export is never the kernel's: the kernel only accepts what it can check itself.
 
 mod encode;
-mod json;
 pub mod readings;
 pub mod script;
 pub mod values;

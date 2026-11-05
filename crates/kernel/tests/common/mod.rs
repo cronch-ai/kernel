@@ -87,19 +87,22 @@ pub fn acting(state: Value, actions: Value) -> Value {
 }
 
 /// The type of an action against this interface (`actionType`).
-pub fn action_type(interface: &Value) -> Value {
-    call(json!({ "op": "actionType", "interface": interface }))["type"].clone()
+/// A call of one of the interface's operations, as plain data: what a channel carries to a harness that makes whatever
+/// call it is told to.
+pub fn calls_of(interface: &Value) -> Value {
+    let calls = action_type(interface)["Variant"]["cases"]["call"].clone();
+    json!({ "Variant": { "tag": "kind", "cases": { "call": calls } } })
 }
 
-/// The actions an action made at run time gives: itself, if it is one the run may take, and none if not.
-pub fn dynamic(action: Value) -> Value {
-    is_type(
-        action,
-        json!("Action"),
-        "@action",
-        list(vec![var("@action")]),
-        list(vec![]),
-    )
+/// The interface with a channel `act` that can hold any action of it, as plain data.
+pub fn acting_on(mut interface: Value) -> Value {
+    let action = action_type(&interface);
+    interface["channels"]["act"] = json!({ "type": action });
+    interface
+}
+
+pub fn action_type(interface: &Value) -> Value {
+    call(json!({ "op": "actionType", "interface": interface, "result": "String" }))["type"].clone()
 }
 
 pub fn halt(value: Value) -> Value {
@@ -244,11 +247,6 @@ pub fn match_(
     m
 }
 
-/// `if of is ty as bind then … else …`.
-pub fn is_type(of: Value, ty: Value, bind: &str, then: Value, otherwise: Value) -> Value {
-    json!({ "e": "is", "of": of, "type": ty, "bind": bind, "then": then, "else": otherwise })
-}
-
 /// `then`, where `of` is the case `case` of its variant over `tag`, bound as `bind`; false anywhere else.
 pub fn when_case(of: Value, tag: &str, case: &str, bind: &str, then: Value) -> Value {
     match_(of, tag, vec![(case, bind, then)], Some(lit(json!(false))))
@@ -278,4 +276,19 @@ pub fn at_input(kind: &str, then: Value) -> Value {
         "in",
         when_case(path("e", &["input"]), "kind", kind, "i", then),
     )
+}
+
+/// `then` on a message on `channel`, bound as `m`, inside a message's case of `on`; `otherwise` on any other.
+pub fn on_channel(channel: &str, then: Value, otherwise: Value) -> Value {
+    match_(
+        var("input"),
+        "channel",
+        vec![(channel, "m", then)],
+        Some(otherwise),
+    )
+}
+
+/// A step that performs the action the message `m` holds.
+pub fn performing() -> Value {
+    acting(var("state"), list(vec![path("m", &["value"])]))
 }

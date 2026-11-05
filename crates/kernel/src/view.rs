@@ -23,7 +23,7 @@
 //! evaluate, and the atom is false: read it where `origin` is empty.
 
 use crate::check::infer;
-use crate::harness::{Harness, Interface, action_type, input_type};
+use crate::harness::{Harness, Interface, input_type};
 use crate::ir::Type;
 use crate::ops::text;
 use crate::run::Event;
@@ -146,7 +146,7 @@ fn flatten(labels: &mut Value, names: &[&str]) {
 
 /// What a property may read of `event` in a run of this harness against this interface.
 pub fn event_type(harness: &Harness, interface: &Interface) -> Type {
-    exact(harness, interface).resolved(&action_type(&harness.result, interface))
+    exact(harness, interface)
 }
 
 fn record(fields: Vec<(&str, Type)>) -> Type {
@@ -182,8 +182,12 @@ fn exact(harness: &Harness, interface: &Interface) -> Type {
         .map(|(name, o)| {
             let mut fields = vec![("args", o.input.clone()), ("call", Type::Int)];
             if let Some(f) = &o.footprint {
-                let (ty, _) = infer(f, vec![("args".to_string(), o.input.clone())]);
-                fields.push(("footprint", ty.unwrap_or(Type::Json)));
+                let scope = vec![
+                    ("args".to_string(), o.input.clone()),
+                    ("op".to_string(), Type::String),
+                ];
+                let (ty, _) = infer(f, scope);
+                fields.extend(ty.map(|t| ("footprint", t)));
             }
             (name.clone(), record(fields))
         })
@@ -384,7 +388,6 @@ fn union(a: &Type, b: &Type) -> Option<Type> {
 /// The labels of a value of `ty`, shaped like it: each scalar replaced by its sources.
 fn labels_of(ty: &Type) -> Type {
     match ty {
-        Type::Json => Type::Json,
         Type::List(t) => list(labels_of(t)),
         Type::Record(fields) => Type::Record(
             fields

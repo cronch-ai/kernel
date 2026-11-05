@@ -20,7 +20,7 @@ fn act(action: Value) -> Value {
 
 fn spawn(op_name: &str, args: Value, narrow: Value) -> Value {
     act(
-        json!({ "kind": "spawn", "name": "worker", "harness": worker(), "narrow": narrow, "arg": { "op": op_name, "args": args } }),
+        json!({ "kind": "spawn", "name": "worker", "harness": worker(), "narrow": narrow, "arg": { "kind": "call", "op": op_name, "args": args } }),
     )
 }
 
@@ -63,10 +63,9 @@ fn a_child_calls_through_its_parents_interface_and_answers_it() {
     let (system, events) = deliver_all(system, vec![to(vec![0], ret(0, json!(1)))]);
     assert_eq!(shape(&events), ["in:ret", "out:halt", "in:ret"]);
     assert_eq!(events[2]["origin"], json!([]));
-    assert_eq!(
-        events[2]["input"],
-        json!({ "kind": "ret", "call": 0, "op": "spawn.worker", "value": 1 })
-    );
+    assert_eq!(events[2]["input"]["op"], "spawn.worker");
+    let said: Value = serde_json::from_str(events[2]["input"]["value"].as_str().unwrap()).unwrap();
+    assert_eq!(said["value"], 1);
     assert_eq!(system["root"]["children"], Value::Null);
 }
 
@@ -81,7 +80,9 @@ fn a_child_cannot_exceed_its_grant() {
             json!([{ "kind": "drop", "op": "fs.write" }]),
         )],
     );
-    assert_eq!(events.last().unwrap()["input"]["value"], "denied");
+    // Its start value wouldn't be a call of the child's, so the spawn is refused.
+    assert_eq!(events.last().unwrap()["input"]["kind"], "refused");
+    assert_eq!(events.last().unwrap()["input"]["op"], "spawn.worker");
 
     // Restricted: only under /workspace/sub/, and still never outside /workspace/.
     let sub = op(
@@ -255,7 +256,7 @@ fn a_run_that_ends_takes_its_children_with_it() {
 #[test]
 fn runs_that_only_answer_each_other_are_stopped() {
     let quitter = json!({
-        "result": "Json", "arg": { "Record": {} }, "state": { "Record": {} }, "init": {},
+        "result": "String", "arg": { "Record": {} }, "state": { "Record": {} }, "init": {},
         "step": step(var("state"), vec![halt(lit(json!(0)))]),
     });
     let again = rec(vec![
@@ -265,8 +266,8 @@ fn runs_that_only_answer_each_other_are_stopped() {
         ("arg", rec(vec![])),
     ]);
     let looper = json!({
-        "result": "Json", "arg": { "Record": {} }, "state": { "Record": {} }, "init": {},
-        "spawns": { "quitter": { "arg": { "Record": {} }, "result": "Json" } },
+        "result": "String", "arg": { "Record": {} }, "state": { "Record": {} }, "init": {},
+        "spawns": { "quitter": { "arg": { "Record": {} }, "result": "String" } },
         "step": step(var("state"), vec![again]),
     });
     let ready = call(json!({ "op": "init", "harness": looper, "interface": {} }));
@@ -277,7 +278,7 @@ fn runs_that_only_answer_each_other_are_stopped() {
 
 #[test]
 fn a_spawn_must_name_a_declared_child() {
-    // Naming no child isn't an `Action`, so this harness's test leaves it out.
+    // Naming no child isn't an `Action`, so its message is withheld.
     let (system, events) = deliver_all(
         system(),
         vec![act(
@@ -285,7 +286,7 @@ fn a_spawn_must_name_a_declared_child() {
         )],
     );
     assert_eq!(system["root"]["outcome"], Value::Null, "{events:#?}");
-    assert_eq!(shape(&events), ["in:msg"]);
+    assert_eq!(shape(&events), ["withheld:mismatch"]);
 
     // Naming one the harness doesn't declare is refused, on that name's operation.
     let (_, events) = deliver_all(

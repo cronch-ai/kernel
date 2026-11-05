@@ -23,7 +23,7 @@ fn counter(on_count: Value) -> Value {
         Some(step(var("state"), vec![halt(lit(json!(-1)))])),
     );
     json!({
-        "result": "Json", "arg": { "Record": {} },
+        "result": "Int", "arg": { "Record": {} },
         "state": { "Record": {} },
         "init": {},
         "step": match_(
@@ -69,7 +69,7 @@ fn a_matched_result_has_its_operations_type() {
 #[test]
 fn matches_must_cover_their_variant() {
     let partial = json!({
-        "result": "Json", "arg": { "Record": {} }, "state": { "Record": {} }, "init": {},
+        "result": "Int", "arg": { "Record": {} }, "state": { "Record": {} }, "init": {},
         "step": match_(var("input"), "kind", vec![("start", "s", step(var("state"), vec![]))], None),
     });
     let problems = check(partial);
@@ -80,7 +80,7 @@ fn matches_must_cover_their_variant() {
     );
 
     let unknown = json!({
-        "result": "Json", "arg": { "Record": {} }, "state": { "Record": {} }, "init": {},
+        "result": "Int", "arg": { "Record": {} }, "state": { "Record": {} }, "init": {},
         "step": match_(var("input"), "kind", vec![("stop", "s", step(var("state"), vec![]))], Some(step(var("state"), vec![]))),
     });
     assert_eq!(check(unknown)[0]["problem"]["kind"], "noSuchCase");
@@ -187,7 +187,7 @@ fn slotted() -> Value {
         Some(step(var("state"), vec![])),
     );
     json!({
-        "result": "Json", "arg": { "Record": {} },
+        "result": "Int", "arg": { "Record": {} },
         "state": state_type,
         "init": { "slot": { "kind": "waiting" } },
         "step": match_(

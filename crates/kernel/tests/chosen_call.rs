@@ -1,5 +1,5 @@
 //! A model chooses a call with pure datatypes: its answer is a variant of the tools it is offered, and a harness reads
-//! it with `match`. No `Json`, no `is`, and no type that depends on the interface.
+//! it with `match`. No type here depends on the interface.
 
 mod common;
 use common::*;
@@ -155,13 +155,6 @@ fn withheld(events: &[Value]) -> Option<String> {
         .iter()
         .find(|e| e["kind"] == "withheld")
         .map(|e| e["reason"]["kind"].as_str().unwrap().to_string())
-}
-
-#[test]
-fn the_agent_holds_no_json() {
-    let text = full().to_string();
-    assert!(!text.contains("Json"), "{text}");
-    assert!(!text.contains("\"is\""), "{text}");
 }
 
 #[test]

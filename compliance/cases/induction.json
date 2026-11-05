@@ -30,7 +30,7 @@
             "Record": {}
           },
           "init": {},
-          "result": "Json",
+          "result": "String",
           "state": {
             "Record": {}
           },
@@ -126,8 +126,60 @@
           "channels": {
             "act": {
               "type": {
-                "Record": {
-                  "kind": "String"
+                "Variant": {
+                  "cases": {
+                    "call": {
+                      "Variant": {
+                        "cases": {
+                          "fs.write": {
+                            "Record": {
+                              "args": {
+                                "Record": {
+                                  "path": "String"
+                                }
+                              }
+                            }
+                          },
+                          "net.fetch": {
+                            "Record": {
+                              "args": {
+                                "Record": {
+                                  "url": "String"
+                                }
+                              }
+                            }
+                          },
+                          "net.send": {
+                            "Record": {
+                              "args": {
+                                "Record": {
+                                  "body": "String",
+                                  "url": "String"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "tag": "op"
+                      }
+                    },
+                    "cancel": {
+                      "Record": {
+                        "call": "Int"
+                      }
+                    },
+                    "halt": {
+                      "Record": {
+                        "value": "String"
+                      }
+                    },
+                    "spawn": {
+                      "Record": {
+                        "name": "String"
+                      }
+                    }
+                  },
+                  "tag": "kind"
                 }
               }
             },
@@ -309,7 +361,7 @@
                       "Record": {}
                     },
                     "init": {},
-                    "result": "Json",
+                    "result": "String",
                     "state": {
                       "Record": {}
                     },
@@ -405,8 +457,60 @@
                     "channels": {
                       "act": {
                         "type": {
-                          "Record": {
-                            "kind": "String"
+                          "Variant": {
+                            "cases": {
+                              "call": {
+                                "Variant": {
+                                  "cases": {
+                                    "fs.write": {
+                                      "Record": {
+                                        "args": {
+                                          "Record": {
+                                            "path": "String"
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "net.fetch": {
+                                      "Record": {
+                                        "args": {
+                                          "Record": {
+                                            "url": "String"
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "net.send": {
+                                      "Record": {
+                                        "args": {
+                                          "Record": {
+                                            "body": "String",
+                                            "url": "String"
+                                          }
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "tag": "op"
+                                }
+                              },
+                              "cancel": {
+                                "Record": {
+                                  "call": "Int"
+                                }
+                              },
+                              "halt": {
+                                "Record": {
+                                  "value": "String"
+                                }
+                              },
+                              "spawn": {
+                                "Record": {
+                                  "name": "String"
+                                }
+                              }
+                            },
+                            "tag": "kind"
                           }
                         }
                       },
@@ -477,7 +581,7 @@
                       "Record": {}
                     },
                     "init": {},
-                    "result": "Json",
+                    "result": "String",
                     "state": {
                       "Record": {}
                     },
@@ -573,8 +677,60 @@
                     "channels": {
                       "act": {
                         "type": {
-                          "Record": {
-                            "kind": "String"
+                          "Variant": {
+                            "cases": {
+                              "call": {
+                                "Variant": {
+                                  "cases": {
+                                    "fs.write": {
+                                      "Record": {
+                                        "args": {
+                                          "Record": {
+                                            "path": "String"
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "net.fetch": {
+                                      "Record": {
+                                        "args": {
+                                          "Record": {
+                                            "url": "String"
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "net.send": {
+                                      "Record": {
+                                        "args": {
+                                          "Record": {
+                                            "body": "String",
+                                            "url": "String"
+                                          }
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "tag": "op"
+                                }
+                              },
+                              "cancel": {
+                                "Record": {
+                                  "call": "Int"
+                                }
+                              },
+                              "halt": {
+                                "Record": {
+                                  "value": "String"
+                                }
+                              },
+                              "spawn": {
+                                "Record": {
+                                  "name": "String"
+                                }
+                              }
+                            },
+                            "tag": "kind"
                           }
                         }
                       },
@@ -681,7 +837,7 @@
                       "Record": {}
                     },
                     "init": {},
-                    "result": "Json",
+                    "result": "String",
                     "state": {
                       "Record": {}
                     },
@@ -777,8 +933,60 @@
                     "channels": {
                       "act": {
                         "type": {
-                          "Record": {
-                            "kind": "String"
+                          "Variant": {
+                            "cases": {
+                              "call": {
+                                "Variant": {
+                                  "cases": {
+                                    "fs.write": {
+                                      "Record": {
+                                        "args": {
+                                          "Record": {
+                                            "path": "String"
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "net.fetch": {
+                                      "Record": {
+                                        "args": {
+                                          "Record": {
+                                            "url": "String"
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "net.send": {
+                                      "Record": {
+                                        "args": {
+                                          "Record": {
+                                            "body": "String",
+                                            "url": "String"
+                                          }
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "tag": "op"
+                                }
+                              },
+                              "cancel": {
+                                "Record": {
+                                  "call": "Int"
+                                }
+                              },
+                              "halt": {
+                                "Record": {
+                                  "value": "String"
+                                }
+                              },
+                              "spawn": {
+                                "Record": {
+                                  "name": "String"
+                                }
+                              }
+                            },
+                            "tag": "kind"
                           }
                         }
                       },
@@ -871,7 +1079,7 @@
                       "Record": {}
                     },
                     "init": {},
-                    "result": "Json",
+                    "result": "String",
                     "state": {
                       "Record": {}
                     },
@@ -967,8 +1175,60 @@
                     "channels": {
                       "act": {
                         "type": {
-                          "Record": {
-                            "kind": "String"
+                          "Variant": {
+                            "cases": {
+                              "call": {
+                                "Variant": {
+                                  "cases": {
+                                    "fs.write": {
+                                      "Record": {
+                                        "args": {
+                                          "Record": {
+                                            "path": "String"
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "net.fetch": {
+                                      "Record": {
+                                        "args": {
+                                          "Record": {
+                                            "url": "String"
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "net.send": {
+                                      "Record": {
+                                        "args": {
+                                          "Record": {
+                                            "body": "String",
+                                            "url": "String"
+                                          }
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "tag": "op"
+                                }
+                              },
+                              "cancel": {
+                                "Record": {
+                                  "call": "Int"
+                                }
+                              },
+                              "halt": {
+                                "Record": {
+                                  "value": "String"
+                                }
+                              },
+                              "spawn": {
+                                "Record": {
+                                  "name": "String"
+                                }
+                              }
+                            },
+                            "tag": "kind"
                           }
                         }
                       },
@@ -1055,7 +1315,7 @@
                       "Record": {}
                     },
                     "init": {},
-                    "result": "Json",
+                    "result": "String",
                     "state": {
                       "Record": {}
                     },
@@ -1151,8 +1411,60 @@
                     "channels": {
                       "act": {
                         "type": {
-                          "Record": {
-                            "kind": "String"
+                          "Variant": {
+                            "cases": {
+                              "call": {
+                                "Variant": {
+                                  "cases": {
+                                    "fs.write": {
+                                      "Record": {
+                                        "args": {
+                                          "Record": {
+                                            "path": "String"
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "net.fetch": {
+                                      "Record": {
+                                        "args": {
+                                          "Record": {
+                                            "url": "String"
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "net.send": {
+                                      "Record": {
+                                        "args": {
+                                          "Record": {
+                                            "body": "String",
+                                            "url": "String"
+                                          }
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "tag": "op"
+                                }
+                              },
+                              "cancel": {
+                                "Record": {
+                                  "call": "Int"
+                                }
+                              },
+                              "halt": {
+                                "Record": {
+                                  "value": "String"
+                                }
+                              },
+                              "spawn": {
+                                "Record": {
+                                  "name": "String"
+                                }
+                              }
+                            },
+                            "tag": "kind"
                           }
                         }
                       },
@@ -1246,7 +1558,7 @@
             "Record": {}
           },
           "init": {},
-          "result": "Json",
+          "result": "String",
           "state": {
             "Record": {}
           },
@@ -1342,8 +1654,60 @@
           "channels": {
             "act": {
               "type": {
-                "Record": {
-                  "kind": "String"
+                "Variant": {
+                  "cases": {
+                    "call": {
+                      "Variant": {
+                        "cases": {
+                          "fs.write": {
+                            "Record": {
+                              "args": {
+                                "Record": {
+                                  "path": "String"
+                                }
+                              }
+                            }
+                          },
+                          "net.fetch": {
+                            "Record": {
+                              "args": {
+                                "Record": {
+                                  "url": "String"
+                                }
+                              }
+                            }
+                          },
+                          "net.send": {
+                            "Record": {
+                              "args": {
+                                "Record": {
+                                  "body": "String",
+                                  "url": "String"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "tag": "op"
+                      }
+                    },
+                    "cancel": {
+                      "Record": {
+                        "call": "Int"
+                      }
+                    },
+                    "halt": {
+                      "Record": {
+                        "value": "String"
+                      }
+                    },
+                    "spawn": {
+                      "Record": {
+                        "name": "String"
+                      }
+                    }
+                  },
+                  "tag": "kind"
                 }
               }
             },
@@ -1426,7 +1790,7 @@
                       "Record": {}
                     },
                     "init": {},
-                    "result": "Json",
+                    "result": "String",
                     "state": {
                       "Record": {}
                     },
@@ -1522,8 +1886,60 @@
                     "channels": {
                       "act": {
                         "type": {
-                          "Record": {
-                            "kind": "String"
+                          "Variant": {
+                            "cases": {
+                              "call": {
+                                "Variant": {
+                                  "cases": {
+                                    "fs.write": {
+                                      "Record": {
+                                        "args": {
+                                          "Record": {
+                                            "path": "String"
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "net.fetch": {
+                                      "Record": {
+                                        "args": {
+                                          "Record": {
+                                            "url": "String"
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "net.send": {
+                                      "Record": {
+                                        "args": {
+                                          "Record": {
+                                            "body": "String",
+                                            "url": "String"
+                                          }
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "tag": "op"
+                                }
+                              },
+                              "cancel": {
+                                "Record": {
+                                  "call": "Int"
+                                }
+                              },
+                              "halt": {
+                                "Record": {
+                                  "value": "String"
+                                }
+                              },
+                              "spawn": {
+                                "Record": {
+                                  "name": "String"
+                                }
+                              }
+                            },
+                            "tag": "kind"
                           }
                         }
                       },
@@ -1594,7 +2010,7 @@
                       "Record": {}
                     },
                     "init": {},
-                    "result": "Json",
+                    "result": "String",
                     "state": {
                       "Record": {}
                     },
@@ -1690,8 +2106,60 @@
                     "channels": {
                       "act": {
                         "type": {
-                          "Record": {
-                            "kind": "String"
+                          "Variant": {
+                            "cases": {
+                              "call": {
+                                "Variant": {
+                                  "cases": {
+                                    "fs.write": {
+                                      "Record": {
+                                        "args": {
+                                          "Record": {
+                                            "path": "String"
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "net.fetch": {
+                                      "Record": {
+                                        "args": {
+                                          "Record": {
+                                            "url": "String"
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "net.send": {
+                                      "Record": {
+                                        "args": {
+                                          "Record": {
+                                            "body": "String",
+                                            "url": "String"
+                                          }
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "tag": "op"
+                                }
+                              },
+                              "cancel": {
+                                "Record": {
+                                  "call": "Int"
+                                }
+                              },
+                              "halt": {
+                                "Record": {
+                                  "value": "String"
+                                }
+                              },
+                              "spawn": {
+                                "Record": {
+                                  "name": "String"
+                                }
+                              }
+                            },
+                            "tag": "kind"
                           }
                         }
                       },
@@ -1798,7 +2266,7 @@
                       "Record": {}
                     },
                     "init": {},
-                    "result": "Json",
+                    "result": "String",
                     "state": {
                       "Record": {}
                     },
@@ -1894,8 +2362,60 @@
                     "channels": {
                       "act": {
                         "type": {
-                          "Record": {
-                            "kind": "String"
+                          "Variant": {
+                            "cases": {
+                              "call": {
+                                "Variant": {
+                                  "cases": {
+                                    "fs.write": {
+                                      "Record": {
+                                        "args": {
+                                          "Record": {
+                                            "path": "String"
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "net.fetch": {
+                                      "Record": {
+                                        "args": {
+                                          "Record": {
+                                            "url": "String"
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "net.send": {
+                                      "Record": {
+                                        "args": {
+                                          "Record": {
+                                            "body": "String",
+                                            "url": "String"
+                                          }
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "tag": "op"
+                                }
+                              },
+                              "cancel": {
+                                "Record": {
+                                  "call": "Int"
+                                }
+                              },
+                              "halt": {
+                                "Record": {
+                                  "value": "String"
+                                }
+                              },
+                              "spawn": {
+                                "Record": {
+                                  "name": "String"
+                                }
+                              }
+                            },
+                            "tag": "kind"
                           }
                         }
                       },
@@ -1988,7 +2508,7 @@
                       "Record": {}
                     },
                     "init": {},
-                    "result": "Json",
+                    "result": "String",
                     "state": {
                       "Record": {}
                     },
@@ -2084,8 +2604,60 @@
                     "channels": {
                       "act": {
                         "type": {
-                          "Record": {
-                            "kind": "String"
+                          "Variant": {
+                            "cases": {
+                              "call": {
+                                "Variant": {
+                                  "cases": {
+                                    "fs.write": {
+                                      "Record": {
+                                        "args": {
+                                          "Record": {
+                                            "path": "String"
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "net.fetch": {
+                                      "Record": {
+                                        "args": {
+                                          "Record": {
+                                            "url": "String"
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "net.send": {
+                                      "Record": {
+                                        "args": {
+                                          "Record": {
+                                            "body": "String",
+                                            "url": "String"
+                                          }
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "tag": "op"
+                                }
+                              },
+                              "cancel": {
+                                "Record": {
+                                  "call": "Int"
+                                }
+                              },
+                              "halt": {
+                                "Record": {
+                                  "value": "String"
+                                }
+                              },
+                              "spawn": {
+                                "Record": {
+                                  "name": "String"
+                                }
+                              }
+                            },
+                            "tag": "kind"
                           }
                         }
                       },
@@ -2172,7 +2744,7 @@
                       "Record": {}
                     },
                     "init": {},
-                    "result": "Json",
+                    "result": "String",
                     "state": {
                       "Record": {}
                     },
@@ -2268,8 +2840,60 @@
                     "channels": {
                       "act": {
                         "type": {
-                          "Record": {
-                            "kind": "String"
+                          "Variant": {
+                            "cases": {
+                              "call": {
+                                "Variant": {
+                                  "cases": {
+                                    "fs.write": {
+                                      "Record": {
+                                        "args": {
+                                          "Record": {
+                                            "path": "String"
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "net.fetch": {
+                                      "Record": {
+                                        "args": {
+                                          "Record": {
+                                            "url": "String"
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "net.send": {
+                                      "Record": {
+                                        "args": {
+                                          "Record": {
+                                            "body": "String",
+                                            "url": "String"
+                                          }
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "tag": "op"
+                                }
+                              },
+                              "cancel": {
+                                "Record": {
+                                  "call": "Int"
+                                }
+                              },
+                              "halt": {
+                                "Record": {
+                                  "value": "String"
+                                }
+                              },
+                              "spawn": {
+                                "Record": {
+                                  "name": "String"
+                                }
+                              }
+                            },
+                            "tag": "kind"
                           }
                         }
                       },
@@ -2461,7 +3085,7 @@
           "evidence": {
             "assumptions": [
               {
-                "interface": "sha256:274ffd31ce52b0d63dd92c006422108acff2f175382d0f5d46aa5dfaba1beb21",
+                "interface": "sha256:ba56c6a5f94b9c4c68bb39e19fb117de4ff986df045c458dff7d099a590a4ce0",
                 "kind": "contracts"
               },
               {
@@ -2477,8 +3101,8 @@
               }
             ],
             "grant": "sha256:f192c92f3aeac8e9398fb4e40a7802990f13a78467067fd77e22ea4f4c634dff",
-            "harness": "sha256:8f3398ec28fae51350ab0f8a1ce9d772820ba867e494fe5fbae4f130eafd2ed6",
-            "interface": "sha256:274ffd31ce52b0d63dd92c006422108acff2f175382d0f5d46aa5dfaba1beb21",
+            "harness": "sha256:e805598bacb8275bb998f9e0f3cd7d676a4dc0f0401cfa2d8602e53837a1fc0a",
+            "interface": "sha256:ba56c6a5f94b9c4c68bb39e19fb117de4ff986df045c458dff7d099a590a4ce0",
             "method": {
               "alphabet": [
                 {
@@ -2516,7 +3140,7 @@
                           "Record": {}
                         },
                         "init": {},
-                        "result": "Json",
+                        "result": "String",
                         "state": {
                           "Record": {}
                         },
@@ -2612,8 +3236,60 @@
                         "channels": {
                           "act": {
                             "type": {
-                              "Record": {
-                                "kind": "String"
+                              "Variant": {
+                                "cases": {
+                                  "call": {
+                                    "Variant": {
+                                      "cases": {
+                                        "fs.write": {
+                                          "Record": {
+                                            "args": {
+                                              "Record": {
+                                                "path": "String"
+                                              }
+                                            }
+                                          }
+                                        },
+                                        "net.fetch": {
+                                          "Record": {
+                                            "args": {
+                                              "Record": {
+                                                "url": "String"
+                                              }
+                                            }
+                                          }
+                                        },
+                                        "net.send": {
+                                          "Record": {
+                                            "args": {
+                                              "Record": {
+                                                "body": "String",
+                                                "url": "String"
+                                              }
+                                            }
+                                          }
+                                        }
+                                      },
+                                      "tag": "op"
+                                    }
+                                  },
+                                  "cancel": {
+                                    "Record": {
+                                      "call": "Int"
+                                    }
+                                  },
+                                  "halt": {
+                                    "Record": {
+                                      "value": "String"
+                                    }
+                                  },
+                                  "spawn": {
+                                    "Record": {
+                                      "name": "String"
+                                    }
+                                  }
+                                },
+                                "tag": "kind"
                               }
                             }
                           },
@@ -2684,7 +3360,7 @@
                           "Record": {}
                         },
                         "init": {},
-                        "result": "Json",
+                        "result": "String",
                         "state": {
                           "Record": {}
                         },
@@ -2780,8 +3456,60 @@
                         "channels": {
                           "act": {
                             "type": {
-                              "Record": {
-                                "kind": "String"
+                              "Variant": {
+                                "cases": {
+                                  "call": {
+                                    "Variant": {
+                                      "cases": {
+                                        "fs.write": {
+                                          "Record": {
+                                            "args": {
+                                              "Record": {
+                                                "path": "String"
+                                              }
+                                            }
+                                          }
+                                        },
+                                        "net.fetch": {
+                                          "Record": {
+                                            "args": {
+                                              "Record": {
+                                                "url": "String"
+                                              }
+                                            }
+                                          }
+                                        },
+                                        "net.send": {
+                                          "Record": {
+                                            "args": {
+                                              "Record": {
+                                                "body": "String",
+                                                "url": "String"
+                                              }
+                                            }
+                                          }
+                                        }
+                                      },
+                                      "tag": "op"
+                                    }
+                                  },
+                                  "cancel": {
+                                    "Record": {
+                                      "call": "Int"
+                                    }
+                                  },
+                                  "halt": {
+                                    "Record": {
+                                      "value": "String"
+                                    }
+                                  },
+                                  "spawn": {
+                                    "Record": {
+                                      "name": "String"
+                                    }
+                                  }
+                                },
+                                "tag": "kind"
                               }
                             }
                           },
@@ -2888,7 +3616,7 @@
                           "Record": {}
                         },
                         "init": {},
-                        "result": "Json",
+                        "result": "String",
                         "state": {
                           "Record": {}
                         },
@@ -2984,8 +3712,60 @@
                         "channels": {
                           "act": {
                             "type": {
-                              "Record": {
-                                "kind": "String"
+                              "Variant": {
+                                "cases": {
+                                  "call": {
+                                    "Variant": {
+                                      "cases": {
+                                        "fs.write": {
+                                          "Record": {
+                                            "args": {
+                                              "Record": {
+                                                "path": "String"
+                                              }
+                                            }
+                                          }
+                                        },
+                                        "net.fetch": {
+                                          "Record": {
+                                            "args": {
+                                              "Record": {
+                                                "url": "String"
+                                              }
+                                            }
+                                          }
+                                        },
+                                        "net.send": {
+                                          "Record": {
+                                            "args": {
+                                              "Record": {
+                                                "body": "String",
+                                                "url": "String"
+                                              }
+                                            }
+                                          }
+                                        }
+                                      },
+                                      "tag": "op"
+                                    }
+                                  },
+                                  "cancel": {
+                                    "Record": {
+                                      "call": "Int"
+                                    }
+                                  },
+                                  "halt": {
+                                    "Record": {
+                                      "value": "String"
+                                    }
+                                  },
+                                  "spawn": {
+                                    "Record": {
+                                      "name": "String"
+                                    }
+                                  }
+                                },
+                                "tag": "kind"
                               }
                             }
                           },
@@ -3078,7 +3858,7 @@
                           "Record": {}
                         },
                         "init": {},
-                        "result": "Json",
+                        "result": "String",
                         "state": {
                           "Record": {}
                         },
@@ -3174,8 +3954,60 @@
                         "channels": {
                           "act": {
                             "type": {
-                              "Record": {
-                                "kind": "String"
+                              "Variant": {
+                                "cases": {
+                                  "call": {
+                                    "Variant": {
+                                      "cases": {
+                                        "fs.write": {
+                                          "Record": {
+                                            "args": {
+                                              "Record": {
+                                                "path": "String"
+                                              }
+                                            }
+                                          }
+                                        },
+                                        "net.fetch": {
+                                          "Record": {
+                                            "args": {
+                                              "Record": {
+                                                "url": "String"
+                                              }
+                                            }
+                                          }
+                                        },
+                                        "net.send": {
+                                          "Record": {
+                                            "args": {
+                                              "Record": {
+                                                "body": "String",
+                                                "url": "String"
+                                              }
+                                            }
+                                          }
+                                        }
+                                      },
+                                      "tag": "op"
+                                    }
+                                  },
+                                  "cancel": {
+                                    "Record": {
+                                      "call": "Int"
+                                    }
+                                  },
+                                  "halt": {
+                                    "Record": {
+                                      "value": "String"
+                                    }
+                                  },
+                                  "spawn": {
+                                    "Record": {
+                                      "name": "String"
+                                    }
+                                  }
+                                },
+                                "tag": "kind"
                               }
                             }
                           },
@@ -3262,7 +4094,7 @@
                           "Record": {}
                         },
                         "init": {},
-                        "result": "Json",
+                        "result": "String",
                         "state": {
                           "Record": {}
                         },
@@ -3358,8 +4190,60 @@
                         "channels": {
                           "act": {
                             "type": {
-                              "Record": {
-                                "kind": "String"
+                              "Variant": {
+                                "cases": {
+                                  "call": {
+                                    "Variant": {
+                                      "cases": {
+                                        "fs.write": {
+                                          "Record": {
+                                            "args": {
+                                              "Record": {
+                                                "path": "String"
+                                              }
+                                            }
+                                          }
+                                        },
+                                        "net.fetch": {
+                                          "Record": {
+                                            "args": {
+                                              "Record": {
+                                                "url": "String"
+                                              }
+                                            }
+                                          }
+                                        },
+                                        "net.send": {
+                                          "Record": {
+                                            "args": {
+                                              "Record": {
+                                                "body": "String",
+                                                "url": "String"
+                                              }
+                                            }
+                                          }
+                                        }
+                                      },
+                                      "tag": "op"
+                                    }
+                                  },
+                                  "cancel": {
+                                    "Record": {
+                                      "call": "Int"
+                                    }
+                                  },
+                                  "halt": {
+                                    "Record": {
+                                      "value": "String"
+                                    }
+                                  },
+                                  "spawn": {
+                                    "Record": {
+                                      "name": "String"
+                                    }
+                                  }
+                                },
+                                "tag": "kind"
                               }
                             }
                           },
@@ -3429,7 +4313,7 @@
             "property": "sha256:044e72fbb412811697057948cb8e00415bcff097b46254a1a8d0e35d21e4d958",
             "verdict": "holds"
           },
-          "key": "sha256:045240763b8b5a0e874f7d5c694e99004670a997cf865103d701a8585eb383f6",
+          "key": "sha256:88a1d246ca1c574f160feabdcd412fa786b25979205fb027ba5d46a93708db29",
           "kind": "evidence"
         }
       }
@@ -3443,7 +4327,7 @@
           "init": {
             "n": 0
           },
-          "result": "Json",
+          "result": "String",
           "state": {
             "Record": {
               "n": "Int"
@@ -3651,7 +4535,7 @@
           "init": {
             "n": 0
           },
-          "result": "Json",
+          "result": "String",
           "state": {
             "Record": {
               "n": "Int"

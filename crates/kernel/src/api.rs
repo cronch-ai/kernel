@@ -45,13 +45,8 @@ pub enum Request {
         harness: Harness,
         interface: Interface,
     },
-    /// The type of an action a harness's step may give against an interface, halting with a value of `result`:
-    /// what an action chosen at run time is tested against with `is`.
-    ActionType {
-        #[serde(default = "json_type")]
-        result: Type,
-        interface: Interface,
-    },
+    /// The type of an action a harness's step may give against an interface, halting with a value of `result`.
+    ActionType { result: Type, interface: Interface },
     /// The type of what a harness's step receives against an interface.
     InputType {
         harness: Harness,
@@ -172,10 +167,6 @@ pub enum RequestError {
     Undecodable { error: DecodeError },
     /// The request decodes, but isn't one the kernel understands. `detail` is the deserializer's explanation.
     Malformed { detail: String },
-}
-
-fn json_type() -> Type {
-    Type::Json
 }
 
 fn certificate_limit() -> usize {

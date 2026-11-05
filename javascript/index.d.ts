@@ -2,16 +2,12 @@
 
 export type Value = null | boolean | number | string | Value[] | { [field: string]: Value };
 
-/** A structural type. `Int` conforms to `Float`, wider records to narrower ones, and every type to `Json`. */
+/** A structural type. `Int` conforms to `Float`, and wider records to narrower ones. What no contract has typed is text. */
 export type Type =
   | "Int"
   | "Float"
   | "String"
   | "Bool"
-  /** Any JSON value. Every type conforms to it; what it holds is read only after `is` tests it. */
-  | "Json"
-  /** An action the harness may take against the interface it runs against, resolved where its step is checked and run. */
-  | "Action"
   | { readonly List: Type }
   | { readonly Record: Readonly<Record<string, Type>> }
   /** A record whose `tag` field names its case, and which has that case's type. */
@@ -42,14 +38,6 @@ export type Expr =
   /** The untrusted sources a value may depend on, as a sorted list. Empty: trusted. */
   | { readonly e: "label"; readonly of: Expr }
   /** `then` with `bind` holding `of` at `type` if it has that type, `else` if not. */
-  | {
-      readonly e: "is";
-      readonly of: Expr;
-      readonly type: Type;
-      readonly bind: string;
-      readonly then: Expr;
-      readonly else: Expr;
-    }
   /** The case of a variant, read off its `on` field (`kind` by default), with `bind` holding it at that case's type. */
   | {
       readonly e: "match";
@@ -84,7 +72,9 @@ export type OpTypeError =
       readonly index: number;
       readonly expected: Type;
       readonly got: Type;
-    };
+    }
+  /** An operand that had to be a list, of anything. */
+  | { readonly kind: "notAList"; readonly index: number; readonly got: Type };
 
 export type OpEvalError =
   | { readonly kind: "divisionByZero" }
@@ -95,7 +85,8 @@ export type OpEvalError =
       readonly index: number;
       readonly expected: Type;
       readonly got: Value;
-    };
+    }
+  | { readonly kind: "notAList"; readonly index: number; readonly got: Value };
 
 /** What makes an expression ill-typed (`crates/kernel/src/check.rs`). */
 export type Problem =
@@ -113,6 +104,8 @@ export type Problem =
   /** A field only some of a variant's cases have: match first. */
   | { readonly kind: "notEveryCase"; readonly at: Path; readonly field: string; readonly of: Type }
   | { readonly kind: "notAList"; readonly at: Path; readonly got: Type }
+  /** `null`, or an empty list where nothing says what it holds. */
+  | { readonly kind: "untyped"; readonly at: Path }
   | { readonly kind: "notAVariant"; readonly at: Path; readonly on: string; readonly got: Type }
   | { readonly kind: "noSuchCase"; readonly at: Path; readonly case: string }
   | { readonly kind: "notExhaustive"; readonly at: Path; readonly missing: readonly string[] };
@@ -203,7 +196,7 @@ export interface Interface {
   readonly channels?: Readonly<Record<string, Channel>>;
   /**
    * The type of the grant state its contracts read and write; installing merges each capability's part. Absent:
-   * `Json`, so contracts that read the grant must declare it.
+   * the empty record, so contracts that read the grant must declare it.
    */
   readonly grant?: Type;
 }
@@ -664,8 +657,8 @@ export interface Kernel {
   /** The harness's input is typed by `inputType`, and its actions by the interface's operations. */
   checkHarness(harness: Harness, iface: Interface): readonly HarnessProblem[];
   inputType(harness: Harness, iface: Interface): Type;
-  /** What `Action` is against an interface, halting with a value of `result` (default `Json`). */
-  actionType(iface: Interface, result?: Type): Type;
+  /** What `Action` is against an interface, halting with a value of `result`. */
+  actionType(iface: Interface, result: Type): Type;
   checkInterface(iface: Interface): readonly HarnessProblem[];
   install(
     capabilities: readonly Installation[],
