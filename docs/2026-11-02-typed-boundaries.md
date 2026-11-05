@@ -1,5 +1,7 @@
 # Typed boundaries
 
+> **Superseded on 2026-11-05.** The stack that implemented this (#35 to #41) was closed without reaching `main`, because it strayed from the north star: `Json` is still in the kernel, and v0.8.0 was never released. Datatypes now go by a table of boundaries, implementing only what T1 needs. See [Rules](2026-11-05-rules.md). Kept for reference.
+
 Agreed on 2026-11-02. This deletes `Json` and `is` from the kernel and the surface language, and replaces them with one rule:
 
 **Nothing untyped crosses into a harness.** Every value a harness, a contract or a property reads has a precise type, given by a contract or by the harness, and the interpreter checks it on delivery. What no contract has typed is text.
