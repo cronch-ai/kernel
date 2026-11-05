@@ -45,6 +45,7 @@ use crate::harness::{
 };
 use crate::ir::{Expr, Type};
 use crate::labeled::{self, EvalError, LValue, Label};
+use crate::ops::text;
 use crate::types::inhabits;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -109,14 +110,9 @@ pub struct Run {
 pub struct Child {
     /// The identifier of the spawn that started it, which is also its name in delivery paths.
     pub call: u64,
-    /// The operation its result arrives on: `spawn.<name>` for a declared child, `spawn` otherwise.
-    #[serde(default = "spawn_op_undeclared")]
+    /// The operation its result arrives on: `spawn.<name>`, for the declared child it is.
     pub op: String,
     pub run: Run,
-}
-
-fn spawn_op_undeclared() -> String {
-    "spawn".to_string()
 }
 
 /// How many inputs the interpreter may deliver to itself in response to one delivery. A tree of runs that keeps
@@ -366,6 +362,11 @@ impl System {
         if !problems.is_empty() {
             return Err(InitError::Interface { problems });
         }
+        // No grant given: the empty one, which is all an interface whose capabilities declare no part of it has.
+        let grant = match grant {
+            Value::Null => json!({}),
+            given => given,
+        };
         if !inhabits(&grant, &interface.grant) {
             return Err(InitError::Grant {
                 expected: interface.grant.clone(),
@@ -447,7 +448,7 @@ fn input_value(input: &WorldInput, op: &str) -> Value {
         }
         WorldInput::End { call } => json!({ "kind": "end", "call": call, "op": op }),
         WorldInput::Failed { call, error } => {
-            json!({ "kind": "failed", "call": call, "op": op, "error": { "kind": "world", "detail": error } })
+            json!({ "kind": "failed", "call": call, "op": op, "error": { "kind": "world", "detail": text(error) } })
         }
         WorldInput::Msg { channel, value } => {
             json!({ "kind": "msg", "channel": channel, "value": value })
@@ -538,7 +539,7 @@ impl Run {
                     label,
                 },
                 Some(Outcome::Failed { error }) => Inbound {
-                    input: json!({ "kind": "failed", "call": c.call, "op": c.op, "error": { "kind": "child", "error": error } }),
+                    input: json!({ "kind": "failed", "call": c.call, "op": c.op, "error": { "kind": "child", "error": text(&json!(error)) } }),
                     label: c.run.seen,
                 },
                 None => unreachable!("partitioned on outcome"),
@@ -686,11 +687,9 @@ impl Run {
     /// with that child's signature, with an argument the signature takes.
     fn child(&self, action: &Value, arg: &LValue) -> Option<Run> {
         let harness: Harness = serde_json::from_value(action.get("harness")?.clone()).ok()?;
-        if let Some(name) = action.get("name") {
-            let signature = self.harness.spawns.get(name.as_str()?)?;
-            if !signature.admits(&harness) || !inhabits(&arg.value(), &signature.arg) {
-                return None;
-            }
+        let signature = self.harness.spawns.get(action.get("name")?.as_str()?)?;
+        if !signature.admits(&harness) || !inhabits(&arg.value(), &signature.arg) {
+            return None;
         }
         let narrowings: Vec<Narrowing> = match action.get("narrow") {
             None => Vec::new(),
@@ -811,16 +810,13 @@ impl Run {
                         });
                     }
                 }
-                Some("spawn") => {
+                Some("spawn") if value["name"].is_string() => {
                     let k = self.next;
                     self.next += 1;
                     let arg = action
                         .field("arg")
                         .unwrap_or_else(|| LValue::new(&Value::Null, action.top()));
-                    let op = match value["name"].as_str() {
-                        Some(name) => spawn_op(name),
-                        None => spawn_op_undeclared(),
-                    };
+                    let op = spawn_op(value["name"].as_str().unwrap_or_default());
                     match self.child(&value, &arg) {
                         Some(mut run) => {
                             events.push(out(Some(k), true, false, None));

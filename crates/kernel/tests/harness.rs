@@ -16,7 +16,7 @@ fn double_harness() -> Value {
         op("add", vec![path("state", &["calls"]), lit(json!(1))]),
     )]);
     json!({
-        "arg": "Int",
+        "result": "Json", "arg": "Int",
         "state": { "Record": { "calls": "Int" } },
         "init": { "calls": 0 },
         "step": on(
@@ -183,7 +183,7 @@ fn both_harness() -> Value {
         )
     };
     json!({
-        "arg": { "Record": {} },
+        "result": "Json", "arg": { "Record": {} },
         "state": { "Record": { "got": { "List": "Int" } } },
         "init": { "got": [] },
         "step": on(
@@ -225,7 +225,7 @@ fn streams_deliver_items_then_end_and_cancellation_is_a_request() {
         vec![path("state", &["text"]), path("input", &["value"])],
     );
     let harness = json!({
-        "arg": { "Record": {} },
+        "result": "Json", "arg": { "Record": {} },
         "state": { "Record": { "text": "String" } },
         "init": { "text": "" },
         "step": on(
@@ -270,7 +270,7 @@ fn streams_deliver_items_then_end_and_cancellation_is_a_request() {
 #[test]
 fn a_step_that_fails_ends_the_run() {
     let harness = json!({
-        "arg": "Int",
+        "result": "Json", "arg": "Int",
         "state": "Int",
         "init": 0,
         "step": on(
@@ -320,7 +320,7 @@ fn reacts_to_fetch() -> Value {
     );
     let decided = step(var("state"), vec![fixed, chosen]);
     json!({
-        "arg": { "Record": {} }, "state": { "Record": {} }, "init": {},
+        "result": "Json", "arg": { "Record": {} }, "state": { "Record": {} }, "init": {},
         "step": on(
             vec![
                 ("start", step(var("state"), vec![call_action("net.fetch", rec(vec![("url", lit(json!("https://example.com/page")))]))])),
@@ -361,13 +361,13 @@ fn a_failure_says_whose_it_is() {
         json!({ "kind": "world", "detail": "down" })
     );
 
-    // What the world said is Json, so an obligation can read every failure.
+    // No contract types what the world or a failed child says, so it arrives as text.
     let ty = call(
         json!({ "op": "inputType", "harness": double_harness(), "interface": doubling() }),
     )["type"]
         .clone();
     let cases = &ty["Variant"]["cases"]["failed"]["Record"]["error"]["Variant"]["cases"];
     assert_eq!(cases["cancelled"], json!({ "Record": {} }));
-    assert_eq!(cases["world"], json!({ "Record": { "detail": "Json" } }));
-    assert_eq!(cases["child"], json!({ "Record": { "error": "Json" } }));
+    assert_eq!(cases["world"], json!({ "Record": { "detail": "String" } }));
+    assert_eq!(cases["child"], json!({ "Record": { "error": "String" } }));
 }

@@ -1,5 +1,6 @@
 {
   "arg": "String",
+  "result": "Json",
   "state": {
     "Record": {
       "draft": "String"

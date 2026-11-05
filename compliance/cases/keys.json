@@ -9,6 +9,7 @@
             "Record": {}
           },
           "init": {},
+          "result": "Json",
           "state": {
             "Record": {}
           },
@@ -105,7 +106,7 @@
       "response": {
         "ok": true,
         "result": {
-          "key": "sha256:f9f4dd06b601a52ea910a47b045f9a20a280fb523843743b1f67df9eafc03c0c"
+          "key": "sha256:8f3398ec28fae51350ab0f8a1ce9d772820ba867e494fe5fbae4f130eafd2ed6"
         }
       }
     },

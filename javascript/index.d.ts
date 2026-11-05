@@ -151,10 +151,10 @@ export type LValue =
 /** `⟨A, S, s₀, δ⟩`. `step` is over `state` and `input`, and gives `{ state, actions }`. */
 export interface Harness {
   readonly arg: Type;
-  /** What a run halts with; a halt outside it fails the step. Absent: `Json`. */
-  readonly result?: Type;
+  /** What a run halts with; a halt outside it fails the step. */
+  readonly result: Type;
   /**
-   * The children it may spawn, by name. A `spawn` action with `name` starts only a harness with that signature,
+   * The children it may spawn, by name. A `spawn` action names one, and starts only a harness with that signature,
    * and its result arrives as `ret` on the operation `spawn.<name>`.
    */
   readonly spawns?: Readonly<Record<string, Signature>>;
@@ -338,8 +338,8 @@ export type WorldInput =
 /** Why a call or a child failed, as `δ` receives it. */
 export type CallError =
   | { readonly kind: "cancelled" }
-  | { readonly kind: "child"; readonly error: StepError }
-  | { readonly kind: "world"; readonly detail: Value };
+  | { readonly kind: "child"; readonly error: string }
+  | { readonly kind: "world"; readonly detail: string };
 
 /** An input from the world, to the run at `to` (a path of spawn identifiers; `[]` is the root). */
 export interface Delivery {

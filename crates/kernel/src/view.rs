@@ -13,6 +13,10 @@
 //!
 //! An event of a child run has no `state`: a child's state is its own, and `state` is always the root's.
 //!
+//! What no contract has typed for the root is text, as `str` writes it, and its labels a list of sources: the values
+//! that cross between runs (a start value, a halt value, a spawn's harness, argument and narrowings), a withheld
+//! delivery's value and why it was withheld, and a step error's details.
+//!
 //! Properties are checked against `event_type`, a record of every field some event has, at the type every event that
 //! has it gives it. A property may read a field the event at hand doesn't have (that atom is then false), but not one
 //! no event has, and not at a type no event gives it.
@@ -20,6 +24,7 @@
 use crate::check::infer;
 use crate::harness::{Harness, Interface, input_type};
 use crate::ir::Type;
+use crate::ops::text;
 use crate::run::Event;
 use serde_json::{Map, Value, json};
 use std::collections::BTreeMap;
@@ -35,9 +40,13 @@ pub fn view(event: &Event) -> Value {
             label,
             state,
         } => {
+            let mut input = input.clone();
+            if input["kind"] == "start" {
+                as_text(&mut input, &["value"]);
+            }
             fields.insert("kind".into(), json!("in"));
             fields.insert("origin".into(), json!(origin));
-            fields.insert("input".into(), input.clone());
+            fields.insert("input".into(), input);
             fields.insert("label".into(), json!(label));
             if root(origin) {
                 fields.insert("state".into(), state.clone());
@@ -54,6 +63,14 @@ pub fn view(event: &Event) -> Value {
             state,
         } => {
             let mut action = action.clone();
+            let mut labels = labels.clone();
+            let crossing: &[&str] = match action["kind"].as_str() {
+                Some("halt") => &["value"],
+                Some("spawn") => &["harness", "arg", "narrow"],
+                _ => &[],
+            };
+            as_text(&mut action, crossing);
+            flatten(&mut labels, crossing);
             if let Value::Object(a) = &mut action {
                 if let Some(k) = call {
                     a.insert("call".into(), json!(k));
@@ -69,14 +86,61 @@ pub fn view(event: &Event) -> Value {
             if *performed {
                 fields.insert("effect".into(), json!(effect));
             }
-            fields.insert("labels".into(), labels.clone());
+            fields.insert("labels".into(), labels);
             if root(origin) {
                 fields.insert("state".into(), state.clone());
             }
         }
-        recorded => return serde_json::to_value(recorded).unwrap_or(Value::Null),
+        Event::Withheld { .. } => {
+            let mut recorded = serde_json::to_value(event).unwrap_or(Value::Null);
+            as_text(&mut recorded["input"], &["value", "error"]);
+            as_text(&mut recorded["reason"], &["expected", "got"]);
+            return recorded;
+        }
+        Event::Failed { .. } => {
+            let mut recorded = serde_json::to_value(event).unwrap_or(Value::Null);
+            as_text(
+                &mut recorded["error"],
+                &["error", "got", "action", "expected"],
+            );
+            return recorded;
+        }
     }
     Value::Object(fields)
+}
+
+/// These fields of a record, where it has them, as text.
+fn as_text(record: &mut Value, names: &[&str]) {
+    if let Value::Object(fields) = record {
+        for name in names {
+            if let Some(v) = fields.get_mut(*name) {
+                *v = Value::String(text(v));
+            }
+        }
+    }
+}
+
+/// These fields of a value's labels, where it has them, as one list of every source under them: the labels of text.
+fn flatten(labels: &mut Value, names: &[&str]) {
+    fn sources(v: &Value, out: &mut Vec<String>) {
+        match v {
+            Value::String(s) => out.push(s.clone()),
+            Value::Array(items) => items.iter().for_each(|i| sources(i, out)),
+            Value::Object(fields) => fields.values().for_each(|f| sources(f, out)),
+            _ => {}
+        }
+    }
+    if let Value::Object(fields) = labels {
+        for name in names {
+            if let Some(v) = fields.get_mut(*name) {
+                let mut out = Vec::new();
+                sources(v, &mut out);
+                out.sort();
+                out.dedup();
+                *v = json!(out);
+            }
+        }
+    }
 }
 
 /// What a property may read of `event` in a run of this harness against this interface.
@@ -104,12 +168,12 @@ fn list(t: Type) -> Type {
     Type::List(Box::new(t))
 }
 
-/// The events as a variant over `kind`. A child's start value and result are its own, so they are `Json` here.
+/// The events as a variant over `kind`. What no contract has typed for the root is text.
 fn exact(harness: &Harness, interface: &Interface) -> Type {
     let origin = || list(Type::Int);
     let sources = || list(Type::String);
     let mut started = harness.clone();
-    started.arg = Type::Json;
+    started.arg = Type::String;
     let input = input_type(&started, interface);
     let calls = interface
         .operations
@@ -130,9 +194,9 @@ fn exact(harness: &Harness, interface: &Interface) -> Type {
     let spawn = record(vec![
         ("call", Type::Int),
         ("name", Type::String),
-        ("harness", Type::Json),
-        ("arg", Type::Json),
-        ("narrow", Type::Json),
+        ("harness", Type::String),
+        ("arg", Type::String),
+        ("narrow", Type::String),
     ]);
     let cancel = record(vec![("call", Type::Int)]);
     let performed = variant(
@@ -141,7 +205,7 @@ fn exact(harness: &Harness, interface: &Interface) -> Type {
             ("call", calls.clone()),
             ("spawn", spawn.clone()),
             ("cancel", cancel.clone()),
-            ("halt", record(vec![("value", Type::Json)])),
+            ("halt", record(vec![("value", Type::String)])),
         ],
     );
     let labels = labels_of(&readable(&performed));
@@ -154,20 +218,20 @@ fn exact(harness: &Harness, interface: &Interface) -> Type {
         vec![
             (
                 "start",
-                record(vec![("value", Type::Json), ("label", sources())]),
+                record(vec![("value", Type::String), ("label", sources())]),
             ),
             (
                 "ret",
-                record(vec![("call", Type::Int), ("value", Type::Json)]),
+                record(vec![("call", Type::Int), ("value", Type::String)]),
             ),
             ("end", record(vec![("call", Type::Int)])),
             (
                 "failed",
-                record(vec![("call", Type::Int), ("error", Type::Json)]),
+                record(vec![("call", Type::Int), ("error", Type::String)]),
             ),
             (
                 "msg",
-                record(vec![("channel", Type::String), ("value", Type::Json)]),
+                record(vec![("channel", Type::String), ("value", Type::String)]),
             ),
         ],
     );
@@ -183,7 +247,7 @@ fn exact(harness: &Harness, interface: &Interface) -> Type {
             ("noSuchChannel", record(vec![("channel", Type::String)])),
             (
                 "mismatch",
-                record(vec![("expected", Type::Json), ("got", Type::Json)]),
+                record(vec![("expected", Type::String), ("got", Type::String)]),
             ),
             ("postcondition", record(vec![("call", Type::Int)])),
             ("invariant", record(vec![("channel", Type::String)])),
@@ -193,13 +257,13 @@ fn exact(harness: &Harness, interface: &Interface) -> Type {
     let step_error = variant(
         "kind",
         vec![
-            ("eval", record(vec![("error", Type::Json)])),
-            ("notAStep", record(vec![("got", Type::Json)])),
-            ("badAction", record(vec![("action", Type::Json)])),
+            ("eval", record(vec![("error", Type::String)])),
+            ("notAStep", record(vec![("got", Type::String)])),
+            ("badAction", record(vec![("action", Type::String)])),
             ("runaway", record(vec![])),
             (
                 "result",
-                record(vec![("expected", Type::Json), ("got", Type::Json)]),
+                record(vec![("expected", Type::String), ("got", Type::String)]),
             ),
         ],
     );

@@ -9,6 +9,7 @@
             "Record": {}
           },
           "init": {},
+          "result": "Json",
           "state": {
             "Record": {}
           },
@@ -207,12 +208,13 @@
           "kind": "ready",
           "system": {
             "root": {
-              "grant": null,
+              "grant": {},
               "harness": {
                 "arg": {
                   "Record": {}
                 },
                 "init": {},
+                "result": "Json",
                 "state": {
                   "Record": {}
                 },
@@ -428,12 +430,13 @@
         "op": "deliver",
         "system": {
           "root": {
-            "grant": null,
+            "grant": {},
             "harness": {
               "arg": {
                 "Record": {}
               },
               "init": {},
+              "result": "Json",
               "state": {
                 "Record": {}
               },
@@ -673,12 +676,13 @@
           ],
           "system": {
             "root": {
-              "grant": null,
+              "grant": {},
               "harness": {
                 "arg": {
                   "Record": {}
                 },
                 "init": {},
+                "result": "Json",
                 "state": {
                   "Record": {}
                 },
@@ -911,12 +915,13 @@
         "op": "deliver",
         "system": {
           "root": {
-            "grant": null,
+            "grant": {},
             "harness": {
               "arg": {
                 "Record": {}
               },
               "init": {},
+              "result": "Json",
               "state": {
                 "Record": {}
               },
@@ -1155,12 +1160,13 @@
           ],
           "system": {
             "root": {
-              "grant": null,
+              "grant": {},
               "harness": {
                 "arg": {
                   "Record": {}
                 },
                 "init": {},
+                "result": "Json",
                 "state": {
                   "Record": {}
                 },
@@ -1393,12 +1399,13 @@
         "op": "deliver",
         "system": {
           "root": {
-            "grant": null,
+            "grant": {},
             "harness": {
               "arg": {
                 "Record": {}
               },
               "init": {},
+              "result": "Json",
               "state": {
                 "Record": {}
               },
@@ -1638,12 +1645,13 @@
           ],
           "system": {
             "root": {
-              "grant": null,
+              "grant": {},
               "harness": {
                 "arg": {
                   "Record": {}
                 },
                 "init": {},
+                "result": "Json",
                 "state": {
                   "Record": {}
                 },
@@ -1876,12 +1884,13 @@
         "op": "deliver",
         "system": {
           "root": {
-            "grant": null,
+            "grant": {},
             "harness": {
               "arg": {
                 "Record": {}
               },
               "init": {},
+              "result": "Json",
               "state": {
                 "Record": {}
               },
@@ -2143,12 +2152,13 @@
           ],
           "system": {
             "root": {
-              "grant": null,
+              "grant": {},
               "harness": {
                 "arg": {
                   "Record": {}
                 },
                 "init": {},
+                "result": "Json",
                 "state": {
                   "Record": {}
                 },
@@ -2384,6 +2394,7 @@
             "Record": {}
           },
           "init": {},
+          "result": "Json",
           "state": {
             "Record": {}
           },
@@ -2586,12 +2597,13 @@
           "kind": "ready",
           "system": {
             "root": {
-              "grant": null,
+              "grant": {},
               "harness": {
                 "arg": {
                   "Record": {}
                 },
                 "init": {},
+                "result": "Json",
                 "state": {
                   "Record": {}
                 },
@@ -2811,12 +2823,13 @@
         "op": "deliver",
         "system": {
           "root": {
-            "grant": null,
+            "grant": {},
             "harness": {
               "arg": {
                 "Record": {}
               },
               "init": {},
+              "result": "Json",
               "state": {
                 "Record": {}
               },
@@ -3070,12 +3083,13 @@
           ],
           "system": {
             "root": {
-              "grant": null,
+              "grant": {},
               "harness": {
                 "arg": {
                   "Record": {}
                 },
                 "init": {},
+                "result": "Json",
                 "state": {
                   "Record": {}
                 },
@@ -3291,6 +3305,7 @@
             "Record": {}
           },
           "init": {},
+          "result": "Json",
           "state": {
             "Record": {}
           },

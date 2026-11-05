@@ -174,7 +174,7 @@ fn an_update_has_the_interface_s_grant_type() {
 
 #[test]
 fn what_the_world_says_of_a_failure_is_not_checked() {
-    // The one row where the world picks the shape. It reaches a step as `Json` today, and is to reach it as text.
+    // The one row where the world picks the shape, so whatever it says reaches a step as text.
     let (system, _) = deliver_all(started(), vec![chosen("fetch", json!({ "url": "x" }))]);
     let failure = json!({ "input": { "kind": "failed", "call": 0, "error": { "kind": "world", "detail": { "any": [1, "shape"] } } } });
     let (_, events) = deliver_all(system, vec![failure]);

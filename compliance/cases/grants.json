@@ -12,6 +12,18 @@
             "Record": {}
           },
           "init": {},
+          "result": "Json",
+          "spawns": {
+            "worker": {
+              "arg": {
+                "Record": {
+                  "args": "Json",
+                  "op": "String"
+                }
+              },
+              "result": "Json"
+            }
+          },
           "state": {
             "Record": {}
           },
@@ -439,6 +451,18 @@
                   "Record": {}
                 },
                 "init": {},
+                "result": "Json",
+                "spawns": {
+                  "worker": {
+                    "arg": {
+                      "Record": {
+                        "args": "Json",
+                        "op": "String"
+                      }
+                    },
+                    "result": "Json"
+                  }
+                },
                 "state": {
                   "Record": {}
                 },
@@ -883,6 +907,18 @@
                 "Record": {}
               },
               "init": {},
+              "result": "Json",
+              "spawns": {
+                "worker": {
+                  "arg": {
+                    "Record": {
+                      "args": "Json",
+                      "op": "String"
+                    }
+                  },
+                  "result": "Json"
+                }
+              },
               "state": {
                 "Record": {}
               },
@@ -1330,6 +1366,18 @@
                   "Record": {}
                 },
                 "init": {},
+                "result": "Json",
+                "spawns": {
+                  "worker": {
+                    "arg": {
+                      "Record": {
+                        "args": "Json",
+                        "op": "String"
+                      }
+                    },
+                    "result": "Json"
+                  }
+                },
                 "state": {
                   "Record": {}
                 },
@@ -1781,6 +1829,18 @@
                 "Record": {}
               },
               "init": {},
+              "result": "Json",
+              "spawns": {
+                "worker": {
+                  "arg": {
+                    "Record": {
+                      "args": "Json",
+                      "op": "String"
+                    }
+                  },
+                  "result": "Json"
+                }
+              },
               "state": {
                 "Record": {}
               },
@@ -2266,6 +2326,18 @@
                   "Record": {}
                 },
                 "init": {},
+                "result": "Json",
+                "spawns": {
+                  "worker": {
+                    "arg": {
+                      "Record": {
+                        "args": "Json",
+                        "op": "String"
+                      }
+                    },
+                    "result": "Json"
+                  }
+                },
                 "state": {
                   "Record": {}
                 },
@@ -2711,6 +2783,7 @@
                   }
                 },
                 "init": {},
+                "result": "Json",
                 "state": {
                   "Record": {}
                 },
@@ -2893,6 +2966,7 @@
                 }
               },
               "kind": "spawn",
+              "name": "worker",
               "narrow": [
                 {
                   "kind": "only",
@@ -2914,6 +2988,18 @@
                 "Record": {}
               },
               "init": {},
+              "result": "Json",
+              "spawns": {
+                "worker": {
+                  "arg": {
+                    "Record": {
+                      "args": "Json",
+                      "op": "String"
+                    }
+                  },
+                  "result": "Json"
+                }
+              },
               "state": {
                 "Record": {}
               },
@@ -3359,6 +3445,7 @@
                       }
                     },
                     "init": {},
+                    "result": "Json",
                     "state": {
                       "Record": {}
                     },
@@ -3541,6 +3628,7 @@
                     }
                   },
                   "kind": "spawn",
+                  "name": "worker",
                   "narrow": [
                     {
                       "kind": "only",
@@ -3569,6 +3657,7 @@
                     }
                   },
                   "init": {},
+                  "result": "Json",
                   "state": {
                     "Record": {}
                   },
@@ -3751,6 +3840,7 @@
                   }
                 },
                 "kind": "spawn",
+                "name": "worker",
                 "narrow": [
                   {
                     "kind": "only",
@@ -3775,6 +3865,7 @@
                     }
                   },
                   "init": {},
+                  "result": [],
                   "state": {
                     "Record": {}
                   },
@@ -3957,6 +4048,7 @@
                   }
                 },
                 "kind": [],
+                "name": [],
                 "narrow": [
                   {
                     "kind": [],
@@ -4009,7 +4101,7 @@
               "children": [
                 {
                   "call": 1,
-                  "op": "spawn",
+                  "op": "spawn.worker",
                   "run": {
                     "grant": {
                       "allow": [],
@@ -4023,6 +4115,7 @@
                         }
                       },
                       "init": {},
+                      "result": "Json",
                       "state": {
                         "Record": {}
                       },
@@ -4401,6 +4494,18 @@
                   "Record": {}
                 },
                 "init": {},
+                "result": "Json",
+                "spawns": {
+                  "worker": {
+                    "arg": {
+                      "Record": {
+                        "args": "Json",
+                        "op": "String"
+                      }
+                    },
+                    "result": "Json"
+                  }
+                },
                 "state": {
                   "Record": {}
                 },
@@ -4841,7 +4946,7 @@
             "children": [
               {
                 "call": 1,
-                "op": "spawn",
+                "op": "spawn.worker",
                 "run": {
                   "grant": {
                     "allow": [],
@@ -4855,6 +4960,7 @@
                       }
                     },
                     "init": {},
+                    "result": "Json",
                     "state": {
                       "Record": {}
                     },
@@ -5233,6 +5339,18 @@
                 "Record": {}
               },
               "init": {},
+              "result": "Json",
+              "spawns": {
+                "worker": {
+                  "arg": {
+                    "Record": {
+                      "args": "Json",
+                      "op": "String"
+                    }
+                  },
+                  "result": "Json"
+                }
+              },
               "state": {
                 "Record": {}
               },
@@ -5688,7 +5806,7 @@
               "input": {
                 "call": 1,
                 "kind": "ret",
-                "op": "spawn",
+                "op": "spawn.worker",
                 "value": "always"
               },
               "kind": "in",
@@ -5707,6 +5825,18 @@
                   "Record": {}
                 },
                 "init": {},
+                "result": "Json",
+                "spawns": {
+                  "worker": {
+                    "arg": {
+                      "Record": {
+                        "args": "Json",
+                        "op": "String"
+                      }
+                    },
+                    "result": "Json"
+                  }
+                },
                 "state": {
                   "Record": {}
                 },
@@ -6158,6 +6288,18 @@
                 "Record": {}
               },
               "init": {},
+              "result": "Json",
+              "spawns": {
+                "worker": {
+                  "arg": {
+                    "Record": {
+                      "args": "Json",
+                      "op": "String"
+                    }
+                  },
+                  "result": "Json"
+                }
+              },
               "state": {
                 "Record": {}
               },
@@ -6634,6 +6776,18 @@
                   "Record": {}
                 },
                 "init": {},
+                "result": "Json",
+                "spawns": {
+                  "worker": {
+                    "arg": {
+                      "Record": {
+                        "args": "Json",
+                        "op": "String"
+                      }
+                    },
+                    "result": "Json"
+                  }
+                },
                 "state": {
                   "Record": {}
                 },
