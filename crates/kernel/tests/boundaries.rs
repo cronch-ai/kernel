@@ -87,8 +87,8 @@ fn a_start_value_has_the_harness_s_argument_type() {
 
 #[test]
 fn a_chosen_call_has_the_operation_s_input_type_whatever_the_harness_held() {
-    // The harness read these as `Json`. To act on one it must narrow it to `Action`, whose cases are this interface's
-    // operations and their input types, so none of these becomes a call that happens.
+    // Today a harness can read these as `Json`, which goes: see `chosen_call.rs`. Until then it must narrow one to
+    // `Action`, whose cases are this interface's operations and their input types, so none of these happens.
     let (system, events) = deliver_all(started(), vec![chosen("fetch", json!({ "url": 1 }))]);
     assert!(!performed(&events), "{events:?}");
     let (system, events) = deliver_all(system, vec![chosen("fetch", json!({}))]);
@@ -174,7 +174,7 @@ fn an_update_has_the_interface_s_grant_type() {
 
 #[test]
 fn what_the_world_says_of_a_failure_is_not_checked() {
-    // The one row where the world picks the shape. It reaches a step as `Json`, which a step reads with `is`.
+    // The one row where the world picks the shape. It reaches a step as `Json` today, and is to reach it as text.
     let (system, _) = deliver_all(started(), vec![chosen("fetch", json!({ "url": "x" }))]);
     let failure = json!({ "input": { "kind": "failed", "call": 0, "error": { "kind": "world", "detail": { "any": [1, "shape"] } } } });
     let (_, events) = deliver_all(system, vec![failure]);
