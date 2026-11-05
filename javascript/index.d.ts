@@ -779,6 +779,18 @@ export interface Kernel {
   ):
     | { readonly kind: "exported"; readonly text: string }
     | { readonly kind: "refused"; readonly error: SmtlibRefusal };
+  ruleObligations(input: {
+    readonly interface: Interface;
+    readonly rule: Rule;
+    readonly grant: Value;
+    readonly floats?: Floats;
+  }):
+    | {
+        readonly kind: "obligations";
+        readonly obligations: readonly { readonly name: string; readonly text: string }[];
+        readonly framed: readonly string[];
+      }
+    | { readonly kind: "refused"; readonly error: RuleError };
   readValues(
     reply: string,
     types: readonly Type[],
@@ -786,6 +798,21 @@ export interface Kernel {
     | { readonly kind: "values"; readonly values: readonly Value[] }
     | { readonly kind: "unreadable"; readonly error: Unreadable };
 }
+
+/** `op` can't happen until an approval has been given (`crates/kernel/src/rules.rs`). */
+export interface Rule {
+  readonly op: string;
+  /** Each `when` reads `args` (the call's), `approval` (this operation's arguments) and `result`. */
+  readonly approvedBy?: readonly { readonly op: string; readonly when: Expr }[];
+}
+
+export type RuleError =
+  | { readonly kind: "interface"; readonly problems: readonly unknown[] }
+  | { readonly kind: "noSuchOperation"; readonly name: string }
+  | { readonly kind: "grantNotARecord" }
+  | { readonly kind: "grant" }
+  | { readonly kind: "unreadable"; readonly update: string }
+  | { readonly kind: "refused"; readonly place: string; readonly refusal: SmtlibRefusal };
 
 /** Instantiate the kernel from its bytes, or from a compiled module where bytes can't be compiled (a Worker). */
 export function instantiate(source: BufferSource | WebAssembly.Module): Promise<Kernel>;

@@ -9,6 +9,7 @@
     "build": "./scripts/build-wasm.sh",
     "format": "biome check --write .",
     "lint": "biome ci .",
+    "test:proofs": "node --test \"proofs/*.test.mjs\"",
     "prepare": "simple-git-hooks",
     "clean": "cargo clean && rm -f javascript/kernel.wasm javascript/kernel.sha256",
     "clean:all": "npm run clean && rm -rf node_modules"

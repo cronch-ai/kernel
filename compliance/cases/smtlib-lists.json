@@ -117,7 +117,7 @@
         "ok": true,
         "result": {
           "kind": "exported",
-          "text": "; Exported from Cronch. Each definition's identity is the content key of its deterministic CBOR, not this text.\n(set-logic ALL)\n\n; Records and variants.\n; {a: Int}\n(declare-datatype |record:2b7534d1| ((|record:2b7534d1| (|record:2b7534d1.a| Int))))\n; The JSON text of a {a: Int}, unconstrained: what a solver finds with it, the kernel re-checks.\n(declare-fun |fn:text.17037da4| (|record:2b7534d1|) String)\n\n; Definitions.\n(define-fun |def:text| ((|v:r| |record:2b7534d1|)) String (|fn:text.17037da4| |v:r|))\n"
+          "text": "; Exported from Cronch. Each definition's identity is the content key of its deterministic CBOR, not this text.\n(set-logic ALL)\n\n; Records and variants.\n; {a: Int}\n(declare-datatype |record:2b7534d1| ((|record:2b7534d1#make| (|record:2b7534d1.a| Int))))\n; The JSON text of a {a: Int}, unconstrained: what a solver finds with it, the kernel re-checks.\n(declare-fun |fn:text.17037da4| (|record:2b7534d1|) String)\n\n; Definitions.\n(define-fun |def:text| ((|v:r| |record:2b7534d1|)) String (|fn:text.17037da4| |v:r|))\n"
         }
       }
     }

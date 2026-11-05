@@ -147,9 +147,11 @@ impl Display for Term {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Command {
     SetLogic(&'static str),
-    /// A record: one constructor, named as its sort, with a selector per field.
+    /// A record: one constructor, with a selector per field. Its name is apart from the sort's: SMT-LIB keeps sorts
+    /// and terms in separate namespaces, and some proof checkers don't.
     DeclareDatatype {
         name: Term,
+        constructor: Term,
         selectors: Vec<(Term, Term)>,
     },
     /// A variant: one constructor per case, each with its selectors.
@@ -204,9 +206,13 @@ impl Display for Command {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Command::SetLogic(logic) => write!(f, "(set-logic {logic})"),
-            Command::DeclareDatatype { name, selectors } => {
+            Command::DeclareDatatype {
+                name,
+                constructor,
+                selectors,
+            } => {
                 let constructor = Term::List(
-                    std::iter::once(name.clone())
+                    std::iter::once(constructor.clone())
                         .chain(pairs(selectors).items())
                         .collect(),
                 );

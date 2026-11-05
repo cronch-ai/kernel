@@ -157,3 +157,6 @@ target/
 *.pdb
 
 # End of https://www.toptal.com/developers/gitignore/api/rust,node
+
+# scripts/install-proof-tools.sh
+.proof-tools/

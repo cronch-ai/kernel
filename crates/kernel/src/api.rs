@@ -12,6 +12,7 @@ use crate::ir::{Expr, Type};
 use crate::key::{Kind, key};
 use crate::labeled::{self, LValue};
 use crate::property::{MonitorState, Property, check_property, monitor, monitor_step};
+use crate::rules::{Rule, obligations};
 use crate::run::{Delivery, Event, System};
 use crate::smtlib::{self, Definition, Floats};
 use crate::view::{event_type, view};
@@ -149,6 +150,14 @@ pub enum Request {
     /// Definitions as an SMT-LIB 2 script, or why they have no faithful reading.
     Smtlib {
         definitions: Vec<Definition>,
+        #[serde(default)]
+        floats: Floats,
+    },
+    /// The queries whose `unsat` shows a rule, for a proof to be checked against, and the updates it needs nothing from.
+    RuleObligations {
+        interface: Interface,
+        rule: Rule,
+        grant: Value,
         #[serde(default)]
         floats: Floats,
     },
@@ -322,6 +331,19 @@ fn respond(request: Request) -> Value {
             definitions,
             floats,
         } => refused_or("exported", "text", smtlib::export(&definitions, floats)),
+        Request::RuleObligations {
+            interface,
+            rule,
+            grant,
+            floats,
+        } => match obligations(&interface, &rule, &grant, floats) {
+            Ok(out) => json!({
+                "kind": "obligations",
+                "obligations": out.obligations,
+                "framed": out.framed,
+            }),
+            Err(error) => json!({ "kind": "refused", "error": error }),
+        },
         Request::ReadValues { reply, types } => {
             match smtlib::values::read(&reply, &types.iter().collect::<Vec<_>>()) {
                 Ok(values) => json!({ "kind": "values", "values": values }),
