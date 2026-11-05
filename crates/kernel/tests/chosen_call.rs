@@ -299,3 +299,52 @@ fn a_child_that_calls_what_its_narrowing_took_away_can_t_start() {
         "{sys}"
     );
 }
+
+#[test]
+fn a_withheld_choice_changes_nothing_and_a_failure_still_ends_the_call() {
+    let failure =
+        || json!({ "input": { "kind": "failed", "call": 0, "error": "no answer that fits" } });
+    let heedless = started(full(), json!(["https://a"]));
+    let mut hears = full();
+    hears["step"]["cases"]["failed"] = json!({
+        "bind": "input",
+        "body": step(var("state"), vec![ask("brain.choose", lit(json!("try again")))]),
+    });
+    let listening = started(hears, json!(["https://a"]));
+
+    let unfit = json!({ "kind": "shell.run", "argv": ["rm"] });
+    let (unchanged, ev) = deliver_all(listening.clone(), vec![ret(0, unfit)]);
+    assert_eq!(withheld(&ev).as_deref(), Some("mismatch"), "{ev:?}");
+    assert_eq!(unchanged, listening);
+
+    // The harness hears the failure, labelled as the model's result would be, as if nothing had been withheld.
+    let (after, ev) = deliver_all(unchanged, vec![failure()]);
+    let (alone, ev_alone) = deliver_all(listening, vec![failure()]);
+    assert_eq!((&after, &ev), (&alone, &ev_alone));
+    assert_eq!(ev[0]["kind"], "in", "{ev:?}");
+    assert_eq!(
+        ev[0]["input"],
+        json!({ "kind": "failed", "call": 0, "op": "brain.choose",
+                "error": { "kind": "world", "detail": "no answer that fits" } })
+    );
+    assert_eq!(ev[0]["label"], json!(["model"]));
+    assert_eq!(
+        performed(&ev),
+        [("brain.choose".to_string(), true)],
+        "{ev:?}"
+    );
+
+    // The call has ended: nothing more can answer it.
+    let answer = ret(0, json!({ "kind": "answer", "text": "late" }));
+    for late in [answer, failure()] {
+        let (same, ev) = deliver_all(after.clone(), vec![late]);
+        assert_eq!(withheld(&ev).as_deref(), Some("notPending"), "{ev:?}");
+        assert_eq!(same, after);
+    }
+
+    // A step that doesn't read the failure hears it and does nothing: no call pending, no outcome, and no event says so.
+    let (stuck, ev) = deliver_all(heedless, vec![failure()]);
+    assert_eq!(ev.len(), 1, "{ev:?}");
+    assert_eq!(stuck["root"]["pending"], json!([]), "{stuck}");
+    assert_eq!(stuck["root"]["outcome"], Value::Null, "{stuck}");
+}
