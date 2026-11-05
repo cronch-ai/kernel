@@ -10,28 +10,28 @@ There is no `Json` type and no `is`. A value is an `Int`, `Float`, `String`, `Bo
 
 ## The table
 
-| Boundary                         | Its type comes from                                             | Checked                      | What doesn't fit  | Today                                              |
-| -------------------------------- | --------------------------------------------------------------- | ---------------------------- | ----------------- | -------------------------------------------------- |
-| Start value → harness            | the harness's `arg`                                             | on delivery                  | withheld          | as stated                                          |
-| Capability result → harness      | the operation's `output`, then `post`                           | on delivery                  | withheld          | as stated                                          |
-| Message → harness                | the channel's `type`, then `inv`                                | on delivery                  | withheld          | as stated                                          |
-| Harness → call's arguments       | the operation's `input`, then `pre`                             | at the call                  | refused           | as stated                                          |
-| Model's chosen call → harness    | the model operation's `output`: a variant of its tools          | on delivery                  | withheld          | a harness can choose this, and can also use `Json` |
-| Parent → child's argument        | the signature's `arg`, then the child's own                     | at the spawn                 | refused           | undeclared children too                            |
-| Child's result → parent          | the signature's `result`                                        | statically, then at its halt | the child fails   | undeclared children are `Json`                     |
-| Harness's result                 | the harness's `result`, which it must declare                   | statically, then at the halt | the run fails     | absent means `Json`                                |
-| Harness's next state             | the harness's `state`                                           | after each step              | the run fails     | as stated                                          |
-| Initial grant                    | the interface's `grant`                                         | at `init`                    | refused           | can hold `Json`                                    |
-| Update → grant                   | the interface's `grant`                                         | statically                   | refused at `init` | can hold `Json`                                    |
-| World's failure detail → harness | it is `String`                                                  | always text                  | nothing           | `Json`                                             |
-| A failed child's error → parent  | it is `String`                                                  | always text                  | nothing           | `Json`                                             |
-| Event → property                 | the event's variant, and `String` for what one type can't cover | never: it only reads         | nothing to refuse | `Json`                                             |
+| Boundary                         | Its type comes from                                             | Checked                      | What doesn't fit  |
+| -------------------------------- | --------------------------------------------------------------- | ---------------------------- | ----------------- |
+| Start value → harness            | the harness's `arg`                                             | on delivery                  | withheld          |
+| Capability result → harness      | the operation's `output`, then `post`                           | on delivery                  | withheld          |
+| Message → harness                | the channel's `type`, then `inv`                                | on delivery                  | withheld          |
+| Harness → call's arguments       | the operation's `input`, then `pre`                             | statically, then at the call | refused           |
+| Model's chosen call → harness    | the model operation's `output`: a variant of its tools          | on delivery                  | withheld          |
+| Parent → child's argument        | the signature's `arg`, then the child's own                     | at the spawn                 | refused           |
+| Child's result → parent          | the signature's `result`                                        | statically, then at its halt | the child fails   |
+| Harness's result                 | the harness's `result`, which it must declare                   | statically, then at the halt | the run fails     |
+| Harness's next state             | the harness's `state`                                           | after each step              | the run fails     |
+| Initial grant                    | the interface's `grant`                                         | at `init`                    | refused           |
+| Update → grant                   | the interface's `grant`                                         | statically                   | refused at `init` |
+| World's failure detail → harness | it is `String`                                                  | always text                  | nothing           |
+| A failed child's error → parent  | it is `String`                                                  | always text                  | nothing           |
+| Event → property                 | the event's variant, and `String` for what one type can't cover | never: it only reads         | nothing to refuse |
 
 [boundaries.rs](../crates/kernel/tests/boundaries.rs) and [chosen_call.rs](../crates/kernel/tests/chosen_call.rs) pin the rows of a single run and the model's chosen call, and [spawn.rs](../crates/kernel/tests/spawn.rs) the refused spawn. Three rows have no test of their own yet: a child's result, the next state, and what a property reads.
 
 ## A model's chosen call
 
-A model's answer is a variant of the tools it is offered, such as `answer {text} | net.fetch {url} | notes.append {text}`. A harness reads it with `match`, and each arm makes its call. This needs no new type: no `Call`, no `Returned`, and nothing resolved per interface.
+A model's answer is a variant of the tools it is offered, such as `answer {text} | net.fetch {url} | notes.append {text}`. A harness reads it with `match`, and each arm makes its call. In the surface language, `x = perform choice` writes those arms: a case naming an operation issues it with the case's fields as its arguments, any other case skips, and `x` holds the result as text. This needs no new type: no `Call`, no `Returned`, and nothing resolved per interface.
 
 - **A choice of the wrong shape never reaches the harness.** A bad argument, or a tool that isn't offered, doesn't inhabit the variant, so the result is withheld.
 - **A contract still has the last word.** A well-shaped call the contract forbids is refused at the call, and the harness hears so.
@@ -44,7 +44,7 @@ What it costs:
 - **Adding a tool changes the harness.** It gains a case and an arm, so its hash changes. The surface language can write those arms. [Rules](2026-11-05-rules.md) aren't affected: they read contracts, not steps.
 - **The model's capability must answer in the variant.** Its implementation turns an answer it can't fit into a failure. A withheld result leaves the call pending.
 
-`Action` as a model's answer was the alternative. The checker doesn't allow it as an operation's output today, and its cases would offer a model `halt` and `cancel` as well.
+`Action` as a model's answer was the alternative. Its cases would offer a model `halt` and `cancel` as well. That type is gone: a step's actions are checked against the interface's action type, which is plain data.
 
 ## Grants
 
@@ -62,10 +62,8 @@ The closed stack's `Call`, `Returned`, `@none`, approvals as text, and `op` in c
 
 ## Order
 
-1. Delete `Json` and `is`, undeclared children, and the default result, in the kernel and the surface language. The closed branches hold much of this work.
-2. `perform` in the surface language becomes a `match` over a variant of tools.
-3. The harness of T1, on the result.
-4. The platform adopts it when it hosts that harness, including its `model`, `notes` and `approve`.
+1. The harness of T1, on this.
+2. The platform adopts it when it hosts that harness, including its `model`, `notes` and `approve`.
 
 ## Open
 

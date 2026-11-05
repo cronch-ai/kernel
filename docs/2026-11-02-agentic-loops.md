@@ -1,5 +1,7 @@
 # Agentic loops
 
+> **Changed on 2026-11-05.** `perform` now takes a variant of tools, and its slot holds text. `Json`, `is` and `Action` are gone. See [Boundaries](2026-11-05-boundaries.md).
+
 Plan for open question 1 of [the surface language](2026-11-01-surface-language.md), "iteration across steps", agreed on 2026-11-02. The [design session](2026-11-01-harness-design-session.md) set the goal that harnesses be "expressive enough to describe systems like Claude Code". A graph runs each node at most once, so until now the language could only describe one turn of such a system.
 
 ## What an agentic loop is
