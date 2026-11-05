@@ -47,7 +47,7 @@ There is no `Json` type and no `is`. A value is an `Int`, `Float`, `String`, `Bo
 | A failed child's error → parent  | it is `String`                                                  | always text                  | nothing           |
 | Event → property                 | the event's variant, and `String` for what one type can't cover | never: it only reads         | nothing to refuse |
 
-[boundaries.rs](../crates/kernel/tests/boundaries.rs) and [chosen_call.rs](../crates/kernel/tests/chosen_call.rs) pin the rows of a single run and the model's chosen call, and [spawn.rs](../crates/kernel/tests/spawn.rs) the refused spawn. Three rows have no test of their own yet: a child's result, the next state, and what a property reads.
+[boundaries.rs](../crates/kernel/tests/boundaries.rs) and [chosen_call.rs](../crates/kernel/tests/chosen_call.rs) pin the rows of a single run and the model's chosen call, and [spawn.rs](../crates/kernel/tests/spawn.rs) the refused spawn. [boundaries.rs](../crates/kernel/tests/boundaries.rs) also pins a child's result, the next state, and what a property reads.
 
 ## A model's chosen call
 
