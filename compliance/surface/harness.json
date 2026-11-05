@@ -11,12 +11,7 @@
                   "List": "String"
                 },
                 "once": {
-                  "List": {
-                    "Record": {
-                      "action": "String",
-                      "args": "Json"
-                    }
-                  }
+                  "List": "String"
                 }
               }
             },
@@ -25,7 +20,7 @@
                 "input": {
                   "Record": {
                     "action": "String",
-                    "args": "Json"
+                    "detail": "String"
                   }
                 },
                 "onResult": {
@@ -67,14 +62,6 @@
                     "then": {
                       "e": "record",
                       "fields": {
-                        "allow": {
-                          "e": "get",
-                          "field": "allow",
-                          "of": {
-                            "e": "var",
-                            "name": "grant"
-                          }
-                        },
                         "once": {
                           "args": [
                             {
@@ -86,8 +73,12 @@
                               }
                             },
                             {
-                              "e": "var",
-                              "name": "args"
+                              "e": "get",
+                              "field": "action",
+                              "of": {
+                                "e": "var",
+                                "name": "args"
+                              }
                             }
                           ],
                           "e": "op",
@@ -120,14 +111,6 @@
                         ],
                         "e": "op",
                         "op": "append"
-                      },
-                      "once": {
-                        "e": "get",
-                        "field": "once",
-                        "of": {
-                          "e": "var",
-                          "name": "grant"
-                        }
                       }
                     }
                   }
@@ -189,12 +172,7 @@
                   "List": "String"
                 },
                 "once": {
-                  "List": {
-                    "Record": {
-                      "action": "String",
-                      "args": "Json"
-                    }
-                  }
+                  "List": "String"
                 }
               }
             },
@@ -218,14 +196,6 @@
                 "onCall": {
                   "e": "record",
                   "fields": {
-                    "allow": {
-                      "e": "get",
-                      "field": "allow",
-                      "of": {
-                        "e": "var",
-                        "name": "grant"
-                      }
-                    },
                     "once": {
                       "acc": "kept",
                       "body": {
@@ -236,17 +206,8 @@
                               "name": "x"
                             },
                             {
-                              "e": "record",
-                              "fields": {
-                                "action": {
-                                  "e": "lit",
-                                  "v": "notes.append"
-                                },
-                                "args": {
-                                  "e": "var",
-                                  "name": "args"
-                                }
-                              }
+                              "e": "lit",
+                              "v": "notes.append"
                             }
                           ],
                           "e": "op",
@@ -285,6 +246,9 @@
                           "e": "var",
                           "name": "grant"
                         }
+                      },
+                      "type": {
+                        "List": "String"
                       }
                     }
                   }
@@ -321,17 +285,8 @@
                           }
                         },
                         {
-                          "e": "record",
-                          "fields": {
-                            "action": {
-                              "e": "lit",
-                              "v": "notes.append"
-                            },
-                            "args": {
-                              "e": "var",
-                              "name": "args"
-                            }
-                          }
+                          "e": "lit",
+                          "v": "notes.append"
                         }
                       ],
                       "e": "op",
@@ -363,7 +318,7 @@
           }
         },
         "op": "elaborate",
-        "source": "harness approved_note(prompt: String) -> Json\n\nuses model, approve, notes\n\ndraft    = model.generate(messages: [{role: \"user\", content: prompt}])\ndecision = approve.ask(action: \"notes.append\", args: {text: draft})\nsaved    = notes.append(text: draft) when decision != \"deny\"\n\nreturn match saved {\n  ok(note) => note\n  skipped  => \"denied\"\n}\n\notherwise return \"stopped\"\n"
+        "source": "harness approved_note(prompt: String) -> Json\n\nuses model, approve, notes\n\ndraft    = model.generate(messages: [{role: \"user\", content: prompt}])\ndecision = approve.ask(action: \"notes.append\", detail: draft)\nsaved    = notes.append(text: draft) when decision != \"deny\"\n\nreturn match saved {\n  ok(note) => note\n  skipped  => \"denied\"\n}\n\notherwise return \"stopped\"\n"
       },
       "response": {
         "ok": true,
@@ -2648,14 +2603,9 @@
                                                             "e": "lit",
                                                             "v": "notes.append"
                                                           },
-                                                          "args": {
-                                                            "e": "record",
-                                                            "fields": {
-                                                              "text": {
-                                                                "e": "var",
-                                                                "name": "draft"
-                                                              }
-                                                            }
+                                                          "detail": {
+                                                            "e": "var",
+                                                            "name": "draft"
                                                           }
                                                         }
                                                       },
@@ -3731,7 +3681,7 @@
                                                       "args": {
                                                         "Record": {
                                                           "action": "String",
-                                                          "args": "Json"
+                                                          "detail": "String"
                                                         }
                                                       }
                                                     }
@@ -3837,7 +3787,7 @@
                                                     "args": {
                                                       "Record": {
                                                         "action": "String",
-                                                        "args": "Json"
+                                                        "detail": "String"
                                                       }
                                                     }
                                                   }
@@ -3943,7 +3893,7 @@
                                                   "args": {
                                                     "Record": {
                                                       "action": "String",
-                                                      "args": "Json"
+                                                      "detail": "String"
                                                     }
                                                   }
                                                 }
@@ -4049,7 +3999,7 @@
                                                 "args": {
                                                   "Record": {
                                                     "action": "String",
-                                                    "args": "Json"
+                                                    "detail": "String"
                                                   }
                                                 }
                                               }
@@ -4304,7 +4254,7 @@
                                       "args": {
                                         "Record": {
                                           "action": "String",
-                                          "args": "Json"
+                                          "detail": "String"
                                         }
                                       }
                                     }
@@ -4465,12 +4415,7 @@
                   "List": "String"
                 },
                 "once": {
-                  "List": {
-                    "Record": {
-                      "action": "String",
-                      "args": "Json"
-                    }
-                  }
+                  "List": "String"
                 }
               }
             },
@@ -4479,7 +4424,7 @@
                 "input": {
                   "Record": {
                     "action": "String",
-                    "args": "Json"
+                    "detail": "String"
                   }
                 },
                 "onResult": {
@@ -4521,14 +4466,6 @@
                     "then": {
                       "e": "record",
                       "fields": {
-                        "allow": {
-                          "e": "get",
-                          "field": "allow",
-                          "of": {
-                            "e": "var",
-                            "name": "grant"
-                          }
-                        },
                         "once": {
                           "args": [
                             {
@@ -4540,8 +4477,12 @@
                               }
                             },
                             {
-                              "e": "var",
-                              "name": "args"
+                              "e": "get",
+                              "field": "action",
+                              "of": {
+                                "e": "var",
+                                "name": "args"
+                              }
                             }
                           ],
                           "e": "op",
@@ -4574,14 +4515,6 @@
                         ],
                         "e": "op",
                         "op": "append"
-                      },
-                      "once": {
-                        "e": "get",
-                        "field": "once",
-                        "of": {
-                          "e": "var",
-                          "name": "grant"
-                        }
                       }
                     }
                   }
@@ -4643,12 +4576,7 @@
                   "List": "String"
                 },
                 "once": {
-                  "List": {
-                    "Record": {
-                      "action": "String",
-                      "args": "Json"
-                    }
-                  }
+                  "List": "String"
                 }
               }
             },
@@ -4672,14 +4600,6 @@
                 "onCall": {
                   "e": "record",
                   "fields": {
-                    "allow": {
-                      "e": "get",
-                      "field": "allow",
-                      "of": {
-                        "e": "var",
-                        "name": "grant"
-                      }
-                    },
                     "once": {
                       "acc": "kept",
                       "body": {
@@ -4690,17 +4610,8 @@
                               "name": "x"
                             },
                             {
-                              "e": "record",
-                              "fields": {
-                                "action": {
-                                  "e": "lit",
-                                  "v": "notes.append"
-                                },
-                                "args": {
-                                  "e": "var",
-                                  "name": "args"
-                                }
-                              }
+                              "e": "lit",
+                              "v": "notes.append"
                             }
                           ],
                           "e": "op",
@@ -4739,6 +4650,9 @@
                           "e": "var",
                           "name": "grant"
                         }
+                      },
+                      "type": {
+                        "List": "String"
                       }
                     }
                   }
@@ -4775,17 +4689,8 @@
                           }
                         },
                         {
-                          "e": "record",
-                          "fields": {
-                            "action": {
-                              "e": "lit",
-                              "v": "notes.append"
-                            },
-                            "args": {
-                              "e": "var",
-                              "name": "args"
-                            }
-                          }
+                          "e": "lit",
+                          "v": "notes.append"
                         }
                       ],
                       "e": "op",

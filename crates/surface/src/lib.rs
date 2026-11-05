@@ -32,6 +32,10 @@ pub struct Problem {
 #[derive(Serialize, Clone, Debug, PartialEq)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum What {
+    /// A `perform` of something other than a variant with a case naming an operation, whose arguments are a record.
+    NotPerformable {
+        got: Box<Type>,
+    },
     Syntax {
         expected: String,
         found: String,

@@ -6,6 +6,28 @@
         "capabilities": {
           "math": {
             "operations": {
+              "choose": {
+                "input": {
+                  "Record": {
+                    "n": "Int"
+                  }
+                },
+                "output": {
+                  "Variant": {
+                    "cases": {
+                      "m.double": {
+                        "Record": {
+                          "n": "Int"
+                        }
+                      },
+                      "stop": {
+                        "Record": {}
+                      }
+                    },
+                    "tag": "kind"
+                  }
+                }
+              },
               "double": {
                 "input": {
                   "Record": {
@@ -1342,6 +1364,28 @@
         "capabilities": {
           "math": {
             "operations": {
+              "choose": {
+                "input": {
+                  "Record": {
+                    "n": "Int"
+                  }
+                },
+                "output": {
+                  "Variant": {
+                    "cases": {
+                      "m.double": {
+                        "Record": {
+                          "n": "Int"
+                        }
+                      },
+                      "stop": {
+                        "Record": {}
+                      }
+                    },
+                    "tag": "kind"
+                  }
+                }
+              },
               "double": {
                 "input": {
                   "Record": {

@@ -43,17 +43,8 @@
                 "field": "once"
               },
               {
-                "e": "record",
-                "fields": {
-                  "action": {
-                    "e": "lit",
-                    "v": "notes.append"
-                  },
-                  "args": {
-                    "e": "var",
-                    "name": "args"
-                  }
-                }
+                "e": "lit",
+                "v": "notes.append"
               }
             ]
           }
@@ -62,14 +53,6 @@
       "onCall": {
         "e": "record",
         "fields": {
-          "allow": {
-            "e": "get",
-            "of": {
-              "e": "var",
-              "name": "grant"
-            },
-            "field": "allow"
-          },
           "once": {
             "e": "fold",
             "over": {
@@ -97,17 +80,8 @@
                     "name": "x"
                   },
                   {
-                    "e": "record",
-                    "fields": {
-                      "action": {
-                        "e": "lit",
-                        "v": "notes.append"
-                      },
-                      "args": {
-                        "e": "var",
-                        "name": "args"
-                      }
-                    }
+                    "e": "lit",
+                    "v": "notes.append"
                   }
                 ]
               },
@@ -129,6 +103,9 @@
                   }
                 ]
               }
+            },
+            "type": {
+              "List": "String"
             }
           }
         }
@@ -167,12 +144,7 @@
         "List": "String"
       },
       "once": {
-        "List": {
-          "Record": {
-            "action": "String",
-            "args": "Json"
-          }
-        }
+        "List": "String"
       }
     }
   }

@@ -36,7 +36,7 @@ harness approved_note(prompt: String) -> Json
 uses model, approve, notes
 
 draft    = model.generate(messages: [{role: "user", content: prompt}])
-decision = approve.ask(action: "notes.append", args: {text: draft})
+decision = approve.ask(action: "notes.append", detail: draft)
 saved    = notes.append(text: draft) when decision != "deny"
 
 return match saved {

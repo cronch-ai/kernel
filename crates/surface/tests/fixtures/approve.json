@@ -4,7 +4,7 @@
       "input": {
         "Record": {
           "action": "String",
-          "args": "Json"
+          "detail": "String"
         }
       },
       "output": "String",
@@ -66,14 +66,6 @@
                   "field": "action"
                 }
               ]
-            },
-            "once": {
-              "e": "get",
-              "of": {
-                "e": "var",
-                "name": "grant"
-              },
-              "field": "once"
             }
           }
         },
@@ -96,14 +88,6 @@
           "then": {
             "e": "record",
             "fields": {
-              "allow": {
-                "e": "get",
-                "of": {
-                  "e": "var",
-                  "name": "grant"
-                },
-                "field": "allow"
-              },
               "once": {
                 "e": "op",
                 "op": "append",
@@ -117,8 +101,12 @@
                     "field": "once"
                   },
                   {
-                    "e": "var",
-                    "name": "args"
+                    "e": "get",
+                    "of": {
+                      "e": "var",
+                      "name": "args"
+                    },
+                    "field": "action"
                   }
                 ]
               }
@@ -138,12 +126,7 @@
         "List": "String"
       },
       "once": {
-        "List": {
-          "Record": {
-            "action": "String",
-            "args": "Json"
-          }
-        }
+        "List": "String"
       }
     }
   }

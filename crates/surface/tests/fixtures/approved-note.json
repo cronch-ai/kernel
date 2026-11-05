@@ -122,18 +122,13 @@
                                 "e": "lit",
                                 "v": "notes.append"
                               },
-                              "args": {
-                                "e": "record",
-                                "fields": {
-                                  "text": {
-                                    "e": "get",
-                                    "of": {
-                                      "e": "var",
-                                      "name": "m"
-                                    },
-                                    "field": "value"
-                                  }
-                                }
+                              "detail": {
+                                "e": "get",
+                                "of": {
+                                  "e": "var",
+                                  "name": "m"
+                                },
+                                "field": "value"
                               }
                             }
                           }

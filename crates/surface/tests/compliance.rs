@@ -29,7 +29,7 @@ harness approved_note(prompt: String) -> Json
 uses model, approve, notes
 
 draft    = model.generate(messages: [{role: \"user\", content: prompt}])
-decision = approve.ask(action: \"notes.append\", args: {text: draft})
+decision = approve.ask(action: \"notes.append\", detail: draft)
 saved    = notes.append(text: draft) when decision != \"deny\"
 
 return match saved {
@@ -98,8 +98,9 @@ harness climb(goal: Int) -> Int
 uses m = \"math\"
 carry total: Int = 0
 step = m.double(n: total + 1)
-more = perform {kind: \"call\", op: \"m.double\", args: {n: step}}
-got  = match more { ok(v) => if v is Int as i then i else 0, _ => 0 }
+choice = m.choose(n: step)
+more = perform choice
+got  = match more { ok(v) => step, _ => 0 }
 next total = total + got
 return total when total >= goal
 otherwise return total
@@ -135,6 +136,13 @@ fn streaming() -> Value {
 fn math() -> Value {
     json!({ "math": { "operations": {
         "double": { "input": { "Record": { "n": "Int" } }, "output": "Int" },
+        "choose": {
+            "input": { "Record": { "n": "Int" } },
+            "output": { "Variant": { "tag": "kind", "cases": {
+                "stop": { "Record": {} },
+                "m.double": { "Record": { "n": "Int" } },
+            }}},
+        },
     }}})
 }
 
