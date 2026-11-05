@@ -812,6 +812,7 @@ export type RuleError =
   | { readonly kind: "grantNotARecord" }
   | { readonly kind: "grant" }
   | { readonly kind: "unreadable"; readonly update: string }
+  | { readonly kind: "holdsJson"; readonly place: string; readonly name: string }
   | { readonly kind: "refused"; readonly place: string; readonly refusal: SmtlibRefusal };
 
 /** Instantiate the kernel from its bytes, or from a compiled module where bytes can't be compiled (a Worker). */
