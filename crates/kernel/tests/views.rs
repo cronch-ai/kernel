@@ -88,7 +88,8 @@ fn an_operations_footprint_is_on_its_call() {
         call(json!({ "op": "eventType", "harness": actor(), "interface": footprinted }))["type"]
             .clone();
     assert_eq!(
-        ty["Record"]["action"]["Record"]["footprint"],
+        ty["Variant"]["cases"]["out"]["Record"]["action"]["Variant"]["cases"]["call"]["Variant"]["cases"]
+            ["fs.write"]["Record"]["footprint"],
         json!({ "Record": { "writes": "String" } })
     );
     let system = init(actor(), footprinted);

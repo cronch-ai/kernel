@@ -3,154 +3,107 @@
   "always": {
     "f": "implies",
     "if": {
-      "f": "and",
-      "of": [
-        {
-          "f": "atom",
-          "holds": {
-            "e": "op",
-            "op": "eq",
-            "args": [
-              {
-                "e": "get",
-                "of": {
-                  "e": "var",
-                  "name": "event"
-                },
-                "field": "kind"
+      "f": "atom",
+      "holds": {
+        "e": "match",
+        "of": {
+          "e": "var",
+          "name": "event"
+        },
+        "cases": {
+          "out": {
+            "bind": "e",
+            "body": {
+              "e": "get",
+              "of": {
+                "e": "var",
+                "name": "e"
               },
-              {
-                "e": "lit",
-                "v": "out"
-              }
-            ]
+              "field": "effect"
+            }
           }
         },
-        {
-          "f": "atom",
-          "holds": {
-            "e": "op",
-            "op": "eq",
-            "args": [
-              {
-                "e": "get",
-                "of": {
-                  "e": "var",
-                  "name": "event"
-                },
-                "field": "effect"
-              },
-              {
-                "e": "lit",
-                "v": true
-              }
-            ]
-          }
+        "otherwise": {
+          "e": "lit",
+          "v": false
         }
-      ]
+      }
     },
     "then": {
       "f": "once",
       "of": {
-        "f": "and",
-        "of": [
-          {
-            "f": "atom",
-            "holds": {
-              "e": "op",
-              "op": "eq",
-              "args": [
-                {
+        "f": "atom",
+        "holds": {
+          "e": "match",
+          "of": {
+            "e": "var",
+            "name": "event"
+          },
+          "cases": {
+            "in": {
+              "bind": "e",
+              "body": {
+                "e": "match",
+                "of": {
                   "e": "get",
                   "of": {
                     "e": "var",
-                    "name": "event"
+                    "name": "e"
                   },
-                  "field": "kind"
+                  "field": "input"
                 },
-                {
+                "cases": {
+                  "ret": {
+                    "bind": "r",
+                    "body": {
+                      "e": "match",
+                      "of": {
+                        "e": "var",
+                        "name": "r"
+                      },
+                      "cases": {
+                        "approve.ask": {
+                          "bind": "a",
+                          "body": {
+                            "e": "op",
+                            "op": "contains",
+                            "args": [
+                              {
+                                "e": "lit",
+                                "v": ["once", "always"]
+                              },
+                              {
+                                "e": "get",
+                                "of": {
+                                  "e": "var",
+                                  "name": "a"
+                                },
+                                "field": "value"
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      "otherwise": {
+                        "e": "lit",
+                        "v": false
+                      },
+                      "on": "op"
+                    }
+                  }
+                },
+                "otherwise": {
                   "e": "lit",
-                  "v": "in"
+                  "v": false
                 }
-              ]
+              }
             }
           },
-          {
-            "f": "atom",
-            "holds": {
-              "e": "op",
-              "op": "eq",
-              "args": [
-                {
-                  "e": "get",
-                  "of": {
-                    "e": "get",
-                    "of": {
-                      "e": "var",
-                      "name": "event"
-                    },
-                    "field": "input"
-                  },
-                  "field": "kind"
-                },
-                {
-                  "e": "lit",
-                  "v": "ret"
-                }
-              ]
-            }
-          },
-          {
-            "f": "atom",
-            "holds": {
-              "e": "op",
-              "op": "eq",
-              "args": [
-                {
-                  "e": "get",
-                  "of": {
-                    "e": "get",
-                    "of": {
-                      "e": "var",
-                      "name": "event"
-                    },
-                    "field": "input"
-                  },
-                  "field": "op"
-                },
-                {
-                  "e": "lit",
-                  "v": "approve.ask"
-                }
-              ]
-            }
-          },
-          {
-            "f": "atom",
-            "holds": {
-              "e": "op",
-              "op": "contains",
-              "args": [
-                {
-                  "e": "lit",
-                  "v": ["once", "always"]
-                },
-                {
-                  "e": "get",
-                  "of": {
-                    "e": "get",
-                    "of": {
-                      "e": "var",
-                      "name": "event"
-                    },
-                    "field": "input"
-                  },
-                  "field": "value"
-                }
-              ]
-            }
+          "otherwise": {
+            "e": "lit",
+            "v": false
           }
-        ]
+        }
       }
     }
   }

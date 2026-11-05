@@ -243,6 +243,12 @@ impl Checker {
         }
     }
 
+    /// Whether a branch is a literal `[]`. Read with no type expected, it takes its type from the branches that say what
+    /// a list holds.
+    fn empty_arm(expr: &Expr) -> bool {
+        matches!(expr, Expr::List { items } if items.is_empty())
+    }
+
     /// The expression's type, inferred, or, for the forms that pass it on, checked against `expected`.
     fn synth(&mut self, expr: &Expr, at: &str, expected: Option<&Type>) -> Option<Type> {
         match expr {
@@ -304,6 +310,12 @@ impl Checker {
                         expected: Type::Bool,
                         got: c,
                     });
+                }
+                if expected.is_none() && Self::empty_arm(otherwise) && !Self::empty_arm(then) {
+                    return self.infer(then, &child(at, "then"));
+                }
+                if expected.is_none() && Self::empty_arm(then) && !Self::empty_arm(otherwise) {
+                    return self.infer(otherwise, &child(at, "else"));
                 }
                 let t = self.typed(then, &child(at, "then"), expected);
                 let e = self.typed(otherwise, &child(at, "else"), expected);
@@ -445,7 +457,13 @@ impl Checker {
                         _ => None,
                     });
                 };
+                let says = cases.values().any(|c| !Self::empty_arm(&c.body))
+                    || otherwise.as_ref().is_some_and(|o| !Self::empty_arm(o));
+                let skip = |e: &Expr| expected.is_none() && says && Self::empty_arm(e);
                 for (name, case) in cases {
+                    if skip(&case.body) {
+                        continue;
+                    }
                     let bound = declared.as_ref().and_then(|d| d.get(name).cloned());
                     self.scope.push((case.bind.clone(), bound));
                     let body_at = child(at, &format!("cases/{name}/body"));
@@ -453,7 +471,7 @@ impl Checker {
                     self.scope.pop();
                     merge(self, t, body_at);
                 }
-                if let Some(o) = otherwise {
+                if let Some(o) = otherwise.as_ref().filter(|o| !skip(o)) {
                     let body_at = child(at, "otherwise");
                     let t = self.typed(o, &body_at, expected);
                     merge(self, t, body_at);

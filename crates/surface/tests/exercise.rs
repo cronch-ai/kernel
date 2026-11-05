@@ -62,22 +62,21 @@ fn lit(v: Value) -> Value {
     json!({ "e": "lit", "v": v })
 }
 
-fn ev(fields: &[&str]) -> Value {
-    fields.iter().fold(
-        json!({ "e": "var", "name": "event" }),
-        |of, f| json!({ "e": "get", "of": of, "field": f }),
-    )
+fn var(name: &str) -> Value {
+    json!({ "e": "var", "name": name })
 }
 
-fn eq(a: Value, b: Value) -> Value {
-    json!({ "e": "op", "op": "eq", "args": [a, b] })
+fn get(of: Value, field: &str) -> Value {
+    json!({ "e": "get", "of": of, "field": field })
 }
 
-fn all(exprs: Vec<Value>) -> Value {
-    exprs
-        .into_iter()
-        .reduce(|a, b| json!({ "e": "op", "op": "and", "args": [a, b] }))
-        .unwrap()
+/// `then`, where `of` is the case `case` of its variant over `on`, bound as `bind`; false anywhere else.
+fn when_case(of: Value, on: &str, case: &str, bind: &str, then: Value) -> Value {
+    json!({
+        "e": "match", "of": of, "on": on,
+        "cases": { case: { "bind": bind, "body": then } },
+        "otherwise": lit(json!(false)),
+    })
 }
 
 fn atom(holds: Value) -> Value {
@@ -90,21 +89,37 @@ fn not(of: Value) -> Value {
 
 fn user_says(text: &str, same: bool) -> Value {
     let op = if same { "eq" } else { "ne" };
-    atom(all(vec![
-        eq(ev(&["kind"]), lit(json!("in"))),
-        eq(ev(&["input", "kind"]), lit(json!("msg"))),
-        eq(ev(&["input", "channel"]), lit(json!("session.user"))),
-        json!({ "e": "op", "op": op, "args": [ev(&["input", "value"]), lit(json!(text))] }),
-    ]))
+    let said = json!({ "e": "op", "op": op, "args": [get(var("m"), "value"), lit(json!(text))] });
+    atom(when_case(
+        var("event"),
+        "kind",
+        "in",
+        "e",
+        when_case(
+            get(var("e"), "input"),
+            "kind",
+            "msg",
+            "i",
+            when_case(var("i"), "channel", "session.user", "m", said),
+        ),
+    ))
 }
 
 /// P4: no effect is performed after the user says "stop", until they say something else.
 fn p4() -> Value {
-    let effect = atom(all(vec![
-        eq(ev(&["kind"]), lit(json!("out"))),
-        eq(ev(&["action", "kind"]), lit(json!("call"))),
-        ev(&["effect"]),
-    ]));
+    let effect = atom(when_case(
+        var("event"),
+        "kind",
+        "out",
+        "e",
+        when_case(
+            get(var("e"), "action"),
+            "kind",
+            "call",
+            "a",
+            get(var("e"), "effect"),
+        ),
+    ));
     let interrupted = json!({ "f": "since", "left": not(user_says("stop", false)), "right": user_says("stop", true) });
     json!({ "name": "p4", "always": { "f": "implies", "if": effect, "then": not(interrupted) } })
 }

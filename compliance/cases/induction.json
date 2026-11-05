@@ -181,113 +181,112 @@
             "if": {
               "f": "atom",
               "holds": {
-                "args": [
-                  {
-                    "args": [
-                      {
-                        "args": [
-                          {
-                            "e": "get",
-                            "field": "kind",
+                "cases": {
+                  "out": {
+                    "bind": "e",
+                    "body": {
+                      "cases": {
+                        "call": {
+                          "bind": "a",
+                          "body": {
+                            "cases": {
+                              "net.send": {
+                                "bind": "c",
+                                "body": {
+                                  "e": "lit",
+                                  "v": true
+                                }
+                              }
+                            },
+                            "e": "match",
                             "of": {
                               "e": "var",
-                              "name": "event"
+                              "name": "a"
+                            },
+                            "on": "op",
+                            "otherwise": {
+                              "e": "lit",
+                              "v": false
                             }
-                          },
-                          {
-                            "e": "lit",
-                            "v": "out"
-                          }
-                        ],
-                        "e": "op",
-                        "op": "eq"
-                      },
-                      {
-                        "args": [
-                          {
-                            "e": "get",
-                            "field": "kind",
-                            "of": {
-                              "e": "get",
-                              "field": "action",
-                              "of": {
-                                "e": "var",
-                                "name": "event"
-                              }
-                            }
-                          },
-                          {
-                            "e": "lit",
-                            "v": "call"
-                          }
-                        ],
-                        "e": "op",
-                        "op": "eq"
-                      }
-                    ],
-                    "e": "op",
-                    "op": "and"
-                  },
-                  {
-                    "args": [
-                      {
-                        "e": "get",
-                        "field": "op",
-                        "of": {
-                          "e": "get",
-                          "field": "action",
-                          "of": {
-                            "e": "var",
-                            "name": "event"
                           }
                         }
                       },
-                      {
+                      "e": "match",
+                      "of": {
+                        "e": "get",
+                        "field": "action",
+                        "of": {
+                          "e": "var",
+                          "name": "e"
+                        }
+                      },
+                      "otherwise": {
                         "e": "lit",
-                        "v": "net.send"
+                        "v": false
                       }
-                    ],
-                    "e": "op",
-                    "op": "eq"
+                    }
                   }
-                ],
-                "e": "op",
-                "op": "and"
+                },
+                "e": "match",
+                "of": {
+                  "e": "var",
+                  "name": "event"
+                },
+                "otherwise": {
+                  "e": "lit",
+                  "v": false
+                }
               }
             },
             "then": {
               "f": "atom",
               "holds": {
-                "args": [
-                  {
-                    "args": [
-                      {
-                        "e": "get",
-                        "field": "body",
-                        "of": {
-                          "e": "get",
-                          "field": "args",
-                          "of": {
-                            "e": "get",
-                            "field": "labels",
-                            "of": {
-                              "e": "var",
-                              "name": "event"
+                "cases": {
+                  "out": {
+                    "bind": "e",
+                    "body": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "e": "get",
+                              "field": "body",
+                              "of": {
+                                "e": "get",
+                                "field": "args",
+                                "of": {
+                                  "e": "get",
+                                  "field": "labels",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "e"
+                                  }
+                                }
+                              }
                             }
-                          }
+                          ],
+                          "e": "op",
+                          "op": "len"
+                        },
+                        {
+                          "e": "lit",
+                          "v": 0
                         }
-                      }
-                    ],
-                    "e": "op",
-                    "op": "len"
-                  },
-                  {
-                    "e": "lit",
-                    "v": 0
+                      ],
+                      "e": "op",
+                      "op": "eq"
+                    }
                   }
-                ],
-                "e": "op",
-                "op": "eq"
+                },
+                "e": "match",
+                "of": {
+                  "e": "var",
+                  "name": "event"
+                },
+                "otherwise": {
+                  "e": "lit",
+                  "v": false
+                }
               }
             }
           },
@@ -2344,113 +2343,112 @@
             "if": {
               "f": "atom",
               "holds": {
-                "args": [
-                  {
-                    "args": [
-                      {
-                        "args": [
-                          {
-                            "e": "get",
-                            "field": "kind",
+                "cases": {
+                  "out": {
+                    "bind": "e",
+                    "body": {
+                      "cases": {
+                        "call": {
+                          "bind": "a",
+                          "body": {
+                            "cases": {
+                              "net.send": {
+                                "bind": "c",
+                                "body": {
+                                  "e": "lit",
+                                  "v": true
+                                }
+                              }
+                            },
+                            "e": "match",
                             "of": {
                               "e": "var",
-                              "name": "event"
+                              "name": "a"
+                            },
+                            "on": "op",
+                            "otherwise": {
+                              "e": "lit",
+                              "v": false
                             }
-                          },
-                          {
-                            "e": "lit",
-                            "v": "out"
-                          }
-                        ],
-                        "e": "op",
-                        "op": "eq"
-                      },
-                      {
-                        "args": [
-                          {
-                            "e": "get",
-                            "field": "kind",
-                            "of": {
-                              "e": "get",
-                              "field": "action",
-                              "of": {
-                                "e": "var",
-                                "name": "event"
-                              }
-                            }
-                          },
-                          {
-                            "e": "lit",
-                            "v": "call"
-                          }
-                        ],
-                        "e": "op",
-                        "op": "eq"
-                      }
-                    ],
-                    "e": "op",
-                    "op": "and"
-                  },
-                  {
-                    "args": [
-                      {
-                        "e": "get",
-                        "field": "op",
-                        "of": {
-                          "e": "get",
-                          "field": "action",
-                          "of": {
-                            "e": "var",
-                            "name": "event"
                           }
                         }
                       },
-                      {
+                      "e": "match",
+                      "of": {
+                        "e": "get",
+                        "field": "action",
+                        "of": {
+                          "e": "var",
+                          "name": "e"
+                        }
+                      },
+                      "otherwise": {
                         "e": "lit",
-                        "v": "net.send"
+                        "v": false
                       }
-                    ],
-                    "e": "op",
-                    "op": "eq"
+                    }
                   }
-                ],
-                "e": "op",
-                "op": "and"
+                },
+                "e": "match",
+                "of": {
+                  "e": "var",
+                  "name": "event"
+                },
+                "otherwise": {
+                  "e": "lit",
+                  "v": false
+                }
               }
             },
             "then": {
               "f": "atom",
               "holds": {
-                "args": [
-                  {
-                    "args": [
-                      {
-                        "e": "get",
-                        "field": "body",
-                        "of": {
-                          "e": "get",
-                          "field": "args",
-                          "of": {
-                            "e": "get",
-                            "field": "labels",
-                            "of": {
-                              "e": "var",
-                              "name": "event"
+                "cases": {
+                  "out": {
+                    "bind": "e",
+                    "body": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "e": "get",
+                              "field": "body",
+                              "of": {
+                                "e": "get",
+                                "field": "args",
+                                "of": {
+                                  "e": "get",
+                                  "field": "labels",
+                                  "of": {
+                                    "e": "var",
+                                    "name": "e"
+                                  }
+                                }
+                              }
                             }
-                          }
+                          ],
+                          "e": "op",
+                          "op": "len"
+                        },
+                        {
+                          "e": "lit",
+                          "v": 0
                         }
-                      }
-                    ],
-                    "e": "op",
-                    "op": "len"
-                  },
-                  {
-                    "e": "lit",
-                    "v": 0
+                      ],
+                      "e": "op",
+                      "op": "eq"
+                    }
                   }
-                ],
-                "e": "op",
-                "op": "eq"
+                },
+                "e": "match",
+                "of": {
+                  "e": "var",
+                  "name": "event"
+                },
+                "otherwise": {
+                  "e": "lit",
+                  "v": false
+                }
               }
             }
           },
@@ -3428,10 +3426,10 @@
               },
               "kind": "invariant"
             },
-            "property": "sha256:7ebaff759052c11146032c74dc68ae8f7b4519a76f795ad09d5412bc2317894c",
+            "property": "sha256:044e72fbb412811697057948cb8e00415bcff097b46254a1a8d0e35d21e4d958",
             "verdict": "holds"
           },
-          "key": "sha256:8eea5b38a7bcd38e9555147d2e6809b32d5103de11db9ca20c963b0d094549ca",
+          "key": "sha256:045240763b8b5a0e874f7d5c694e99004670a997cf865103d701a8585eb383f6",
           "kind": "evidence"
         }
       }
