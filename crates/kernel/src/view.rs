@@ -100,6 +100,9 @@ pub fn view(event: &Event) -> Value {
         }
         Event::Failed { .. } => {
             let mut recorded = serde_json::to_value(event).unwrap_or(Value::Null);
+            if recorded["input"]["kind"] == "start" {
+                as_text(&mut recorded["input"], &["value"]);
+            }
             as_text(
                 &mut recorded["error"],
                 &["error", "got", "action", "expected"],
