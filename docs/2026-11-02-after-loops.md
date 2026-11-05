@@ -35,7 +35,7 @@ What comes after [agentic loops](2026-11-02-agentic-loops.md) (cronch-ai/kernel#
    - guards on receives, so one loop can wait for a prompt only after an answer;
    - streaming performs.
 
-Superseded in part on 2026-11-02 by [Typed boundaries](2026-11-02-typed-boundaries.md), which deletes `Json`. That deletes the list maps of decision 2 except the one between typed lists, and keeps 2a's text functions.
+Superseded in part on 2026-11-02 by [Typed boundaries](2026-11-02-typed-boundaries.md), which deletes `Json`. That deletes the list maps of decision 2 except the one between typed lists, and keeps 2a's text functions. Typed boundaries was itself superseded on 2026-11-05 by [Rules](2026-11-05-rules.md), and decision 3's next step is now there: checking a proof, outside the kernel, of what a capability's contracts rule out.
 
 ## Order
 
