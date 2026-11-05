@@ -67,7 +67,8 @@ pub enum Problem {
         at: Path,
         got: Type,
     },
-    /// `null`, or an empty list where nothing says what it holds: a literal with no type of its own.
+    /// `null`, an empty list where nothing says what it holds, or a list of items with no type in common: a literal with
+    /// no type of its own.
     Untyped {
         at: Path,
     },
@@ -256,6 +257,17 @@ impl Checker {
         matches!(expr, Expr::List { items } if items.is_empty())
     }
 
+    /// The type of a choice whose literal `[]` branches took it from the others: it must be a list.
+    fn with_empty_arms(&mut self, ty: Option<Type>, arms: Vec<Path>) -> Option<Type> {
+        if arms.is_empty() || matches!(ty, None | Some(Type::List(_))) {
+            return ty;
+        }
+        for at in arms {
+            self.problem(Problem::Untyped { at });
+        }
+        None
+    }
+
     /// The expression's type, inferred, or, for the forms that pass it on, checked against `expected`.
     fn synth(&mut self, expr: &Expr, at: &str, expected: Option<&Type>) -> Option<Type> {
         match expr {
@@ -322,10 +334,12 @@ impl Checker {
                     });
                 }
                 if expected.is_none() && Self::empty_arm(otherwise) && !Self::empty_arm(then) {
-                    return self.infer(then, &child(at, "then"));
+                    let t = self.infer(then, &child(at, "then"));
+                    return self.with_empty_arms(t, vec![child(at, "else")]);
                 }
                 if expected.is_none() && Self::empty_arm(then) && !Self::empty_arm(otherwise) {
-                    return self.infer(otherwise, &child(at, "else"));
+                    let t = self.infer(otherwise, &child(at, "else"));
+                    return self.with_empty_arms(t, vec![child(at, "then")]);
                 }
                 let t = self.typed(then, &child(at, "then"), expected);
                 let e = self.typed(otherwise, &child(at, "else"), expected);
@@ -458,8 +472,10 @@ impl Checker {
                 let says = cases.values().any(|c| !Self::empty_arm(&c.body))
                     || otherwise.as_ref().is_some_and(|o| !Self::empty_arm(o));
                 let skip = |e: &Expr| expected.is_none() && says && Self::empty_arm(e);
+                let mut empty = Vec::new();
                 for (name, case) in cases {
                     if skip(&case.body) {
+                        empty.push(child(at, &format!("cases/{name}/body")));
                         continue;
                     }
                     let bound = declared.as_ref().and_then(|d| d.get(name).cloned());
@@ -469,14 +485,18 @@ impl Checker {
                     self.scope.pop();
                     merge(self, t, body_at);
                 }
-                if let Some(o) = otherwise.as_ref().filter(|o| !skip(o)) {
+                if let Some(o) = otherwise {
                     let body_at = child(at, "otherwise");
-                    let t = self.typed(o, &body_at, expected);
-                    merge(self, t, body_at);
+                    if skip(o) {
+                        empty.push(body_at);
+                    } else {
+                        let t = self.typed(o, &body_at, expected);
+                        merge(self, t, body_at);
+                    }
                 }
                 match expected {
                     Some(want) => result.flatten().map(|_| want.clone()),
-                    None => result.flatten(),
+                    None => self.with_empty_arms(result.flatten(), empty),
                 }
             }
             Expr::Fold {

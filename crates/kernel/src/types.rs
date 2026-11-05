@@ -119,7 +119,7 @@ pub fn inhabits(value: &Value, ty: &Type) -> bool {
 }
 
 /// The most precise type of a value, used for literals. `null` has none, and nor does an empty list: it takes the type
-/// expected where it appears.
+/// expected where it appears. A list has the join of its items' types, and none if an item doesn't inhabit that.
 pub fn of_value(value: &Value) -> Option<Type> {
     Some(match value {
         Value::Null => return None,
@@ -127,7 +127,16 @@ pub fn of_value(value: &Value) -> Option<Type> {
         Value::Number(n) if n.is_i64() || n.is_u64() => Type::Int,
         Value::Number(_) => Type::Float,
         Value::String(_) => Type::String,
-        Value::Array(items) => Type::List(Box::new(of_value(items.first()?)?)),
+        Value::Array(items) => {
+            let mut element = of_value(items.first()?)?;
+            for t in items.iter().filter_map(of_value) {
+                element = join(&element, &t)?;
+            }
+            if !items.iter().all(|i| inhabits(i, &element)) {
+                return None;
+            }
+            Type::List(Box::new(element))
+        }
         Value::Object(map) => Type::Record(
             map.iter()
                 .map(|(k, v)| Some((k.clone(), of_value(v)?)))
