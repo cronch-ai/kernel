@@ -290,3 +290,113 @@ test("the selector define cannot make Ethos accept a proof against a false query
 test("cvc5's proofs hold nothing but what the verifier allows", () => {
   assert.equal(forbidden(proof), null);
 });
+
+// A Float in a query. These pin what each tool does today, so a change in any of them shows up here.
+
+const limit = get(v("grant"), "limit");
+/** `act` needs `pre`, and a person's answer to `ask` sets the grant's Float. */
+const floating = (pre, input) =>
+  install({
+    prefix: "pay",
+    capability: {
+      operations: {
+        act: { input, output: "String", effect: true, pre },
+        ask: {
+          input,
+          output: "String",
+          ret: { e: "list", items: [] },
+          post: op("contains", answers, v("result")),
+          onResult: {
+            e: "if",
+            cond: eq(v("result"), lit("always")),
+            // biome-ignore lint/suspicious/noThenProperty: a field of a kernel expression, never awaited.
+            then: { e: "record", fields: { limit: get(v("args"), "amount") } },
+            else: v("grant"),
+          },
+        },
+      },
+      grant: { Record: { limit: "Float" } },
+    },
+  });
+const payRule = {
+  op: "pay.act",
+  approvedBy: [{ op: "pay.ask", when: eq(v("result"), lit("always")) }],
+};
+const asEthosSpellsIt = (text) =>
+  text
+    .replaceAll("Float64", "(_ FloatingPoint 11 53)")
+    .replaceAll(" RNE ", " roundNearestTiesToEven ");
+
+test("a Float the precondition reads: cvc5 proves it, Ethos can't read the query, and its spelling only reaches incomplete", () => {
+  const out = obligations(
+    floating(op("gt", limit, lit(0.5)), { Record: { amount: "Float" } }),
+    payRule,
+    {
+      limit: 0.25,
+    },
+  );
+  assert.deepEqual(
+    out.obligations.map((o) => o.name),
+    ["initial", "pay.ask.onResult"],
+  );
+  for (const { name, text } of out.obligations) {
+    const query = write(text);
+    const { answer, proof } = prove(query);
+    assert.equal(answer, "unsat", name);
+    assert.match(proof, /:rule trust/, name);
+    assert.match(check(query, proof).reason, /Could not find symbol Float64$/, name);
+
+    const respelled = write(asEthosSpellsIt(text));
+    const again = prove(respelled);
+    assert.equal(again.answer, "unsat", name);
+    assert.deepEqual(check(respelled, again.proof), { ok: false, reason: "incomplete" }, name);
+  }
+});
+
+test("a Float argument nothing reads: Ethos can't read the query either, though the proof needs no Float", () => {
+  const url = get(v("args"), "url");
+  const out = obligations(
+    floating(op("and", eq(url, lit("a")), eq(url, lit("b"))), {
+      Record: { amount: "Float", url: "String" },
+    }),
+    { op: "pay.act" },
+    { limit: 0.25 },
+  );
+  const { text } = out.obligations[0];
+  const query = write(text);
+  const { answer, proof } = prove(query);
+  assert.equal(answer, "unsat");
+  assert.doesNotMatch(proof, /:rule trust/);
+  assert.match(check(query, proof).reason, /Could not find symbol Float64$/);
+
+  const respelled = write(asEthosSpellsIt(text));
+  assert.deepEqual(check(respelled, prove(respelled).proof), { ok: true });
+});
+
+test("a Float grant field no obligation needs is left out of the query, and the proofs check", () => {
+  const withWeight = gated("netAllow", "url");
+  withWeight.grant.Record.weight = "Float";
+  const out = obligations(install({ prefix: "net", capability: withWeight }), netRule, {
+    netAllow: [],
+    weight: 0.5,
+  });
+  for (const { text } of out.obligations) assert.doesNotMatch(text, /Float64/);
+  assertProved(out);
+});
+
+test("the real reading gets a correct from Ethos, for a statement the kernel's own arithmetic refutes", () => {
+  const pre = op("not", eq(op("add", lit(0.1), lit(0.2)), lit(0.3)));
+  const iface = floating(pre, { Record: { amount: "Float" } });
+  const claim = { interface: iface, rule: payRule, grant: { limit: 0 } };
+  // Proved and checked: this precondition holds of nothing.
+  assert.deepEqual(
+    Object.keys(assertProved(kernel.ruleObligations({ ...claim, floats: "real" }))),
+    ["initial"],
+  );
+  // The kernel computes as doubles, where it always holds.
+  assert.deepEqual(kernel.evaluate(pre), { kind: "value", value: true });
+  // The exact reading refuses it, since the addition can fail.
+  const exact = kernel.ruleObligations(claim);
+  assert.equal(exact.kind, "refused");
+  assert.equal(exact.error.refusal.reason.kind, "partial");
+});
