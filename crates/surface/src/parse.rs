@@ -25,7 +25,7 @@
 //! unary   = "-" unary | postfix       postfix = primary ("." name | "(" args ")")*
 //! primary = literal | name | "(" expr ")" | "[" expr,* "]" | "{" (name ":" expr),* "}" | "match" expr "{" arm* "}"
 //!         | ("exists" | "forall") name "in" or ":" expr
-//! arm     = ("_" | name ("(" name ")")? | literal ("|" literal)*) "=>" expr ","?
+//! arm     = ("_" | path ("(" name ")")? | literal ("|" literal)*) "=>" expr ","?
 //! ```
 
 use crate::lex::{Span, Tok, Token};
@@ -788,7 +788,8 @@ impl Parser {
             self.advance();
             return Ok(Pattern::Wild(start));
         }
-        let case = self.label()?;
+        // A case may name an operation, as a model's choice of a tool does.
+        let case = self.path()?;
         let bind = if self.eat_sym("(") {
             let bind = self.name()?;
             self.sym(")")?;

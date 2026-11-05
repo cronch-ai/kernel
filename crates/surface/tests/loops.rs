@@ -17,12 +17,13 @@ fn fixture(name: &str) -> Value {
     serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap()
 }
 
-/// A model that answers or chooses a call, whose `call` case is shaped like an action.
+/// A model that answers or chooses one of the tools it is offered: a variant with a case per tool.
 fn brain() -> Value {
     let message = json!({ "Record": { "role": "String", "content": "String" } });
     let reply = json!({ "Variant": { "tag": "kind", "cases": {
         "answer": { "Record": { "text": "String" } },
-        "call": { "Record": { "op": "String", "args": "Json" } },
+        "notes.append": { "Record": { "text": "String" } },
+        "notes.read": { "Record": {} },
     }}});
     json!({ "operations": { "choose": {
         "input": { "Record": { "messages": { "List": message } } },
@@ -61,13 +62,13 @@ carry turns: Int = 0
 stop   = receive said from session.user when said == "stop"
 reply  = brain.choose(messages: history) until stop
 choice = reply
-wants  = match choice { call(c) => c.op, answer(a) => "" }
-asked  = approve.ask(action: wants, args: match choice { call(c) => c.args, answer(a) => {} }) when wants != "" until stop
+wants  = match choice { notes.append(c) => "notes.append", notes.read(c) => "notes.read", answer(a) => "" }
+asked  = approve.ask(action: wants, detail: str(choice)) when wants != "" until stop
 result = perform choice when (match asked { ok(a) => a != "deny", _ => false }) until stop
 
-answer = match choice { answer(a) => a.text, call(c) => "" }
+answer = match choice { answer(a) => a.text, _ => "" }
 seen   = match result {
-  ok(v)     => str(v)
+  ok(v)     => v
   failed(e) => concat("failed: ", e)
   refused   => "not allowed"
   skipped   => "denied"
@@ -136,7 +137,9 @@ fn says(text: &str) -> Value {
 }
 
 fn chooses(op: &str, args: Value) -> Value {
-    json!({ "kind": "call", "op": op, "args": args })
+    let mut choice = args;
+    choice["kind"] = json!(op);
+    choice
 }
 
 fn answers(text: &str) -> Value {
@@ -202,7 +205,7 @@ fn the_agent_goes_round_until_the_model_answers() {
 }
 
 #[test]
-fn a_choice_that_is_denied_or_not_an_action_is_not_performed() {
+fn a_choice_that_is_denied_or_not_offered_is_not_performed() {
     let harness = elaborated(AGENT)["harness"].clone();
     // Denied: the owner says no.
     let (events, _) = run(
@@ -218,22 +221,18 @@ fn a_choice_that_is_denied_or_not_an_action_is_not_performed() {
         actions(&events),
         ["call brain.choose", "call approve.ask", "call brain.choose"]
     );
-    // Not an action: the interface has no `notes.delete`, so nothing is issued, whatever the owner says.
+    let messages = &events.last().unwrap()["action"]["args"]["messages"];
+    assert_eq!(messages[2]["content"], "denied");
+    // Not a tool it was offered: the model's answer doesn't have the output's type, so it is withheld, and the
+    // harness never sees it.
     let (events, _) = run(
         &harness,
         no_grant(),
-        &[
-            start(),
-            ret(0, chooses("notes.delete", json!({}))),
-            ret(1, json!("always")),
-        ],
+        &[start(), ret(0, chooses("notes.delete", json!({})))],
     );
-    assert_eq!(
-        actions(&events),
-        ["call brain.choose", "call approve.ask", "call brain.choose"]
-    );
-    let messages = &events.last().unwrap()["action"]["args"]["messages"];
-    assert_eq!(messages[2]["content"], "denied");
+    assert_eq!(actions(&events), ["call brain.choose"]);
+    let withheld = events.iter().find(|e| e["kind"] == "withheld").unwrap();
+    assert_eq!(withheld["reason"]["kind"], "mismatch");
 }
 
 #[test]
@@ -373,12 +372,13 @@ fn approval_since_the_last_choice_holds_up_to_a_depth_and_fails_without_it() {
 #[test]
 fn a_loop_without_calls_to_wait_on_stalls() {
     let counter = r#"
-harness count(n: Int) -> Json
+harness count(n: Int) -> Int
 uses notes
 carry k: Int = n
 seen = notes.read()
 next k = k + 1
 return k when k >= n + 2
+otherwise return k
 "#;
     let harness = elaborated(counter)["harness"].clone();
     let (events, system) = run(
@@ -394,19 +394,8 @@ return k when k >= n + 2
     assert_eq!(actions(&events).len(), 4);
     assert_eq!(system["root"]["outcome"]["value"], json!(7));
 
-    // Every call skipped: the next round would wait on nothing, so the run stalls.
+    // Every call skipped: the next round would wait on nothing, so the run stalls, and `otherwise` says what it gives.
     let idle = counter.replace("notes.read()", "notes.read() when k < 0");
-    let harness = elaborated(&idle)["harness"].clone();
-    let (_, system) = run(
-        &harness,
-        no_grant(),
-        &[json!({ "kind": "start", "value": 5 })],
-    );
-    assert_eq!(
-        system["root"]["outcome"]["value"],
-        json!({ "failed": "round" })
-    );
-    let idle = format!("{idle}otherwise return k\n");
     let harness = elaborated(&idle)["harness"].clone();
     let (_, system) = run(
         &harness,
@@ -467,9 +456,14 @@ fn loops_are_checked() {
     // A performed call may be skipped, so the end of a round reads it through `match`.
     assert_eq!(
         kinds(
-            "carry k: String = \"\"\nx = perform n\nnext k = str(x)\nreturn \"\" when true\notherwise return \"\"\n"
+            "carry k: String = \"\"\nc = brain.choose(messages: [])\nx = perform c\nnext k = x\nreturn \"\" when true\notherwise return \"\"\n"
         ),
         ["mayBeSkipped"]
+    );
+    // Only a variant with a case naming an operation can be performed.
+    assert_eq!(
+        kinds("x = perform n\nreturn \"\"\notherwise return \"\"\n"),
+        ["notPerformable"]
     );
     assert_eq!(kinds("x = 1 + perform n\nreturn \"\"\n"), ["syntax"]);
     // A receive read through `match` hasn't always heard anything.
@@ -482,12 +476,13 @@ fn loops_are_checked() {
 #[test]
 fn a_loops_invariant_has_an_induction_obligation() {
     let source = r#"
-harness count(n: Int) -> Json
+harness count(n: Int) -> Int
 uses notes
 carry k: Int = 0
 saved = notes.append(text: "x")
 next k = k + 1
 return k when k >= 3
+otherwise return k
 invariant small: k <= 3
 "#;
     let out = elaborated(source);
@@ -502,8 +497,7 @@ invariant small: k <= 3
         json!({ "Record": { "k": "Int" } })
     );
 
-    // The agent's too: a performed call's result is read as `Json` whichever operation gave it, including
-    // `notes.read`'s list, and `str` of it is text a solver chooses.
+    // The agent's too: a performed call's result is kept as text, and `str` of it is text a solver chooses.
     let agent = elaborated(AGENT);
     let obligation = call(json!({
         "op": "obligation", "harness": agent["harness"], "interface": interface(),
@@ -511,6 +505,5 @@ invariant small: k <= 3
     }));
     assert_eq!(obligation["kind"], "obligation", "{obligation}");
     let text = obligation["text"].as_str().unwrap();
-    assert!(text.contains("(define-funs-rec ((|map:json."), "{text}");
     assert!(text.contains("(declare-fun |fn:text."), "{text}");
 }

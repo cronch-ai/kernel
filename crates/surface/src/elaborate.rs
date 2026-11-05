@@ -137,7 +137,7 @@ pub(crate) enum Slotted {
     FanOut,
     /// A child run.
     Spawn,
-    /// A call chosen at run time: the value of an expression, if it is a call the interface allows.
+    /// A call chosen at run time: the value of an expression, a variant, when its case names an operation.
     Perform,
 }
 
@@ -164,6 +164,15 @@ pub(crate) struct Call {
     child: Option<(Harness, Vec<Narrowing>)>,
     /// The node whose return cancels this call.
     until: Option<usize>,
+    /// What a perform can call, once its expression's type is known.
+    chosen: Option<Chosen>,
+}
+
+/// A performed variant: the field it is read on, and each case naming an operation, with that operation's arguments.
+#[derive(Clone)]
+pub(crate) struct Chosen {
+    tag: String,
+    operations: BTreeMap<String, Vec<String>>,
 }
 
 pub(crate) struct Cx<'a> {
@@ -318,6 +327,51 @@ fn value_expr(v: &Value) -> K {
         Value::Array(items) => list(items.iter().map(value_expr).collect()),
         other => lit(other.clone()),
     }
+}
+
+/// What a perform of a value of type `got` can call: each case of a variant that names an operation, whose fields must
+/// be that operation's arguments.
+fn chosen_operations(
+    cx: &mut Cx,
+    interface: &Interface,
+    got: Option<Type>,
+    span: Span,
+) -> Option<Chosen> {
+    let got = got?;
+    let Type::Variant { tag, cases } = &got else {
+        cx.report(span, What::NotPerformable { got: Box::new(got) });
+        return None;
+    };
+    let mut operations = BTreeMap::new();
+    for (case, ty) in cases {
+        let Some(o) = interface.operations.get(case) else {
+            continue;
+        };
+        let Type::Record(fields) = &o.input else {
+            cx.report(
+                span,
+                What::NotPerformable {
+                    got: Box::new(got.clone()),
+                },
+            );
+            return None;
+        };
+        cx.expect(Some(ty.clone()), &o.input, span);
+        operations.insert(case.clone(), fields.keys().cloned().collect());
+    }
+    if operations.is_empty() {
+        cx.report(
+            span,
+            What::NotPerformable {
+                got: Box::new(got.clone()),
+            },
+        );
+        return None;
+    }
+    Some(Chosen {
+        tag: tag.clone(),
+        operations,
+    })
 }
 
 fn slot_type(call: &Call) -> Type {
@@ -1464,24 +1518,44 @@ impl Cx<'_> {
                 ]);
                 issued(one(), running(), op("append", vec![actions, action]))
             }
-            // Issued only if what the expression gives is an action of the interface the harness runs against, and a
-            // call: halting, cancelling and spawning stay the harness's.
+            // Each case naming an operation issues it, with the case's fields as its arguments. Any other case, such
+            // as a model's answer, skips: halting, cancelling and spawning stay the harness's.
             Slotted::Perform => {
-                let issue = if_(
-                    eq(get(var("@chosen"), "kind"), lit(json!("call"))),
-                    issued(
-                        one(),
-                        running(),
-                        op("append", vec![actions, var("@chosen")]),
-                    ),
-                    skip.clone(),
-                );
-                K::Is {
+                let Some(chosen) = &c.chosen else {
+                    return skip.clone();
+                };
+                let cases = chosen
+                    .operations
+                    .iter()
+                    .map(|(operation, fields)| {
+                        let args = rec(fields
+                            .iter()
+                            .map(|f| (f.as_str(), get(var("@chosen"), f)))
+                            .collect());
+                        let action = rec(vec![
+                            ("kind", lit(json!("call"))),
+                            ("op", lit(json!(operation))),
+                            ("args", args),
+                        ]);
+                        let body = issued(
+                            one(),
+                            running(),
+                            op("append", vec![actions.clone(), action]),
+                        );
+                        (
+                            operation.clone(),
+                            kernel::ir::Case {
+                                bind: "@chosen".to_string(),
+                                body,
+                            },
+                        )
+                    })
+                    .collect();
+                K::Match {
                     of: Box::new(lowered.args[&n].clone()),
-                    ty: Type::Action,
-                    bind: "@chosen".to_string(),
-                    then: Box::new(issue),
-                    otherwise: Box::new(skip.clone()),
+                    on: chosen.tag.clone(),
+                    cases,
+                    otherwise: Some(Box::new(skip.clone())),
                 }
             }
             Slotted::Spawn => {
@@ -1797,10 +1871,8 @@ impl Cx<'_> {
             }
             let slot = get(self.slot("@r", n), "value");
             let item = match self.calls[&n].kind {
-                // Any operation may answer a performed call, so what arrived is read as `Json`.
-                Slotted::Perform => {
-                    typed_let("@v", &Type::Json, get(var("@in"), "value"), var("@v"))
-                }
+                // Several operations may answer a performed call, so what arrived is kept as text.
+                Slotted::Perform => op("str", vec![get(var("@in"), "value")]),
                 _ => get(var("@in"), "value"),
             };
             let (kind, value) = match (input, self.calls[&n].kind) {
@@ -1939,9 +2011,9 @@ impl Cx<'_> {
                 Slotted::Stream,
                 Slotted::FanOut,
                 Slotted::Spawn,
+                Slotted::Perform,
             ],
         );
-        let performs = self.slotted(plan, &[Slotted::Perform]);
         let settles = self.slotted(
             plan,
             &[
@@ -1957,21 +2029,25 @@ impl Cx<'_> {
         let grouped = |nodes: &[usize]| {
             let mut by: BTreeMap<String, Vec<usize>> = BTreeMap::new();
             for &n in nodes {
-                by.entry(self.calls[&n].target.clone()).or_default().push(n);
+                let c = &self.calls[&n];
+                match &c.chosen {
+                    Some(chosen) => {
+                        for operation in chosen.operations.keys() {
+                            by.entry(operation.clone()).or_default().push(n);
+                        }
+                    }
+                    None => by.entry(c.target.clone()).or_default().push(n),
+                }
             }
             by
         };
-        let mut results = self.dispatch(
+        let results = self.dispatch(
             "op",
             grouped(&ops)
                 .into_iter()
                 .map(|(op, nodes)| (op, self.record(&nodes, Input::Ret)))
                 .collect(),
         );
-        // A performed call's result may come from any operation, so it is recorded before the operation is known.
-        if !performs.is_empty() {
-            results = let_("state", self.record(&performs, Input::Ret), results);
-        }
         let ends = self.dispatch(
             "op",
             grouped(&streams)
@@ -2191,6 +2267,7 @@ pub fn elaborate(
             cx.calls.insert(
                 i,
                 Call {
+                    chosen: None,
                     kind: Slotted::Receive,
                     target: channel.text.clone(),
                     input: Type::Record(BTreeMap::new()),
@@ -2285,6 +2362,7 @@ pub fn elaborate(
                     continue;
                 }
                 Call {
+                    chosen: None,
                     kind: Slotted::Spawn,
                     // A declared child: its results arrive on its own operation, at its result type.
                     target: spawn_op(&harness.text),
@@ -2295,12 +2373,13 @@ pub fn elaborate(
                     until: None,
                 }
             }
-            // Which operation it calls, and so what it returns, is known only when it runs.
+            // Which operations it can call is known once its expression's type is, and it keeps what they return as text.
             ExprKind::Perform(_) => Call {
+                chosen: None,
                 kind: Slotted::Perform,
                 target: "perform".to_string(),
-                input: Type::Json,
-                value: Type::Json,
+                input: Type::String,
+                value: Type::String,
                 binder: None,
                 child: None,
                 until: None,
@@ -2448,7 +2527,7 @@ pub fn elaborate(
     for &i in &order {
         let n = cx.needs(&node_reads[i], &of_pure);
         let guarded = cx.calls.get(&i).is_some_and(|c| c.kind != Slotted::Receive);
-        // A performed value that isn't a call the interface allows is skipped.
+        // A performed value whose case names no operation is skipped.
         let performs = cx.calls.get(&i).is_some_and(|c| c.kind == Slotted::Perform);
         let skippable = (file.nodes[i].when.is_some() && guarded)
             || performs
@@ -2624,7 +2703,11 @@ pub fn elaborate(
             }
             ExprKind::Perform(action) => {
                 let e = cx.lower(action, &mut Vec::new());
-                cx.type_of(&e, action.span, &scope);
+                let got = cx.type_of(&e, action.span, &scope);
+                let chosen = chosen_operations(&mut cx, &interface, got, action.span);
+                if let Some(c) = cx.calls.get_mut(&i) {
+                    c.chosen = chosen;
+                }
                 lowered.args.insert(i, e);
             }
             _ => {}
@@ -2677,13 +2760,13 @@ pub fn elaborate(
         if let Some(o) = interface.operations.get(&c.target) {
             used.operations.insert(c.target.clone(), o.clone());
         }
+        for operation in c.chosen.iter().flat_map(|c| c.operations.keys()) {
+            if let Some(o) = interface.operations.get(operation) {
+                used.operations.insert(operation.clone(), o.clone());
+            }
+        }
     }
-    // A harness that performs chosen actions may give any action of the interface it runs against.
-    let action = if cx.calls.values().any(|c| c.kind == Slotted::Perform) {
-        Type::Action
-    } else {
-        action_type(&result, &used)
-    };
+    let action = action_type(&result, &used);
     let step = step_type(&cx.state_type(&arg), &action);
     let plan = Plan {
         step,
@@ -2804,6 +2887,7 @@ fn classify_call(
         binder: None,
         child: None,
         until: None,
+        chosen: None,
     })
 }
 
