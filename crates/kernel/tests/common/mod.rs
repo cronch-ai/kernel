@@ -248,3 +248,34 @@ pub fn match_(
 pub fn is_type(of: Value, ty: Value, bind: &str, then: Value, otherwise: Value) -> Value {
     json!({ "e": "is", "of": of, "type": ty, "bind": bind, "then": then, "else": otherwise })
 }
+
+/// `then`, where `of` is the case `case` of its variant over `tag`, bound as `bind`; false anywhere else.
+pub fn when_case(of: Value, tag: &str, case: &str, bind: &str, then: Value) -> Value {
+    match_(of, tag, vec![(case, bind, then)], Some(lit(json!(false))))
+}
+
+/// `then`, at an event of the kind `kind`, bound as `e`.
+pub fn at_event(kind: &str, then: Value) -> Value {
+    when_case(var("event"), "kind", kind, "e", then)
+}
+
+/// `then`, at a performed call of any operation, its case bound as `a`, and the event as `e`.
+pub fn at_any_call(then: Value) -> Value {
+    at_event(
+        "out",
+        when_case(path("e", &["action"]), "kind", "call", "a", then),
+    )
+}
+
+/// `then`, at a performed call of the operation `name`, its case bound as `c`, and the event as `e`.
+pub fn at_call(name: &str, then: Value) -> Value {
+    at_any_call(when_case(var("a"), "op", name, "c", then))
+}
+
+/// `then`, at an input of the kind `kind`, its case bound as `i`.
+pub fn at_input(kind: &str, then: Value) -> Value {
+    at_event(
+        "in",
+        when_case(path("e", &["input"]), "kind", kind, "i", then),
+    )
+}

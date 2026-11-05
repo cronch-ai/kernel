@@ -4,24 +4,23 @@
 //! A property is `□φ`. `φ` is built from `and`, `or`, `not`, `implies`, `since`, `once`, `prev`, `historically`,
 //! `exists` and `forall`, whose leaves are atoms: an event helper (`called`, `returned`, `failed`, `refused`, `effect`,
 //! `msg`), a node helper (`ok`, `failed`, `refused`, `skipped`, `running`, `waiting`), or any boolean expression over
-//! `event`. Each helper is an atom of its own, its field reads guarded by `if`s, because an atom that reads a field its
-//! event doesn't have is false as a whole: inlined into a larger expression, one helper's missing field would falsify
-//! the others.
+//! `event`. Each helper is an atom of its own, a `match` down to the case of the event it is about, and false at any
+//! other.
 //!
 //! In a property or an invariant, a call node's name is its slot, `{kind, call, value, error}`, which the language
 //! defines (decision 6 of the plan), and a carried value's name is its value in the current round. A property reads slots from the state each event carries, and only at the root
 //! run's own steps: at any other event, an atom that reads a slot is false.
 
 use crate::What;
-use crate::elaborate::{Cx, Read, eq, get, if_, let_, lit, one_of, var};
+use crate::elaborate::{Bound, Cx, Read, eq, get, if_, let_, lit, var};
 use crate::lex::Span;
 use crate::syntax::{Binary, Expr, ExprKind, Name, Unary};
 use kernel::harness::{Harness, Interface};
-use kernel::ir::{Expr as K, Type};
+use kernel::ir::{Case, Expr as K, Type};
 use kernel::property::{Formula, Property, check_property};
 use serde::Serialize;
 use serde_json::{Value, json};
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 /// An invariant of the generated state, over the variable `state`.
 #[derive(Serialize, Clone, Debug)]
@@ -50,12 +49,68 @@ fn guarded(conditions: Vec<K>, then: K) -> K {
         .fold(then, |inner, c| if_(c, inner, lit(json!(false))))
 }
 
-/// The root run's own steps, which carry its state.
-fn at_root_step() -> Vec<K> {
-    vec![
-        eq(ev(&["origin"]), lit(json!([]))),
-        one_of(&["in", "out", "refused"], ev(&["kind"])),
-    ]
+/// `then`, where `of` is the case `case` of its variant over `tag`, bound as `bind`; false anywhere else.
+fn when_case(of: K, tag: &str, case: &str, bind: &str, then: K) -> K {
+    K::Match {
+        of: Box::new(of),
+        on: tag.to_string(),
+        cases: BTreeMap::from([(
+            case.to_string(),
+            Case {
+                bind: bind.to_string(),
+                body: then,
+            },
+        )]),
+        otherwise: Some(Box::new(lit(json!(false)))),
+    }
+}
+
+/// `body`, at the root run's own steps, which carry its state, with the event as `@s`; false at any other event.
+fn at_root_step(body: K) -> K {
+    let cases = ["in", "out", "refused"]
+        .into_iter()
+        .map(|kind| {
+            let case = Case {
+                bind: "@s".to_string(),
+                body: body.clone(),
+            };
+            (kind.to_string(), case)
+        })
+        .collect();
+    let step = K::Match {
+        of: Box::new(var("event")),
+        on: "kind".to_string(),
+        cases,
+        otherwise: Some(Box::new(lit(json!(false)))),
+    };
+    guarded(vec![eq(ev(&["origin"]), lit(json!([])))], step)
+}
+
+/// The root run's state, inside `at_root_step`.
+fn root_state() -> K {
+    get(var("@s"), "state")
+}
+
+/// `then`, at a performed call of any operation, its case bound as `@a`, and the event as `@e`.
+fn at_any_call(then: K) -> K {
+    when_case(
+        var("event"),
+        "kind",
+        "out",
+        "@e",
+        when_case(get(var("@e"), "action"), "kind", "call", "@a", then),
+    )
+}
+
+/// `then`, at an input of the kind `kind`, its case bound as `@i`.
+fn at_input(kind: &str, then: K) -> K {
+    when_case(
+        var("event"),
+        "kind",
+        "in",
+        "@e",
+        when_case(get(var("@e"), "input"), "kind", kind, "@i", then),
+    )
 }
 
 /// Whether `k` reads the variable `name` anywhere, shadowed or not: enough to know whether to bind it.
@@ -121,7 +176,10 @@ impl Cx<'_> {
         let known = if channel {
             interface.channels.contains_key(&name)
         } else {
-            name == "spawn" || interface.operations.contains_key(&name)
+            interface.operations.contains_key(&name)
+                || name
+                    .strip_prefix("spawn.")
+                    .is_some_and(|child| self.names.get(child) == Some(&Bound::Harness))
         };
         if !known {
             let what = if channel {
@@ -162,20 +220,20 @@ impl Cx<'_> {
         for &n in slots.iter().rev() {
             body = let_(
                 self.node_name(n),
-                ev(&["state", "nodes", self.node_name(n)]),
+                get(get(root_state(), "nodes"), self.node_name(n)),
                 body,
             );
         }
         if reads_state {
-            body = self.carried_from(&ev(&["state"]), body);
-            body = let_(&param, ev(&["state", "arg"]), body);
-            body = let_("@nodes", ev(&["state", "nodes"]), body);
+            body = self.carried_from(&root_state(), body);
+            body = let_(&param, get(root_state(), "arg"), body);
+            body = let_("@nodes", get(root_state(), "nodes"), body);
         }
         for (name, value) in binds.into_iter().rev() {
             body = let_(name, value, body);
         }
         if reads_state {
-            body = guarded(at_root_step(), body);
+            body = at_root_step(body);
         }
         body
     }
@@ -231,8 +289,8 @@ impl Cx<'_> {
                 self.helper_problem(e.span, name, "a call or receive node");
                 return None;
             };
-            let kind = ev(&["state", "nodes", self.node_name(n), "kind"]);
-            return Some(atom(guarded(at_root_step(), eq(kind, lit(json!(name))))));
+            let slot = get(get(root_state(), "nodes"), self.node_name(n));
+            return Some(atom(at_root_step(eq(get(slot, "kind"), lit(json!(name))))));
         }
         let channel = name == "msg";
         if name == "effect" {
@@ -240,13 +298,7 @@ impl Cx<'_> {
                 self.helper_problem(e.span, name, "no arguments");
                 return None;
             }
-            return Some(atom(guarded(
-                vec![
-                    eq(ev(&["kind"]), lit(json!("out"))),
-                    eq(ev(&["action", "kind"]), lit(json!("call"))),
-                ],
-                ev(&["effect"]),
-            )));
+            return Some(atom(at_any_call(get(var("@e"), "effect"))));
         }
         let (Some(target), 1..=2) = (arg(0), args.len()) else {
             let what = if channel { "a channel" } else { "an operation" };
@@ -260,42 +312,31 @@ impl Cx<'_> {
         let target = self.named(target, locals, interface, channel)?;
         let holds = match name {
             "called" => {
-                let filter = self.filter(args, locals, "args", ev(&["action", "args"]));
-                guarded(
-                    vec![
-                        eq(ev(&["kind"]), lit(json!("out"))),
-                        eq(ev(&["action", "kind"]), lit(json!("call"))),
-                        eq(ev(&["action", "op"]), lit(json!(target))),
-                    ],
-                    filter,
-                )
+                let filter = self.filter(args, locals, "args", get(var("@c"), "args"));
+                at_any_call(when_case(var("@a"), "op", &target, "@c", filter))
             }
             "msg" => {
-                let filter = self.filter(args, locals, "value", ev(&["input", "value"]));
-                guarded(
-                    vec![
-                        eq(ev(&["kind"]), lit(json!("in"))),
-                        eq(ev(&["input", "kind"]), lit(json!("msg"))),
-                        eq(ev(&["input", "channel"]), lit(json!(target))),
-                    ],
-                    filter,
+                let filter = self.filter(args, locals, "value", get(var("@c"), "value"));
+                at_input(
+                    "msg",
+                    when_case(var("@i"), "channel", &target, "@c", filter),
                 )
             }
+            "returned" => {
+                let filter = self.filter(args, locals, "value", get(var("@c"), "value"));
+                at_input("ret", when_case(var("@i"), "op", &target, "@c", filter))
+            }
+            "failed" => {
+                let filter = self.filter(args, locals, "error", get(var("@i"), "error"));
+                let of_it = eq(get(var("@i"), "op"), lit(json!(target)));
+                at_input("failed", if_(of_it, filter, lit(json!(false))))
+            }
             _ => {
-                let (kind, binder, field) = match name {
-                    "returned" => ("ret", "value", "value"),
-                    "failed" => ("failed", "error", "error"),
-                    _ => ("refused", "value", "value"),
-                };
-                let filter = self.filter(args, locals, binder, ev(&["input", field]));
-                guarded(
-                    vec![
-                        eq(ev(&["kind"]), lit(json!("in"))),
-                        eq(ev(&["input", "kind"]), lit(json!(kind))),
-                        eq(ev(&["input", "op"]), lit(json!(target))),
-                    ],
-                    filter,
-                )
+                if args.len() > 1 {
+                    self.helper_problem(e.span, name, "an operation, and no condition");
+                    return None;
+                }
+                at_input("refused", eq(get(var("@i"), "op"), lit(json!(target))))
             }
         };
         Some(atom(holds))

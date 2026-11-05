@@ -9,7 +9,6 @@ const kernel = await instantiate(bytes);
 const lit = (v) => ({ e: "lit", v });
 const v = (name) => ({ e: "var", name });
 const get = (of, field) => ({ e: "get", of, field });
-const eq = (a, b) => ({ e: "op", op: "eq", args: [a, b] });
 const step = (actions) => ({
   e: "record",
   fields: { state: v("state"), actions: { e: "list", items: actions } },
@@ -45,6 +44,37 @@ const writer = {
     },
     otherwise: step([{ e: "record", fields: { kind: lit("halt"), value: lit("refused") } }]),
   },
+};
+
+/** `then` where `of` is the case `name` of its variant over `on`, bound as `bind`; false anywhere else. */
+const whenCase = (of, on, name, bind, then) => ({
+  e: "match",
+  of,
+  on,
+  cases: { [name]: { bind, body: then } },
+  otherwise: lit(false),
+});
+
+/** `then` at an event of `kind` that is a call of `fs.write`, its case bound as `c`. */
+const atCall = (kind, then) =>
+  whenCase(
+    v("event"),
+    "kind",
+    kind,
+    "e",
+    whenCase(
+      get(v("e"), "action"),
+      "kind",
+      "call",
+      "a",
+      whenCase(v("a"), "op", "fs.write", "c", then),
+    ),
+  );
+
+const notWithin = {
+  e: "op",
+  op: "not",
+  args: [{ e: "op", op: "prefix", args: [lit("/workspace/"), get(get(v("c"), "args"), "path")] }],
 };
 
 const files = {
@@ -86,31 +116,18 @@ test("properties read events as views, typed by the harness and interface", () =
   const [, refused] = kernel.view(outside.events);
   assert.equal(refused.kind, "refused");
   assert.equal(refused.action.call, 0);
-  assert.equal(kernel.eventType(writer, files).Record.action.Record.call, "Int");
-  const misspelled = { name: "m", always: { f: "atom", holds: get(v("event"), "efect") } };
+  const performed = kernel.eventType(writer, files).Variant.cases.out.Record.action;
+  assert.equal(performed.Variant.cases.call.Variant.cases["fs.write"].Record.call, "Int");
+  const misspelled = {
+    name: "m",
+    always: { f: "atom", holds: atCall("out", get(v("e"), "efect")) },
+  };
   const [problem] = kernel.checkProperty(misspelled, writer, files);
   assert.equal(problem.problem.kind, "noSuchField");
 });
 
 test("proves and re-checks evidence", () => {
-  const performedOutside = {
-    e: "op",
-    op: "and",
-    args: [
-      eq(get(v("event"), "kind"), lit("out")),
-      {
-        e: "op",
-        op: "not",
-        args: [
-          {
-            e: "op",
-            op: "prefix",
-            args: [lit("/workspace/"), get(get(get(v("event"), "action"), "args"), "path")],
-          },
-        ],
-      },
-    ],
-  };
+  const performedOutside = atCall("out", notWithin);
   const property = {
     name: "staysInWorkspace",
     always: { f: "not", of: { f: "atom", holds: performedOutside } },
@@ -130,30 +147,7 @@ test("proves and re-checks evidence", () => {
 test("monitors a run step by step as it would the whole trace", () => {
   const property = {
     name: "neverTriesOutside",
-    always: {
-      f: "not",
-      of: {
-        f: "atom",
-        holds: {
-          e: "op",
-          op: "and",
-          args: [
-            eq(get(v("event"), "kind"), lit("refused")),
-            {
-              e: "op",
-              op: "not",
-              args: [
-                {
-                  e: "op",
-                  op: "prefix",
-                  args: [lit("/workspace/"), get(get(get(v("event"), "action"), "args"), "path")],
-                },
-              ],
-            },
-          ],
-        },
-      },
-    },
+    always: { f: "not", of: { f: "atom", holds: atCall("refused", notWithin) } },
   };
   const { system } = kernel.init({ harness: writer, interface: files });
   const started = kernel.monitorStart(property);

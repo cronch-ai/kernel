@@ -39,7 +39,8 @@ pub enum Formula {
         condition: Box<Formula>,
         then: Box<Formula>,
     },
-    /// `x` ranges over the values `of` gave at the events so far.
+    /// `x` ranges over the items of the lists `of` gave at the events so far: a list holds what an event has to offer,
+    /// and is empty at one with nothing.
     Exists {
         var: String,
         of: Expr,
@@ -84,7 +85,7 @@ pub struct PropertyProblem {
 }
 
 /// Problems with a property's atoms and quantifier bounds, in runs of this harness against this interface: `event`
-/// has the type `view::event_type` gives, and what a quantifier binds is `Json`.
+/// has the type `view::event_type` gives, and what a quantifier binds is an item of the list it ranges over.
 pub fn check_property(
     property: &Property,
     harness: &Harness,
@@ -100,15 +101,15 @@ fn check_formula(
     f: &Formula,
     at: &str,
     event: &Type,
-    bound: &mut Vec<String>,
+    bound: &mut Vec<(String, Type)>,
     out: &mut Vec<PropertyProblem>,
 ) {
     let child = |s: &str| format!("{at}/{s}");
-    let mut expr = |e: &Expr, at: String, bound: &Vec<String>, want: Option<Type>| {
+    let mut expr = |e: &Expr, at: String, bound: &Vec<(String, Type)>, want: Option<Type>| {
         let scope = std::iter::once(("event".to_string(), event.clone()))
-            .chain(bound.iter().map(|n| (n.clone(), Type::Json)))
+            .chain(bound.iter().cloned())
             .collect();
-        let (_, problems) = match &want {
+        let (ty, problems) = match &want {
             Some(expected) => check(e, expected, scope),
             None => infer(e, scope),
         };
@@ -116,9 +117,12 @@ fn check_formula(
             at: at.clone(),
             problem,
         }));
+        ty
     };
     match f {
-        Formula::Atom { holds } => expr(holds, child("holds"), bound, Some(Type::Bool)),
+        Formula::Atom { holds } => {
+            expr(holds, child("holds"), bound, Some(Type::Bool));
+        }
         Formula::Not { of }
         | Formula::Prev { of }
         | Formula::Once { of }
@@ -136,10 +140,22 @@ fn check_formula(
             check_formula(right, &child("right"), event, bound, out);
         }
         Formula::Exists { var, of, body } | Formula::Forall { var, of, body } => {
-            expr(of, child("of"), bound, None);
-            bound.push(var.clone());
-            check_formula(body, &child("body"), event, bound, out);
-            bound.pop();
+            // With no list to range over, there is nothing to say what the body's variable is.
+            match expr(of, child("of"), bound, None) {
+                Some(Type::List(item)) => {
+                    bound.push((var.clone(), *item));
+                    check_formula(body, &child("body"), event, bound, out);
+                    bound.pop();
+                }
+                Some(got) => out.push(PropertyProblem {
+                    at: child("of"),
+                    problem: Problem::NotAList {
+                        at: String::new(),
+                        got,
+                    },
+                }),
+                None => {}
+            }
         }
     }
 }
@@ -165,11 +181,12 @@ fn holds_at(f: &Formula, trace: &[Value], i: usize, env: &mut Vec<(String, Value
         Formula::Exists { var, of, body } | Formula::Forall { var, of, body } => {
             let mut domain: Vec<Value> = Vec::new();
             for event in &trace[..=i] {
-                if let Some(v) = value_at(of, event, env)
-                    && !v.is_null()
-                    && !domain.contains(&v)
-                {
-                    domain.push(v);
+                if let Some(Value::Array(items)) = value_at(of, event, env) {
+                    for item in items {
+                        if !domain.contains(&item) {
+                            domain.push(item);
+                        }
+                    }
                 }
             }
             let exists = matches!(f, Formula::Exists { .. });
