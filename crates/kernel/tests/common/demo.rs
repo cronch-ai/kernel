@@ -35,7 +35,7 @@ fn fetch() -> Value {
 }
 
 fn empty_state(step_fn: Value) -> Value {
-    json!({ "arg": { "Record": {} }, "state": { "Record": {} }, "init": {}, "step": step_fn })
+    json!({ "result": "Json", "arg": { "Record": {} }, "state": { "Record": {} }, "init": {}, "step": step_fn })
 }
 
 /// Fetches a page and sends what it got.
@@ -97,7 +97,7 @@ pub fn obedient() -> Value {
         acting(var("state"), dynamic(path("input", &["value"]))),
     );
     json!({
-        "arg": { "Record": {} },
+        "result": "Json", "arg": { "Record": {} },
         "state": { "Record": { "stopped": "Bool" } },
         "init": { "stopped": false },
         "step": on(
@@ -177,7 +177,8 @@ pub fn mistyped() -> Value {
 /// Performs the action each message names, if it is one of the interface's. Ignores everything else.
 pub fn actor() -> Value {
     json!({
-        "arg": { "Record": {} },
+        "result": "Json", "arg": { "Record": {} },
+        "spawns": { "worker": { "arg": { "Record": { "op": "String", "args": "Json" } }, "result": "Json" } },
         "state": { "Record": {} },
         "init": {},
         "step": on(
@@ -191,7 +192,7 @@ pub fn actor() -> Value {
 /// "failed".
 pub fn worker() -> Value {
     json!({
-        "arg": { "Record": { "op": "String", "args": "Json" } },
+        "result": "Json", "arg": { "Record": { "op": "String", "args": "Json" } },
         "state": { "Record": {} },
         "init": {},
         "step": on(

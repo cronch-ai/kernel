@@ -23,7 +23,7 @@ fn counter(on_count: Value) -> Value {
         Some(step(var("state"), vec![halt(lit(json!(-1)))])),
     );
     json!({
-        "arg": { "Record": {} },
+        "result": "Json", "arg": { "Record": {} },
         "state": { "Record": {} },
         "init": {},
         "step": match_(
@@ -69,7 +69,7 @@ fn a_matched_result_has_its_operations_type() {
 #[test]
 fn matches_must_cover_their_variant() {
     let partial = json!({
-        "arg": { "Record": {} }, "state": { "Record": {} }, "init": {},
+        "result": "Json", "arg": { "Record": {} }, "state": { "Record": {} }, "init": {},
         "step": match_(var("input"), "kind", vec![("start", "s", step(var("state"), vec![]))], None),
     });
     let problems = check(partial);
@@ -80,7 +80,7 @@ fn matches_must_cover_their_variant() {
     );
 
     let unknown = json!({
-        "arg": { "Record": {} }, "state": { "Record": {} }, "init": {},
+        "result": "Json", "arg": { "Record": {} }, "state": { "Record": {} }, "init": {},
         "step": match_(var("input"), "kind", vec![("stop", "s", step(var("state"), vec![]))], Some(step(var("state"), vec![]))),
     });
     assert_eq!(check(unknown)[0]["problem"]["kind"], "noSuchCase");
@@ -97,10 +97,8 @@ fn the_input_type_follows_the_interface() {
         cases["ret"]["Variant"]["cases"]["count"]["Record"]["value"],
         "Int"
     );
-    assert_eq!(
-        cases["ret"]["Variant"]["cases"]["spawn"]["Record"]["value"],
-        "Json"
-    );
+    // Every child is declared, so there is no result case for an undeclared one.
+    assert!(cases["ret"]["Variant"]["cases"].get("spawn").is_none());
     assert_eq!(
         cases["msg"]["Variant"]["cases"]["user"]["Record"]["value"],
         "String"
@@ -189,7 +187,7 @@ fn slotted() -> Value {
         Some(step(var("state"), vec![])),
     );
     json!({
-        "arg": { "Record": {} },
+        "result": "Json", "arg": { "Record": {} },
         "state": state_type,
         "init": { "slot": { "kind": "waiting" } },
         "step": match_(

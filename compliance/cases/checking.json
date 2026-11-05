@@ -8,6 +8,7 @@
             "Record": {}
           },
           "init": 1,
+          "result": "Json",
           "state": {
             "Record": {}
           },
@@ -175,6 +176,7 @@
             "Record": {}
           },
           "init": {},
+          "result": "Json",
           "state": {
             "Record": {}
           },
@@ -372,6 +374,7 @@
           "init": {
             "stopped": false
           },
+          "result": "Json",
           "state": {
             "Record": {
               "stopped": "Bool"
@@ -576,7 +579,7 @@
             "Record": {
               "action": {
                 "Record": {
-                  "arg": "Json",
+                  "arg": "String",
                   "args": {
                     "Record": {
                       "body": "String",
@@ -585,21 +588,21 @@
                     }
                   },
                   "call": "Int",
-                  "harness": "Json",
+                  "harness": "String",
                   "kind": "String",
                   "name": "String",
-                  "narrow": "Json",
+                  "narrow": "String",
                   "op": "String",
-                  "value": "Json"
+                  "value": "String"
                 }
               },
               "effect": "Bool",
               "error": {
                 "Record": {
-                  "action": "Json",
-                  "error": "Json",
-                  "expected": "Json",
-                  "got": "Json",
+                  "action": "String",
+                  "error": "String",
+                  "expected": "String",
+                  "got": "String",
                   "kind": "String"
                 }
               },
@@ -622,7 +625,9 @@
               },
               "labels": {
                 "Record": {
-                  "arg": "Json",
+                  "arg": {
+                    "List": "String"
+                  },
                   "args": {
                     "Record": {
                       "body": {
@@ -639,18 +644,24 @@
                   "call": {
                     "List": "String"
                   },
-                  "harness": "Json",
+                  "harness": {
+                    "List": "String"
+                  },
                   "kind": {
                     "List": "String"
                   },
                   "name": {
                     "List": "String"
                   },
-                  "narrow": "Json",
+                  "narrow": {
+                    "List": "String"
+                  },
                   "op": {
                     "List": "String"
                   },
-                  "value": "Json"
+                  "value": {
+                    "List": "String"
+                  }
                 }
               },
               "origin": {
@@ -660,8 +671,8 @@
                 "Record": {
                   "call": "Int",
                   "channel": "String",
-                  "expected": "Json",
-                  "got": "Json",
+                  "expected": "String",
+                  "got": "String",
                   "kind": "String"
                 }
               },
@@ -684,6 +695,7 @@
           "init": {
             "stopped": false
           },
+          "result": "Json",
           "state": {
             "Record": {
               "stopped": "Bool"
@@ -1185,6 +1197,7 @@
           "init": {
             "stopped": false
           },
+          "result": "Json",
           "state": {
             "Record": {
               "stopped": "Bool"
@@ -1684,7 +1697,7 @@
                   "Record": {
                     "action": {
                       "Record": {
-                        "arg": "Json",
+                        "arg": "String",
                         "args": {
                           "Record": {
                             "body": "String",
@@ -1693,21 +1706,21 @@
                           }
                         },
                         "call": "Int",
-                        "harness": "Json",
+                        "harness": "String",
                         "kind": "String",
                         "name": "String",
-                        "narrow": "Json",
+                        "narrow": "String",
                         "op": "String",
-                        "value": "Json"
+                        "value": "String"
                       }
                     },
                     "effect": "Bool",
                     "error": {
                       "Record": {
-                        "action": "Json",
-                        "error": "Json",
-                        "expected": "Json",
-                        "got": "Json",
+                        "action": "String",
+                        "error": "String",
+                        "expected": "String",
+                        "got": "String",
                         "kind": "String"
                       }
                     },
@@ -1730,7 +1743,9 @@
                     },
                     "labels": {
                       "Record": {
-                        "arg": "Json",
+                        "arg": {
+                          "List": "String"
+                        },
                         "args": {
                           "Record": {
                             "body": {
@@ -1747,18 +1762,24 @@
                         "call": {
                           "List": "String"
                         },
-                        "harness": "Json",
+                        "harness": {
+                          "List": "String"
+                        },
                         "kind": {
                           "List": "String"
                         },
                         "name": {
                           "List": "String"
                         },
-                        "narrow": "Json",
+                        "narrow": {
+                          "List": "String"
+                        },
                         "op": {
                           "List": "String"
                         },
-                        "value": "Json"
+                        "value": {
+                          "List": "String"
+                        }
                       }
                     },
                     "origin": {
@@ -1768,8 +1789,8 @@
                       "Record": {
                         "call": "Int",
                         "channel": "String",
-                        "expected": "Json",
-                        "got": "Json",
+                        "expected": "String",
+                        "got": "String",
                         "kind": "String"
                       }
                     },
@@ -1795,6 +1816,7 @@
           "init": {
             "stopped": false
           },
+          "result": "Json",
           "state": {
             "Record": {
               "stopped": "Bool"

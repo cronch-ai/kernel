@@ -84,7 +84,7 @@ fn chooser() -> Value {
         step(var("state"), vec![halt(lit(json!("not a call")))]),
     );
     json!({
-        "arg": "Json", "state": { "Record": {} }, "init": {},
+        "result": "Json", "arg": "Json", "state": { "Record": {} }, "init": {},
         "step": match_(
             var("input"), "kind",
             vec![
@@ -135,7 +135,7 @@ fn a_started_value_its_test_rejects_still_taints_the_fallback() {
 /// Keeps the last start value, whatever it is.
 fn keeper() -> Value {
     json!({
-        "arg": "Json", "state": { "Record": { "last": "Json" } }, "init": { "last": null },
+        "result": "Json", "arg": "Json", "state": { "Record": { "last": "Json" } }, "init": { "last": null },
         "step": match_(var("input"), "kind", vec![
             ("start", "s", step(rec(vec![("last", path("s", &["value"]))]), vec![])),
         ], Some(step(var("state"), vec![]))),
@@ -189,7 +189,7 @@ fn performer() -> Value {
         step(var("state"), vec![]),
     );
     json!({
-        "arg": "Json", "state": { "Record": { "acted": "Int" } }, "init": { "acted": 0 },
+        "result": "Json", "arg": "Json", "state": { "Record": { "acted": "Int" } }, "init": { "acted": 0 },
         "step": on(vec![("msg", chosen)], step(var("state"), vec![])),
     })
 }

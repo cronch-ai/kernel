@@ -20,7 +20,7 @@ fn act(action: Value) -> Value {
 
 fn spawn(op_name: &str, args: Value, narrow: Value) -> Value {
     act(
-        json!({ "kind": "spawn", "harness": worker(), "narrow": narrow, "arg": { "op": op_name, "args": args } }),
+        json!({ "kind": "spawn", "name": "worker", "harness": worker(), "narrow": narrow, "arg": { "op": op_name, "args": args } }),
     )
 }
 
@@ -65,7 +65,7 @@ fn a_child_calls_through_its_parents_interface_and_answers_it() {
     assert_eq!(events[2]["origin"], json!([]));
     assert_eq!(
         events[2]["input"],
-        json!({ "kind": "ret", "call": 0, "op": "spawn", "value": 1 })
+        json!({ "kind": "ret", "call": 0, "op": "spawn.worker", "value": 1 })
     );
     assert_eq!(system["root"]["children"], Value::Null);
 }
@@ -212,13 +212,15 @@ fn a_spawn_that_cannot_start_is_refused() {
     let (_, events) = deliver_all(
         system(),
         vec![
-            act(json!({ "kind": "spawn", "harness": bad, "arg": { "op": "x" } })),
+            act(json!({ "kind": "spawn", "name": "worker", "harness": bad, "arg": { "op": "x" } })),
             spawn(
                 "x",
                 json!({}),
                 json!([{ "kind": "drop", "op": "fs.delete" }]),
             ),
-            act(json!({ "kind": "spawn", "harness": worker(), "arg": { "op": 3 } })),
+            act(
+                json!({ "kind": "spawn", "name": "worker", "harness": worker(), "arg": { "op": 3 } }),
+            ),
         ],
     );
     let refused: Vec<&Value> = events
@@ -226,7 +228,14 @@ fn a_spawn_that_cannot_start_is_refused() {
         .filter(|e| e["input"]["kind"] == "refused")
         .map(|e| &e["input"]["op"])
         .collect();
-    assert_eq!(refused, [&json!("spawn"), &json!("spawn"), &json!("spawn")]);
+    assert_eq!(
+        refused,
+        [
+            &json!("spawn.worker"),
+            &json!("spawn.worker"),
+            &json!("spawn.worker")
+        ]
+    );
 }
 
 #[test]
@@ -246,20 +255,45 @@ fn a_run_that_ends_takes_its_children_with_it() {
 #[test]
 fn runs_that_only_answer_each_other_are_stopped() {
     let quitter = json!({
-        "arg": { "Record": {} }, "state": { "Record": {} }, "init": {},
+        "result": "Json", "arg": { "Record": {} }, "state": { "Record": {} }, "init": {},
         "step": step(var("state"), vec![halt(lit(json!(0)))]),
     });
     let again = rec(vec![
         ("kind", lit(json!("spawn"))),
+        ("name", lit(json!("quitter"))),
         ("harness", lit(quitter)),
         ("arg", rec(vec![])),
     ]);
     let looper = json!({
-        "arg": { "Record": {} }, "state": { "Record": {} }, "init": {},
+        "result": "Json", "arg": { "Record": {} }, "state": { "Record": {} }, "init": {},
+        "spawns": { "quitter": { "arg": { "Record": {} }, "result": "Json" } },
         "step": step(var("state"), vec![again]),
     });
     let ready = call(json!({ "op": "init", "harness": looper, "interface": {} }));
     let (system, events) = deliver_all(ready["system"].clone(), vec![start(json!({}))]);
     assert_eq!(system["root"]["outcome"]["error"]["kind"], "runaway");
     assert_eq!(events.last().unwrap()["kind"], "failed");
+}
+
+#[test]
+fn a_spawn_must_name_a_declared_child() {
+    // Naming no child isn't an `Action`, so this harness's test leaves it out.
+    let (system, events) = deliver_all(
+        system(),
+        vec![act(
+            json!({ "kind": "spawn", "harness": worker(), "arg": { "op": "x" } }),
+        )],
+    );
+    assert_eq!(system["root"]["outcome"], Value::Null, "{events:#?}");
+    assert_eq!(shape(&events), ["in:msg"]);
+
+    // Naming one the harness doesn't declare is refused, on that name's operation.
+    let (_, events) = deliver_all(
+        system,
+        vec![act(
+            json!({ "kind": "spawn", "name": "stranger", "harness": worker(), "arg": { "op": "x" } }),
+        )],
+    );
+    assert_eq!(events[2]["input"]["kind"], "refused", "{events:#?}");
+    assert_eq!(events[2]["input"]["op"], "spawn.stranger");
 }

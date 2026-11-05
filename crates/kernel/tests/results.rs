@@ -135,10 +135,14 @@ fn a_halt_outside_the_result_type_fails_the_run() {
     );
     assert_eq!(outcome(chosen, json!("five")), Value::Null);
 
-    // Without a result type, any value will do, as before.
+    // A harness without a result type is malformed: every harness says what it halts with.
     let mut untyped = increment();
     untyped.as_object_mut().unwrap().remove("result");
-    assert_eq!(outcome(untyped, json!(4))["value"], json!(5));
+    let response = kernel::cbor::decode(&kernel::api::call(&kernel::cbor::encode(
+        &json!({ "op": "init", "harness": untyped, "interface": {} }),
+    )))
+    .unwrap();
+    assert_eq!(response["error"]["kind"], "malformed", "{response}");
 }
 
 #[test]

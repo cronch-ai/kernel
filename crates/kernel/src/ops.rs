@@ -425,10 +425,7 @@ pub fn apply(op: Op, args: &[Value]) -> Result<Value, OpEvalError> {
             }
             Ok(Value::String(out))
         }
-        Op::Str => Ok(Value::String(match &args[0] {
-            Value::String(s) => s.clone(),
-            other => other.to_string(),
-        })),
+        Op::Str => Ok(Value::String(text(&args[0]))),
         Op::Len => match &args[0] {
             Value::String(s) => length(s.chars().count()),
             Value::Array(items) => length(items.len()),
@@ -465,6 +462,15 @@ pub fn apply(op: Op, args: &[Value]) -> Result<Value, OpEvalError> {
                 }
             }
         }
+    }
+}
+
+/// A value as `str` writes it: a string as itself, anything else as its JSON text. What no contract has typed reaches a
+/// harness this way.
+pub fn text(value: &Value) -> String {
+    match value {
+        Value::String(s) => s.clone(),
+        other => other.to_string(),
     }
 }
 
