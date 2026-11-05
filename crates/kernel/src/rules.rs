@@ -80,9 +80,6 @@ pub enum RuleError {
     Grant,
     /// This update isn't made of records, branches and bindings, so what it writes can't be read off it.
     Unreadable { update: String },
-    /// A query would hold `Json`, whose reading a proof checker can't follow. A harness can run with it; a rule over
-    /// it can't be checked, so the rule says so rather than writing a query nothing can check. Type the field.
-    HoldsJson { place: String, name: String },
     /// A part has no faithful reading in SMT-LIB.
     Refused { place: String, refusal: Refusal },
 }
@@ -282,28 +279,6 @@ fn part(declared: &BTreeMap<String, Type>, fields: &BTreeSet<String>) -> BTreeMa
         .collect()
 }
 
-/// Whether `ty` holds `Json` at any depth.
-fn holds_json(ty: &Type) -> bool {
-    match ty {
-        Type::Json => true,
-        Type::List(t) => holds_json(t),
-        Type::Record(fields) => fields.values().any(holds_json),
-        Type::Variant { cases, .. } => cases.values().any(holds_json),
-        _ => false,
-    }
-}
-
-/// `Err` naming the first of these parameters that holds `Json`.
-fn checkable(place: &str, params: &[Param]) -> Result<(), RuleError> {
-    match params.iter().find(|p| holds_json(&p.ty)) {
-        Some(p) => Err(RuleError::HoldsJson {
-            place: place.to_string(),
-            name: p.name.clone(),
-        }),
-        None => Ok(()),
-    }
-}
-
 /// One update of the grant state.
 struct Update<'a> {
     name: String,
@@ -446,14 +421,12 @@ pub fn obligations(
             .map(|(name, v)| (name.clone(), v.clone()))
             .collect(),
     );
-    let initial_params = [
-        param("args", &guarded.input),
-        param("grant", &Type::Record(initial_part)),
-    ];
-    checkable("initial", &initial_params)?;
     let initial = smtlib::refutation(
         &header("initial"),
-        &initial_params,
+        &[
+            param("args", &guarded.input),
+            param("grant", &Type::Record(initial_part)),
+        ],
         &[("grant", &initial_grant)],
         &pre,
         floats,
@@ -493,7 +466,6 @@ pub fn obligations(
             param(GRANT, &Type::Record(needed)),
         ];
         params.extend(update.vars.iter().map(|(_, p, ty)| param(p, ty)));
-        checkable(&update.name, &params)?;
         // The approval reads the call as `args`, and this update's arguments as `approval`.
         let approved = update.approves.iter().fold(var(APPROVED), |acc, when| {
             let reading = update.vars.iter().find(|(n, ..)| *n == "result");

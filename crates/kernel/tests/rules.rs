@@ -211,44 +211,6 @@ fn a_contract_the_kernel_can_fail_to_evaluate_is_refused() {
 }
 
 #[test]
-fn a_query_holding_json_is_refused_by_name() {
-    // An approval that keeps a call's arguments as `Json`, as a generic approval does.
-    let approve = json!({ "prefix": "approve", "capability": {
-        "operations": { "ask": {
-            "input": { "Record": { "url": "String" } }, "output": "String", "ret": list(vec![]),
-            "onResult": rec(vec![
-                ("netAllow", op("append", vec![path("grant", &["netAllow"]), path("args", &["url"])])),
-                ("kept", op("append", vec![path("grant", &["kept"]), path("args", &["url"])])),
-            ]),
-        } },
-        "grant": { "Record": { "netAllow": { "List": "String" }, "kept": { "List": "Json" } } },
-    }});
-    let interface = install(json!([net(), approve]));
-    let out = obligations(interface, json!({ "netAllow": [], "kept": [] }));
-    assert_eq!(
-        out["error"],
-        json!({ "kind": "holdsJson", "place": "approve.ask.onResult", "name": "rule:grant" }),
-        "{out}"
-    );
-}
-
-#[test]
-fn json_elsewhere_in_the_grant_leaves_a_rule_alone() {
-    // Nothing here reads or writes the `Json` field, so no query holds it.
-    let elsewhere = json!({ "prefix": "other", "capability": {
-        "operations": { "go": { "input": { "Record": {} }, "output": "String", "ret": list(vec![]),
-            "onResult": rec(vec![("kept", op("append", vec![path("grant", &["kept"]), var("result")]))]) } },
-        "grant": { "Record": { "kept": { "List": "Json" } } },
-    }});
-    let out = obligations(
-        install(json!([net(), elsewhere])),
-        json!({ "netAllow": [], "kept": [] }),
-    );
-    assert_eq!(out["kind"], "obligations", "{out}");
-    assert_eq!(names(&out, "framed"), ["other.go.onResult"]);
-}
-
-#[test]
 fn the_grant_and_the_operations_must_be_the_interface_s() {
     let interface = install(json!([net()]));
     let out = obligations(interface.clone(), json!({ "netAllow": 1 }));
