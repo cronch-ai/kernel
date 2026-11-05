@@ -6,48 +6,27 @@ mod common;
 use common::*;
 use serde_json::{Value, json};
 
-/// Calls `{op, args}` from its start value and from messages on the driving channels, if they name one of the
-/// interface's calls; ignores everything else.
+/// Makes the call each message on a driving channel holds; ignores everything else.
 fn puppet() -> Value {
-    let call = |of: Value| {
-        let shaped = json!({ "Record": { "op": "String", "args": "Json" } });
-        let made = rec(vec![
-            ("kind", lit(json!("call"))),
-            ("op", path("v", &["op"])),
-            ("args", path("v", &["args"])),
-        ]);
-        is_type(
-            of,
-            shaped,
-            "v",
-            acting(var("state"), dynamic(made)),
-            step(var("state"), vec![]),
-        )
-    };
-    let channel = || path("input", &["channel"]);
-    let driven = op(
-        "or",
-        vec![
-            eq(channel(), lit(json!("drive"))),
-            eq(channel(), lit(json!("model"))),
-        ],
+    let msg = match_(
+        var("input"),
+        "channel",
+        vec![("drive", "m", performing()), ("model", "m", performing())],
+        Some(step(var("state"), vec![])),
     );
     json!({
-        "result": "Json", "arg": { "Record": { "op": "String", "args": "Json" } },
+        "result": "String", "arg": { "Record": {} },
         "state": { "Record": {} },
         "init": {},
-        "step": on(
-            vec![
-                ("start", call(path("input", &["value"]))),
-                ("msg", if_(driven, call(path("input", &["value"])), step(var("state"), vec![]))),
-            ],
-            step(var("state"), vec![]),
-        ),
+        "step": on(vec![("msg", msg)], step(var("state"), vec![])),
     })
 }
 
 fn drive(op_name: &str, args: Value) -> Value {
-    msg("drive", json!({ "op": op_name, "args": args }))
+    msg(
+        "drive",
+        json!({ "kind": "call", "op": op_name, "args": args }),
+    )
 }
 
 fn argv() -> Value {
@@ -65,17 +44,21 @@ fn shell() -> Value {
         op("or", vec![var("ok"), op("prefix", vec![var("p"), argv()])]),
     );
     let approved_once = op("contains", vec![path("grant", &["once"]), argv()]);
-    let used_up = fold(
-        path("grant", &["once"]),
-        list(vec![]),
-        "kept",
-        "x",
-        if_(
-            eq(var("x"), argv()),
-            var("kept"),
-            op("append", vec![var("kept"), var("x")]),
-        ),
-    );
+    let used_up = {
+        let mut f = fold(
+            path("grant", &["once"]),
+            list(vec![]),
+            "kept",
+            "x",
+            if_(
+                eq(var("x"), argv()),
+                var("kept"),
+                op("append", vec![var("kept"), var("x")]),
+            ),
+        );
+        f["type"] = json!({ "List": { "List": "String" } });
+        f
+    };
     let grant = |allow: Value, once: Value| rec(vec![("allow", allow), ("once", once)]);
     let answered = if_(
         eq(var("result"), lit(json!("always"))),
@@ -165,10 +148,16 @@ fn web() -> Value {
 
 /// Messages that drive the puppet: one from a trusted principal, one from a model.
 fn drivers() -> Value {
+    let tools = call(json!({ "op": "install", "capabilities": [
+        { "prefix": "shell", "capability": shell() },
+        { "prefix": "fs", "capability": files() },
+        { "prefix": "net", "capability": web() },
+    ]}));
+    let calls = calls_of(&tools["interface"]);
     json!({
         "channels": {
-            "drive": { "type": { "Record": { "op": "String" } } },
-            "model": { "type": { "Record": { "op": "String" } }, "label": ["model"] },
+            "drive": { "type": calls },
+            "model": { "type": calls, "label": ["model"] },
             // A trusted message changes the mode, and leaves the rest of the grant as it was.
             "mode": { "type": "String", "onMsg": rec(vec![("mode", var("value"))]) },
             "spoof": { "type": "String", "label": ["model"], "onMsg": rec(vec![("mode", var("value"))]) },
@@ -193,10 +182,7 @@ fn system(interface: Value) -> Value {
     let ready =
         call(json!({ "op": "init", "harness": puppet(), "interface": interface, "grant": grant }));
     assert_eq!(ready["kind"], "ready", "{ready}");
-    let (system, _) = deliver_all(
-        ready["system"].clone(),
-        vec![start(json!({ "op": "none", "args": {} }))],
-    );
+    let (system, _) = deliver_all(ready["system"].clone(), vec![start(json!({}))]);
     system
 }
 
@@ -319,7 +305,7 @@ fn writes_stay_in_the_workspace_and_record_their_footprint() {
 
 #[test]
 fn preconditions_read_labels() {
-    let send = |url: &str| json!({ "op": "net.send", "args": { "url": url, "body": "hi" } });
+    let send = |url: &str| json!({ "kind": "call", "op": "net.send", "args": { "url": url, "body": "hi" } });
     let (_, calls) = performed(
         system(installed()),
         vec![
@@ -342,7 +328,10 @@ fn results_carry_their_return_label_and_must_meet_their_postcondition() {
     let counter = json!({ "operations": { "count": {
         "input": { "Record": {} }, "output": "Int",
         "post": op("ge", vec![var("result"), lit(json!(0))]),
-    }}, "channels": drivers()["channels"], "grant": drivers()["grant"] });
+    }}, "grant": drivers()["grant"] });
+    let calls = calls_of(&counter);
+    let mut counter = counter;
+    counter["channels"] = json!({ "drive": { "type": calls }, "model": { "type": calls } });
     let (system, _) = deliver_all(system_with(counter), vec![drive("count", json!({}))]);
     let (system, events) = deliver_all(system, vec![ret(0, json!(-1))]);
     assert_eq!(shape(&events), ["withheld:postcondition"]);
@@ -355,11 +344,7 @@ fn system_with(interface: Value) -> Value {
         json!({ "op": "init", "harness": puppet(), "interface": interface, "grant": { "mode": "default" } }),
     );
     assert_eq!(ready["kind"], "ready", "{ready}");
-    deliver_all(
-        ready["system"].clone(),
-        vec![start(json!({ "op": "none", "args": {} }))],
-    )
-    .0
+    deliver_all(ready["system"].clone(), vec![start(json!({}))]).0
 }
 
 #[test]
@@ -368,7 +353,9 @@ fn messages_must_meet_their_channels_invariant() {
         "type": { "Record": { "op": "String" } },
         "inv": op("ne", vec![path("value", &["op"]), lit(json!("forbidden"))]),
     }}});
-    let (_, events) = deliver_all(system_with(interface), vec![drive("forbidden", json!({}))]);
+    let idle = json!({ "result": "String", "arg": { "Record": {} }, "state": { "Record": {} }, "init": {}, "step": step(var("state"), vec![]) });
+    let (system, _) = deliver_all(init(idle, interface), vec![start(json!({}))]);
+    let (_, events) = deliver_all(system, vec![msg("drive", json!({ "op": "forbidden" }))]);
     assert_eq!(shape(&events), ["withheld:invariant"]);
 }
 
@@ -431,7 +418,7 @@ fn contracts_are_checked() {
         .map(|p| p["place"]["part"].as_str().unwrap())
         .collect();
     assert_eq!(parts, ["pre", "ret"]);
-    let idle = json!({ "result": "Json", "arg": "Json", "state": { "Record": {} }, "init": {}, "step": step(var("state"), vec![]) });
+    let idle = json!({ "result": "String", "arg": "String", "state": { "Record": {} }, "init": {}, "step": step(var("state"), vec![]) });
     let refused = call(json!({ "op": "init", "harness": idle, "interface": interface }));
     assert_eq!(refused["error"]["kind"], "interface");
 }
@@ -485,7 +472,7 @@ fn capabilities_declare_their_part_of_the_grant_state() {
     assert_eq!(problems[0]["place"]["part"], "onCall");
 
     // And a run can't start with a grant state of another type.
-    let harness = json!({ "result": "Json", "arg": "Json", "state": { "Record": {} }, "init": {}, "step": step(var("state"), vec![]) });
+    let harness = json!({ "result": "String", "arg": "String", "state": { "Record": {} }, "init": {}, "step": step(var("state"), vec![]) });
     let refused = call(
         json!({ "op": "init", "harness": harness, "interface": counter, "grant": { "ticks": "none" } }),
     );

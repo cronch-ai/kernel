@@ -7,21 +7,14 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::BTreeMap;
 
-/// A structural type over JSON values. `Int` conforms to `Float`, a record with more fields conforms to one with fewer,
-/// and every type conforms to `Json`, which is read only after `is` has tested it.
+/// A structural type over JSON values. `Int` conforms to `Float`, and a record with more fields conforms to one with
+/// fewer. There is no type of any value: what no contract has typed is text.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub enum Type {
     Int,
     Float,
     String,
     Bool,
-    /// Any JSON value: null, a boolean, a number, a string, a list of them or a record of them. Every value is one, so
-    /// every type conforms to it, and it conforms to nothing else: what it holds is read only by testing it with `is`.
-    Json,
-    /// An action the harness may take against the interface it runs against: its interface's action type, resolved
-    /// where the step is checked, run or read in SMT-LIB. So one term tests a choice made at run time (a model's tool
-    /// call) against whatever its interface allows, and a narrowed child against what its narrowing leaves.
-    Action,
     List(Box<Type>),
     Record(BTreeMap<String, Type>),
     /// A tagged union: a record whose `tag` field names its case, and which has that case's type. A case is a record
@@ -94,17 +87,6 @@ pub enum Expr {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         otherwise: Option<Box<Expr>>,
     },
-    /// Whether `of` has type `type`: if it does, `then`, with `bind` holding it at that type; if not, `else`. How a
-    /// `Json` value is read, such as a tool call a model chose, checked against the operations it may name.
-    Is {
-        of: Box<Expr>,
-        #[serde(rename = "type")]
-        ty: Type,
-        bind: String,
-        then: Box<Expr>,
-        #[serde(rename = "else")]
-        otherwise: Box<Expr>,
-    },
     /// `acc` starts as `init` and becomes `body` once per item of `over`, in order, with `item` bound to that item.
     /// The only iteration there is: it runs once per item of a list it is given, so evaluation always terminates.
     /// With `type`, the accumulator has it, and `init` and `body` are checked against it.
@@ -132,119 +114,4 @@ pub fn default_tag() -> String {
 
 fn is_default_tag(tag: &str) -> bool {
     tag == "kind"
-}
-
-impl Type {
-    /// This type with `Action` as `action`.
-    pub fn resolved(&self, action: &Type) -> Type {
-        match self {
-            Type::Action => action.clone(),
-            Type::List(t) => Type::List(Box::new(t.resolved(action))),
-            Type::Record(fields) => Type::Record(
-                fields
-                    .iter()
-                    .map(|(n, t)| (n.clone(), t.resolved(action)))
-                    .collect(),
-            ),
-            Type::Variant { tag, cases } => Type::Variant {
-                tag: tag.clone(),
-                cases: cases
-                    .iter()
-                    .map(|(n, t)| (n.clone(), t.resolved(action)))
-                    .collect(),
-            },
-            other => other.clone(),
-        }
-    }
-}
-
-impl Expr {
-    /// This expression with `Action` in its types as `action`.
-    pub fn resolved(&self, action: &Type) -> Expr {
-        let again = |e: &Expr| Box::new(e.resolved(action));
-        match self {
-            Expr::Lit { .. } | Expr::Var { .. } => self.clone(),
-            Expr::Op { op, args } => Expr::Op {
-                op: op.clone(),
-                args: args.iter().map(|a| a.resolved(action)).collect(),
-            },
-            Expr::Let { name, be, body, ty } => Expr::Let {
-                name: name.clone(),
-                be: again(be),
-                body: again(body),
-                ty: ty.as_ref().map(|t| t.resolved(action)),
-            },
-            Expr::If {
-                cond,
-                then,
-                otherwise,
-            } => Expr::If {
-                cond: again(cond),
-                then: again(then),
-                otherwise: again(otherwise),
-            },
-            Expr::Record { fields } => Expr::Record {
-                fields: fields
-                    .iter()
-                    .map(|(n, e)| (n.clone(), e.resolved(action)))
-                    .collect(),
-            },
-            Expr::List { items } => Expr::List {
-                items: items.iter().map(|e| e.resolved(action)).collect(),
-            },
-            Expr::Get { of, field } => Expr::Get {
-                of: again(of),
-                field: field.clone(),
-            },
-            Expr::Label { of } => Expr::Label { of: again(of) },
-            Expr::Is {
-                of,
-                ty,
-                bind,
-                then,
-                otherwise,
-            } => Expr::Is {
-                of: again(of),
-                ty: ty.resolved(action),
-                bind: bind.clone(),
-                then: again(then),
-                otherwise: again(otherwise),
-            },
-            Expr::Match {
-                of,
-                on,
-                cases,
-                otherwise,
-            } => Expr::Match {
-                of: again(of),
-                on: on.clone(),
-                cases: cases
-                    .iter()
-                    .map(|(n, c)| {
-                        let case = Case {
-                            bind: c.bind.clone(),
-                            body: c.body.resolved(action),
-                        };
-                        (n.clone(), case)
-                    })
-                    .collect(),
-                otherwise: otherwise.as_ref().map(|o| again(o)),
-            },
-            Expr::Fold {
-                over,
-                init,
-                acc,
-                item,
-                body,
-                ty,
-            } => Expr::Fold {
-                over: again(over),
-                init: again(init),
-                acc: acc.clone(),
-                item: item.clone(),
-                body: again(body),
-                ty: ty.as_ref().map(|t| t.resolved(action)),
-            },
-        }
-    }
 }

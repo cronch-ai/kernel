@@ -1,0 +1,176 @@
+{
+  "description": "A literal with no type of its own, a literal taking the type expected of it, and `[]` taking its type from the other branch.",
+  "exchanges": [
+    {
+      "request": {
+        "expr": {
+          "e": "lit",
+          "v": null
+        },
+        "op": "infer",
+        "vars": {}
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "problems": [
+            {
+              "at": "",
+              "kind": "untyped"
+            }
+          ],
+          "type": null
+        }
+      }
+    },
+    {
+      "request": {
+        "expr": {
+          "e": "list",
+          "items": []
+        },
+        "op": "infer",
+        "vars": {}
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "problems": [
+            {
+              "at": "",
+              "kind": "untyped"
+            }
+          ],
+          "type": null
+        }
+      }
+    },
+    {
+      "request": {
+        "expr": {
+          "be": {
+            "e": "list",
+            "items": []
+          },
+          "e": "let",
+          "in": {
+            "e": "var",
+            "name": "x"
+          },
+          "name": "x",
+          "type": {
+            "List": "Int"
+          }
+        },
+        "op": "infer",
+        "vars": {}
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "problems": [],
+          "type": {
+            "List": "Int"
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "expr": {
+          "cond": {
+            "e": "lit",
+            "v": true
+          },
+          "e": "if",
+          "else": {
+            "e": "list",
+            "items": []
+          },
+          "then": {
+            "e": "list",
+            "items": [
+              {
+                "e": "lit",
+                "v": 1
+              }
+            ]
+          }
+        },
+        "op": "infer",
+        "vars": {}
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "problems": [],
+          "type": {
+            "List": "Int"
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "expr": {
+          "e": "get",
+          "field": "value",
+          "of": {
+            "e": "var",
+            "name": "x"
+          }
+        },
+        "op": "infer",
+        "vars": {
+          "x": {
+            "Variant": {
+              "cases": {
+                "a": {
+                  "Record": {
+                    "value": "Int"
+                  }
+                },
+                "b": {
+                  "Record": {
+                    "value": "String"
+                  }
+                }
+              },
+              "tag": "kind"
+            }
+          }
+        }
+      },
+      "response": {
+        "ok": true,
+        "result": {
+          "problems": [
+            {
+              "at": "",
+              "field": "value",
+              "kind": "notEveryCase",
+              "of": {
+                "Variant": {
+                  "cases": {
+                    "a": {
+                      "Record": {
+                        "value": "Int"
+                      }
+                    },
+                    "b": {
+                      "Record": {
+                        "value": "String"
+                      }
+                    }
+                  },
+                  "tag": "kind"
+                }
+              }
+            }
+          ],
+          "type": null
+        }
+      }
+    }
+  ]
+}

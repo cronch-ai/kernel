@@ -17,7 +17,7 @@ const step = (actions) => ({
 /** Writes to the path its start value names, then halts with the result. */
 const writer = {
   arg: "String",
-  result: "Json",
+  result: "String",
   state: { Record: {} },
   init: {},
   step: {
@@ -39,7 +39,15 @@ const writer = {
       },
       ret: {
         bind: "r",
-        body: step([{ e: "record", fields: { kind: lit("halt"), value: get(v("r"), "value") } }]),
+        body: step([
+          {
+            e: "record",
+            fields: {
+              kind: lit("halt"),
+              value: { e: "op", op: "str", args: [get(v("r"), "value")] },
+            },
+          },
+        ]),
       },
     },
     otherwise: step([{ e: "record", fields: { kind: lit("halt"), value: lit("refused") } }]),
@@ -103,7 +111,7 @@ test("runs a harness, checking preconditions at the point of the call", () => {
   );
   assert.equal(inside.events[1].performed, true);
   const done = kernel.deliver(inside.system, { input: { kind: "ret", call: 0, value: 1 } });
-  assert.deepEqual(done.system.root.outcome, { kind: "halted", value: 1 });
+  assert.deepEqual(done.system.root.outcome, { kind: "halted", value: "1" });
 
   const outside = kernel.deliver(ready.system, { input: { kind: "start", value: "/etc/passwd" } });
   assert.equal(outside.events[1].performed, false);

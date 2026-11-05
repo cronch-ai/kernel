@@ -100,6 +100,11 @@ pub enum OpTypeError {
         expected: Type,
         got: Type,
     },
+    /// An operand that had to be a list, of anything.
+    NotAList {
+        index: usize,
+        got: Type,
+    },
 }
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
@@ -112,6 +117,11 @@ pub enum OpEvalError {
     Operand {
         index: usize,
         expected: Type,
+        got: Value,
+    },
+    /// An operand that had to be a list, of anything, met in a term that wasn't checked.
+    NotAList {
+        index: usize,
         got: Value,
     },
 }
@@ -211,9 +221,8 @@ pub fn result_type(op: Op, args: &[Type]) -> Result<Type, OpTypeError> {
                     expected: (**t).clone(),
                     got: args[1].clone(),
                 }),
-            got => Err(OpTypeError::Operand {
+            got => Err(OpTypeError::NotAList {
                 index: 0,
-                expected: Type::List(Box::new(Type::Json)),
                 got: got.clone(),
             }),
         },
@@ -303,9 +312,8 @@ fn boolean(index: usize, v: &Value) -> Result<bool, OpEvalError> {
 }
 
 fn list(index: usize, v: &Value) -> Result<&Vec<Value>, OpEvalError> {
-    v.as_array().ok_or_else(|| OpEvalError::Operand {
+    v.as_array().ok_or_else(|| OpEvalError::NotAList {
         index,
-        expected: Type::List(Box::new(Type::Json)),
         got: v.clone(),
     })
 }

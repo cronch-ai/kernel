@@ -140,7 +140,7 @@ pub struct Channel {
 ///
 /// `grant` is the type of the grant state its contracts read and write: a capability declares the part it uses, as
 /// a record type, and installing capabilities together merges their parts. A run's grant state must have it. Absent:
-/// `Json`, which says nothing of it, so a capability that reads the grant must declare what it reads.
+/// the empty record, so a capability that reads the grant must declare what it reads.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Interface {
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
@@ -469,13 +469,6 @@ pub fn check_interface(interface: &Interface) -> Vec<HarnessProblem> {
     problems
 }
 
-/// The step as it runs against this interface: `Action` in its types is the interface's action type.
-pub fn resolved_step(harness: &Harness, interface: &Interface) -> Expr {
-    harness
-        .step
-        .resolved(&action_type(&harness.result, interface))
-}
-
 /// What `δ` must give: the next state and the actions, each of type `action`.
 pub fn step_type(state: &Type, action: &Type) -> Type {
     Type::Record(BTreeMap::from([
@@ -632,7 +625,7 @@ pub fn check_harness(harness: &Harness, interface: &Interface) -> Vec<HarnessPro
     ];
     // The step is checked against its type, so the state it builds can hold variants.
     let action = action_type(&harness.result, interface);
-    let step = harness.step.resolved(&action);
+    let step = harness.step.clone();
     let (_, found) = check(&step, &step_type(&harness.state, &action), scope);
     for problem in found {
         problems.push(match problem {

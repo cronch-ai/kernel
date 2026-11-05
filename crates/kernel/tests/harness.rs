@@ -9,14 +9,14 @@ fn int_op() -> Value {
     json!({ "input": { "Record": { "n": "Int" } }, "output": "Int" })
 }
 
-/// Start: call `double(n)`. A result: halt with it. Anything else: halt with "refused".
+/// Start: call `double(n)`. A result: halt with it. Anything else: halt with -1.
 fn double_harness() -> Value {
     let calls = rec(vec![(
         "calls",
         op("add", vec![path("state", &["calls"]), lit(json!(1))]),
     )]);
     json!({
-        "result": "Json", "arg": "Int",
+        "result": "Int", "arg": "Int",
         "state": { "Record": { "calls": "Int" } },
         "init": { "calls": 0 },
         "step": on(
@@ -24,7 +24,7 @@ fn double_harness() -> Value {
                 ("start", step(calls, vec![call_action("double", rec(vec![("n", path("input", &["value"]))]))])),
                 ("ret", step(var("state"), vec![halt(path("input", &["value"]))])),
             ],
-            step(var("state"), vec![halt(lit(json!("refused")))]),
+            step(var("state"), vec![halt(lit(json!(-1)))]),
         ),
     })
 }
@@ -117,7 +117,7 @@ fn a_call_the_interface_lacks_is_caught_before_the_run_and_a_failed_precondition
         events[2]["input"],
         json!({ "kind": "refused", "call": 0, "op": "double" })
     );
-    assert_eq!(system["root"]["outcome"]["value"], "refused");
+    assert_eq!(system["root"]["outcome"]["value"], json!(-1));
 }
 
 #[test]
@@ -183,7 +183,7 @@ fn both_harness() -> Value {
         )
     };
     json!({
-        "result": "Json", "arg": { "Record": {} },
+        "result": { "List": "Int" }, "arg": { "Record": {} },
         "state": { "Record": { "got": { "List": "Int" } } },
         "init": { "got": [] },
         "step": on(
@@ -225,7 +225,7 @@ fn streams_deliver_items_then_end_and_cancellation_is_a_request() {
         vec![path("state", &["text"]), path("input", &["value"])],
     );
     let harness = json!({
-        "result": "Json", "arg": { "Record": {} },
+        "result": "String", "arg": { "Record": {} },
         "state": { "Record": { "text": "String" } },
         "init": { "text": "" },
         "step": on(
@@ -270,7 +270,7 @@ fn streams_deliver_items_then_end_and_cancellation_is_a_request() {
 #[test]
 fn a_step_that_fails_ends_the_run() {
     let harness = json!({
-        "result": "Json", "arg": "Int",
+        "result": "String", "arg": "Int",
         "state": "Int",
         "init": 0,
         "step": on(
@@ -320,11 +320,11 @@ fn reacts_to_fetch() -> Value {
     );
     let decided = step(var("state"), vec![fixed, chosen]);
     json!({
-        "result": "Json", "arg": { "Record": {} }, "state": { "Record": {} }, "init": {},
+        "result": "String", "arg": { "Record": {} }, "state": { "Record": {} }, "init": {},
         "step": on(
             vec![
                 ("start", step(var("state"), vec![call_action("net.fetch", rec(vec![("url", lit(json!("https://example.com/page")))]))])),
-                ("ret", decided),
+                ("ret", on_op(vec![("net.fetch", decided)], step(var("state"), vec![]))),
             ],
             step(var("state"), vec![]),
         ),

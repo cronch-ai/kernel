@@ -47,7 +47,7 @@
           }
         },
         "op": "elaborate",
-        "source": "harness turn(prompt: String) -> Json\nuses model, fs, session\nstop   = receive said from session.user when said == \"stop\"\nchunks = model.generate(messages: [{role: \"user\", content: prompt}]) until stop\nreply  = fold chunks from \"\" with (text, chunk) => concat(text, chunk)\nsaved  = fs.write(path: \"/workspace/reply.md\", text: reply) until stop\nreturn saved\notherwise return \"interrupted\"\n"
+        "source": "harness turn(prompt: String) -> String\nuses model, fs, session\nstop   = receive said from session.user when said == \"stop\"\nchunks = model.generate(messages: [{role: \"user\", content: prompt}]) until stop\nreply  = fold chunks from \"\" with (text, chunk) => concat(text, chunk)\nsaved  = fs.write(path: \"/workspace/reply.md\", text: reply) until stop\nreturn str(saved)\notherwise return \"interrupted\"\n"
       },
       "response": {
         "ok": true,
@@ -78,7 +78,7 @@
                 }
               }
             },
-            "result": "Json",
+            "result": "String",
             "state": {
               "Record": {
                 "arg": "String",
@@ -3442,8 +3442,14 @@
                                                           "v": "halt"
                                                         },
                                                         "value": {
-                                                          "e": "var",
-                                                          "name": "saved"
+                                                          "args": [
+                                                            {
+                                                              "e": "var",
+                                                              "name": "saved"
+                                                            }
+                                                          ],
+                                                          "e": "op",
+                                                          "op": "str"
                                                         }
                                                       }
                                                     }
@@ -3513,7 +3519,7 @@
                                               },
                                               "halt": {
                                                 "Record": {
-                                                  "value": "Json"
+                                                  "value": "String"
                                                 }
                                               },
                                               "spawn": {
@@ -3612,7 +3618,7 @@
                                             },
                                             "halt": {
                                               "Record": {
-                                                "value": "Json"
+                                                "value": "String"
                                               }
                                             },
                                             "spawn": {
@@ -3711,7 +3717,7 @@
                                           },
                                           "halt": {
                                             "Record": {
-                                              "value": "Json"
+                                              "value": "String"
                                             }
                                           },
                                           "spawn": {
@@ -3810,7 +3816,7 @@
                                         },
                                         "halt": {
                                           "Record": {
-                                            "value": "Json"
+                                            "value": "String"
                                           }
                                         },
                                         "spawn": {
@@ -4009,7 +4015,7 @@
                                 },
                                 "halt": {
                                   "Record": {
-                                    "value": "Json"
+                                    "value": "String"
                                   }
                                 },
                                 "spawn": {
@@ -4108,7 +4114,7 @@
                               },
                               "halt": {
                                 "Record": {
-                                  "value": "Json"
+                                  "value": "String"
                                 }
                               },
                               "spawn": {
@@ -4207,7 +4213,7 @@
                             },
                             "halt": {
                               "Record": {
-                                "value": "Json"
+                                "value": "String"
                               }
                             },
                             "spawn": {

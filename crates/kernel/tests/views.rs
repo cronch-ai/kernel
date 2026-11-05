@@ -44,7 +44,7 @@ fn a_refused_call_has_no_effect_and_a_child_has_no_state() {
     );
     let child = msg(
         "act",
-        json!({ "kind": "spawn", "name": "worker", "harness": worker(), "narrow": [], "arg": { "op": "fs.write", "args": { "path": "/workspace/a" } } }),
+        json!({ "kind": "spawn", "name": "worker", "harness": worker(), "narrow": [], "arg": { "kind": "call", "op": "fs.write", "args": { "path": "/workspace/a" } } }),
     );
     let (_, events) = deliver_all(system, vec![refused, child]);
     let seen = views(&events);
@@ -77,13 +77,12 @@ fn a_refused_call_has_no_effect_and_a_child_has_no_state() {
 
 #[test]
 fn an_operations_footprint_is_on_its_call() {
-    let footprinted = json!({
+    let footprinted = acting_on(json!({
         "operations": {
             "fs.write": { "input": { "Record": { "path": "String" } }, "output": "Int", "effect": true,
                 "footprint": rec(vec![("writes", path("args", &["path"]))]) },
         },
-        "channels": { "act": { "type": { "Record": { "kind": "String" } } } },
-    });
+    }));
     let ty =
         call(json!({ "op": "eventType", "harness": actor(), "interface": footprinted }))["type"]
             .clone();

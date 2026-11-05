@@ -24,7 +24,7 @@ fn call(request: &Value) -> Value {
 type Case = (&'static str, &'static str, fn() -> Vec<Value>);
 
 const APPROVED_NOTE: &str = "\
-harness approved_note(prompt: String) -> Json
+harness approved_note(prompt: String) -> String
 
 uses model, approve, notes
 
@@ -56,13 +56,13 @@ return draft
 ";
 
 const TURN: &str = "\
-harness turn(prompt: String) -> Json
+harness turn(prompt: String) -> String
 uses model, fs, session
 stop   = receive said from session.user when said == \"stop\"
 chunks = model.generate(messages: [{role: \"user\", content: prompt}]) until stop
 reply  = fold chunks from \"\" with (text, chunk) => concat(text, chunk)
 saved  = fs.write(path: \"/workspace/reply.md\", text: reply) until stop
-return saved
+return str(saved)
 otherwise return \"interrupted\"
 ";
 
@@ -75,21 +75,13 @@ otherwise return -1
 ";
 
 const PARENT: &str = "\
-harness parent(xs: List[Int]) -> Json
+harness parent(xs: List[Int]) -> Int
 uses m = \"math\"
 uses doubler = harness \"registered:doubler\"
 doubled = for x in xs: m.double(n: x)
 total = fold doubled from 0 with (sum, d) => sum + d
 again = spawn doubler(total) only m.double
 return again
-";
-
-const PICK: &str = "\
-harness pick(choice: Json) -> Int
-uses m = \"math\"
-type Doubling = {n: Int}
-d = m.double(n: if choice is Doubling as c then c.n else 0)
-return d
 otherwise return -1
 ";
 
@@ -171,11 +163,6 @@ fn cases() -> Vec<Case> {
             "claims",
             "Properties and invariants claimed in source.",
             || vec![elaborate(&format!("{APPROVED_NOTE}{CLAIMS}"), platform())],
-        ),
-        (
-            "json",
-            "A Json argument read only after testing it against a type.",
-            || vec![elaborate(PICK, math())],
         ),
         (
             "loops",

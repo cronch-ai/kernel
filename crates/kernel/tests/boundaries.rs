@@ -5,35 +5,23 @@ mod common;
 use common::*;
 use serde_json::{Value, json};
 
-/// Calls whatever a message on `model` says, as a harness following a model would, and halts when told what to halt
-/// with on `stop`. Its argument, state and what it reads of a message promise nothing about the call.
+/// Makes the call a message on `model` holds, and halts with what a message on `stop` holds. The model's choice has a
+/// type: the calls of the interface, as plain data.
 fn puppet(result: Value) -> Value {
-    let call = |of: Value| {
-        let shaped = json!({ "Record": { "op": "String", "args": "Json" } });
-        let made = rec(vec![
-            ("kind", lit(json!("call"))),
-            ("op", path("v", &["op"])),
-            ("args", path("v", &["args"])),
-        ]);
-        is_type(
-            of,
-            shaped,
-            "v",
-            acting(var("state"), dynamic(made)),
-            step(var("state"), vec![]),
-        )
-    };
-    let message = path("input", &["value"]);
     json!({
         "arg": "Int",
         "result": result,
         "state": { "Record": {} },
         "init": {},
         "step": on(
-            vec![("msg", if_(
-                eq(path("input", &["channel"]), lit(json!("model"))),
-                call(message.clone()),
-                step(var("state"), vec![halt(message)]),
+            vec![("msg", match_(
+                var("input"),
+                "channel",
+                vec![
+                    ("model", "m", acting(var("state"), list(vec![path("m", &["value"])]))),
+                    ("stop", "m", step(var("state"), vec![halt(path("m", &["value"]))])),
+                ],
+                Some(step(var("state"), vec![])),
             ))],
             step(var("state"), vec![]),
         ),
@@ -50,20 +38,22 @@ fn interface() -> Value {
             },
         },
         "channels": {
-            "model": { "type": "Json", "label": ["model"] },
-            "stop": { "type": "Json" },
+            "model": { "type": { "Variant": { "tag": "kind", "cases": { "call": { "Variant": { "tag": "op", "cases": {
+                "fetch": { "Record": { "args": { "Record": { "url": "String" } } } },
+            }}}}}}, "label": ["model"] },
+            "stop": { "type": "String" },
             "count": { "type": "Int", "inv": op("gt", vec![var("value"), lit(json!(0))]) },
         },
     })
 }
 
 fn started() -> Value {
-    let system = init(puppet(json!("Json")), interface());
+    let system = init(puppet(json!("String")), interface());
     deliver_all(system, vec![start(json!(1))]).0
 }
 
 fn chosen(op_: &str, args: Value) -> Value {
-    msg("model", json!({ "op": op_, "args": args }))
+    msg("model", json!({ "kind": "call", "op": op_, "args": args }))
 }
 
 fn withheld(events: &[Value]) -> Option<&Value> {
@@ -79,23 +69,28 @@ fn performed(events: &[Value]) -> bool {
 
 #[test]
 fn a_start_value_has_the_harness_s_argument_type() {
-    let system = init(puppet(json!("Json")), interface());
+    let system = init(puppet(json!("String")), interface());
     let (_, events) = deliver_all(system, vec![start(json!("one"))]);
     let reason = &withheld(&events).expect("withheld")["reason"];
     assert_eq!(reason["kind"], "mismatch", "{events:?}");
 }
 
 #[test]
-fn a_chosen_call_has_the_operation_s_input_type_whatever_the_harness_held() {
-    // Today a harness can read these as `Json`, which goes: see `chosen_call.rs`. Until then it must narrow one to
-    // `Action`, whose cases are this interface's operations and their input types, so none of these happens.
-    let (system, events) = deliver_all(started(), vec![chosen("fetch", json!({ "url": 1 }))]);
-    assert!(!performed(&events), "{events:?}");
-    let (system, events) = deliver_all(system, vec![chosen("fetch", json!({}))]);
-    assert!(!performed(&events), "{events:?}");
-    let (system, events) = deliver_all(system, vec![chosen("delete", json!({ "url": "x" }))]);
-    assert!(!performed(&events), "{events:?}");
-    let (_, events) = deliver_all(system, vec![chosen("fetch", json!({ "url": "x" }))]);
+fn a_chosen_call_has_the_operation_s_input_type() {
+    // None of these has the channel's type, so none reaches the harness. See `chosen_call.rs` for a model's answer.
+    for (operation, args) in [
+        ("fetch", json!({ "url": 1 })),
+        ("fetch", json!({})),
+        ("delete", json!({ "url": "x" })),
+    ] {
+        let (_, events) = deliver_all(started(), vec![chosen(operation, args)]);
+        assert_eq!(
+            withheld(&events).expect("withheld")["reason"]["kind"],
+            "mismatch"
+        );
+        assert!(!performed(&events), "{events:?}");
+    }
+    let (_, events) = deliver_all(started(), vec![chosen("fetch", json!({ "url": "x" }))]);
     assert!(performed(&events), "{events:?}");
 }
 
@@ -134,17 +129,12 @@ fn a_message_has_the_channel_s_type_and_invariant() {
 
 #[test]
 fn a_halt_has_the_harness_s_result_type() {
-    // Checked before the run starts: this step halts with `Json` where the harness declares `String`.
+    // Checked before the run starts: this step halts with `String` where the harness declares `Int`.
     let out =
-        call(json!({ "op": "init", "harness": puppet(json!("String")), "interface": interface() }));
+        call(json!({ "op": "init", "harness": puppet(json!("Int")), "interface": interface() }));
     assert_eq!(out["kind"], "refused", "{out}");
-    assert_eq!(
-        out["error"]["problems"][0]["problem"]["kind"], "mismatch",
-        "{out}"
-    );
-    // `Json` promises nothing, so anything halts.
-    let (system, _) = deliver_all(started(), vec![msg("stop", json!(1))]);
-    assert_eq!(system["root"]["outcome"]["kind"], "halted", "{system}");
+    let (system, _) = deliver_all(started(), vec![msg("stop", json!("done"))]);
+    assert_eq!(system["root"]["outcome"]["value"], "done", "{system}");
 }
 
 #[test]
@@ -152,11 +142,11 @@ fn a_grant_has_the_interface_s_grant_type() {
     let mut interface = interface();
     interface["grant"] = json!({ "Record": { "allow": { "List": "String" } } });
     let bad = call(
-        json!({ "op": "init", "harness": puppet(json!("Json")), "interface": interface, "grant": { "allow": 1 } }),
+        json!({ "op": "init", "harness": puppet(json!("String")), "interface": interface, "grant": { "allow": 1 } }),
     );
     assert_ne!(bad["kind"], "ready", "{bad}");
     let good = call(
-        json!({ "op": "init", "harness": puppet(json!("Json")), "interface": interface, "grant": { "allow": [] } }),
+        json!({ "op": "init", "harness": puppet(json!("String")), "interface": interface, "grant": { "allow": [] } }),
     );
     assert_eq!(good["kind"], "ready", "{good}");
 }
@@ -167,7 +157,7 @@ fn an_update_has_the_interface_s_grant_type() {
     interface["grant"] = json!({ "Record": { "allow": { "List": "String" } } });
     interface["operations"]["fetch"]["onResult"] = rec(vec![("allow", lit(json!(1)))]);
     let out = call(
-        json!({ "op": "init", "harness": puppet(json!("Json")), "interface": interface, "grant": { "allow": [] } }),
+        json!({ "op": "init", "harness": puppet(json!("String")), "interface": interface, "grant": { "allow": [] } }),
     );
     assert_eq!(out["kind"], "refused", "{out}");
 }
