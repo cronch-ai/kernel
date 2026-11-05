@@ -1,0 +1,25 @@
+{
+  "operations": {
+    "choose": {
+      "input": {
+        "Record": {
+          "messages": { "List": { "Record": { "role": "String", "content": "String" } } }
+        }
+      },
+      "output": {
+        "Variant": {
+          "tag": "kind",
+          "cases": {
+            "answer": { "Record": { "text": "String" } },
+            "fs.read": { "Record": { "path": "String" } },
+            "fs.write": { "Record": { "path": "String", "text": "String" } },
+            "shell.run": { "Record": { "command": "String" } },
+            "shell.online": { "Record": { "command": "String", "url": "String" } },
+            "net.fetch": { "Record": { "url": "String" } }
+          }
+        }
+      },
+      "ret": { "e": "list", "items": [{ "e": "lit", "v": "model" }] }
+    }
+  }
+}
