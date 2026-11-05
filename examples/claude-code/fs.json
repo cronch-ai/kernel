@@ -1,0 +1,10 @@
+{
+  "operations": {
+    "read": { "input": { "Record": { "path": "String" } }, "output": "String" },
+    "write": {
+      "input": { "Record": { "path": "String", "text": "String" } },
+      "output": "String",
+      "effect": true
+    }
+  }
+}
