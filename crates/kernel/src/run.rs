@@ -16,9 +16,9 @@
 //!   do what its parent couldn't. When the child halts,
 //!   its value comes back to the parent as `ret(k, v)`, labelled as the child's own evaluation labelled it; if it
 //!   fails, as `failed(k, e)`. Everything the child computes carries the sources of its harness text, so a literal in
-//!   a child a model wrote is as untrusted as the model. A spawn that can't start (an ill-formed harness, a narrowing of something the
-//!   interface lacks, an argument of the wrong type) is refused.
-//! * `halt(v)` ends the run; later actions of the step are discarded.
+//!   a child a model wrote is as untrusted as the model. A spawn that can't start (an ill-formed harness, a narrowing
+//!   of something the interface lacks, an argument not exactly of the child's type) is refused.
+//! * `halt(v)` ends the run; later actions of the step are discarded. A `v` not exactly of the result type fails it.
 //!
 //! Cancelling a spawn revokes the child at once: the interpreter runs it, so unlike a call, there is no world to ask.
 //! A run that ends takes its children with it.
@@ -683,7 +683,7 @@ impl Run {
         let action = &labelled.value();
         let harness: Harness = serde_json::from_str(action.get("harness")?.as_str()?).ok()?;
         let signature = self.harness.spawns.get(action.get("name")?.as_str()?)?;
-        if !signature.admits(&harness) || !inhabits(&arg.value(), &signature.arg) {
+        if !signature.admits(&harness) || !inhabits_exactly(&arg.value(), &signature.arg) {
             return None;
         }
         let narrowings: Vec<Narrowing> =
@@ -691,7 +691,7 @@ impl Run {
         let interface = narrow(&self.interface, &narrowings).ok()?;
         let well_formed = check_harness(&harness, &interface).is_empty()
             && check_interface(&interface).is_empty()
-            && inhabits(&arg.value(), &harness.arg);
+            && inhabits_exactly(&arg.value(), &harness.arg);
         well_formed.then(|| {
             let mut run = Run::new(harness, interface);
             run.grant = self.grant.clone();
@@ -851,7 +851,7 @@ impl Run {
                     let value = action
                         .field("value")
                         .unwrap_or_else(|| LValue::new(&Value::Null, action.top()));
-                    if !inhabits(&value.value(), &self.harness.result) {
+                    if !inhabits_exactly(&value.value(), &self.harness.result) {
                         let error = StepError::Result {
                             expected: self.harness.result.clone(),
                             got: value.value(),
