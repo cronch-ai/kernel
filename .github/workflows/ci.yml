@@ -36,4 +36,8 @@ jobs:
       - run: ./scripts/install-lean.sh
       - run: ../.proof-tools/lean/bin/lake build
         working-directory: lean
+      # Lake's comparator builds a solution in a bwrap sandbox, which Ubuntu's AppArmor keeps from making namespaces.
+      - run: |
+          sudo apt-get install -y bubblewrap
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
       - run: npm run test:proofs
