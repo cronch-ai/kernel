@@ -1,7 +1,7 @@
 // T1, end to end: the Claude Code-style harness in `examples/claude-code/` can't reach the network until a person
-// allows the URL, proved by cvc5 and checked by Ethos. Then a capability is added, and what is proved again is
-// measured: only what the new capability can change.
-// Run with `npm run test:proofs` after `scripts/install-proof-tools.sh` and `npm run build`.
+// allows the URL, proved by cvc5 and checked by Ethos, and proved in Lean and checked by Comparator. Then a capability
+// is added, and what is proved again is measured: only what the new capability can change.
+// Run with `npm run test:proofs` after `scripts/install-proof-tools.sh`, `scripts/install-lean.sh` and `npm run build`.
 
 import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
@@ -10,6 +10,7 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { instantiate } from "../javascript/index.js";
 import { check } from "./check.mjs";
+import { checkLean } from "./check-lean.mjs";
 import { prove } from "./prove.mjs";
 
 const kernel = await instantiate(
@@ -52,11 +53,18 @@ const allowedFirst = (operation, key) => ({
 // In T1's vocabulary, internet access is `net.fetch` and `shell.online`.
 const rules = [allowedFirst("net.fetch", "url"), allowedFirst("shell.online", "url")];
 
-const obligations = (iface, rule) => {
-  const out = kernel.ruleObligations({ interface: iface, rule });
+const obligations = (iface, rule, format = "smtlib") => {
+  const out = kernel.ruleObligations({ interface: iface, rule, format });
   assert.equal(out.kind, "obligations", JSON.stringify(out));
   return out;
 };
+
+/** Each obligation's Lean statement, by name. */
+const statements = (iface, rule) =>
+  Object.fromEntries(obligations(iface, rule, "lean").obligations.map((o) => [o.name, o.text]));
+
+/** A Lean proof of `statement`: it restates the statement, and `grind` proves it. */
+const leanProof = (statement) => `${statement}\ntheorem obligation : statement := by\n  grind\n`;
 
 let written = 0;
 const write = (text) => {
@@ -65,21 +73,27 @@ const write = (text) => {
   return path;
 };
 
-/** Each obligation proved by cvc5, and its proof checked by Ethos against the query it was written for. */
-function proveAll(out) {
+/**
+ * Each obligation proved by cvc5, and its proof checked by Ethos against the query it was written for; and proved in
+ * Lean, and its proof checked by Comparator against the Lean statement written for it.
+ */
+function proveAll(iface, rule) {
+  const lean = statements(iface, rule);
   const proved = {};
-  for (const { name, text } of out.obligations) {
+  for (const { name, text } of obligations(iface, rule).obligations) {
     const query = write(text);
     const { answer, proof } = prove(query);
     assert.equal(answer, "unsat", name);
     assert.deepEqual(check(query, proof), { ok: true }, name);
-    proved[name] = { text, proof };
+    const statement = lean[name];
+    assert.deepEqual(checkLean(statement, leanProof(statement)), { ok: true }, `${name} in Lean`);
+    proved[name] = { text, proof, statement, leanProof: leanProof(statement) };
   }
   return proved;
 }
 
 const base = install(harness);
-const proofs = Object.fromEntries(rules.map((r) => [r.op, proveAll(obligations(base, r))]));
+const proofs = Object.fromEntries(rules.map((r) => [r.op, proveAll(base, r)]));
 
 test("the network can't be reached until a person allows the URL", () => {
   for (const rule of rules) {
@@ -89,17 +103,25 @@ test("the network can't be reached until a person allows the URL", () => {
 
 /**
  * What adding `extra` costs each rule of the harness: an obligation whose query is unchanged to the byte keeps its
- * proof, which is checked again against the new query and not re-proved; any other is new.
+ * proof, which is checked again against the new query and not re-proved; any other is new. So does its Lean statement,
+ * and its Lean proof.
  */
 function cost(extra) {
   const iface = install(harness, extra);
   const kept = [];
   const owed = [];
   for (const rule of rules) {
+    const lean = statements(iface, rule);
     for (const { name, text } of obligations(iface, rule).obligations) {
       const before = proofs[rule.op][name];
       if (before && before.text === text) {
         assert.deepEqual(check(write(text), before.proof), { ok: true }, `${rule.op} ${name}`);
+        assert.equal(lean[name], before.statement, `${rule.op} ${name} in Lean`);
+        assert.deepEqual(
+          checkLean(lean[name], before.leanProof),
+          { ok: true },
+          `${rule.op} ${name} in Lean`,
+        );
         kept.push(`${rule.op} ${name}`);
       } else {
         owed.push({ rule: rule.op, name, text });
@@ -118,7 +140,7 @@ test("adding an MCP client re-proves nothing already proved, and proves only its
   assert.deepEqual(owed, []);
 
   // The new operation reaches the network too, so it gets the rule the others have, and that is all that is proved.
-  const fresh = proveAll(obligations(iface, allowedFirst("mcp.call", "server")));
+  const fresh = proveAll(iface, allowedFirst("mcp.call", "server"));
   assert.deepEqual(Object.keys(fresh), ["initial", "net.ask.onResult"]);
   t.diagnostic(
     `kept ${kept.length} proofs, checked again; proved ${Object.keys(fresh).length} new`,
