@@ -80,9 +80,9 @@ fn alphabet() -> Value {
     json!(letters)
 }
 
-fn verdict(harness: &Value, property: &Value, grant: Value) -> Value {
+fn verdict(harness: &Value, property: &Value, interface: Value) -> Value {
     let out = call(json!({
-        "op": "prove", "harness": harness, "interface": interface(), "grant": grant, "property": property,
+        "op": "prove", "harness": harness, "interface": interface, "property": property,
         "method": { "kind": "exhaustive", "alphabet": alphabet() },
     }));
     assert_eq!(out["kind"], "evidence", "{out}");
@@ -90,9 +90,8 @@ fn verdict(harness: &Value, property: &Value, grant: Value) -> Value {
 }
 
 /// Every event of the run these inputs give.
-fn trace(harness: &Value, grant: Value, inputs: &[Value]) -> Vec<Value> {
-    let ready =
-        call(json!({ "op": "init", "harness": harness, "interface": interface(), "grant": grant }));
+fn trace(harness: &Value, interface: Value, inputs: &[Value]) -> Vec<Value> {
+    let ready = call(json!({ "op": "init", "harness": harness, "interface": interface }));
     let mut system = ready["system"].clone();
     let mut events = Vec::new();
     for input in inputs {
@@ -119,8 +118,14 @@ fn a_property_in_source_reaches_the_hand_written_ones_verdicts() {
     let source = out["properties"][0].clone();
     assert_eq!(source["name"], "no_effect_without_approval");
     let hand_written = fixture("no-effect-without-approval");
-    let none = json!({ "allow": [], "once": [] });
-    let allowed = json!({ "allow": ["notes.append"], "once": [] });
+    // Every run starts with the empty grant, so the gate on `notes.append` stops a write without a yes. Without the
+    // gate, only the harness's own guard does, and the reckless harness has none.
+    let none = interface();
+    let mut allowed = interface();
+    allowed["operations"]["notes.append"]
+        .as_object_mut()
+        .unwrap()
+        .remove("pre");
 
     assert_eq!(verdict(&harness, &source, none.clone()), "holds");
     let reckless = APPROVED_NOTE.replace(r#" when decision != "deny""#, "");
@@ -170,7 +175,7 @@ fn properties_and_invariants_read_node_slots_by_name() {
     let out = elaborated(APPROVED_NOTE);
     let harness = out["harness"].clone();
     let slots = out["properties"][1].clone();
-    let none = json!({ "allow": [], "once": [] });
+    let none = interface();
     assert_eq!(verdict(&harness, &slots, none.clone()), "holds");
 
     // The invariant holds of every state of every run, and of the initial state.
@@ -225,7 +230,7 @@ fn quantifiers_and_since_connect_events() {
         "{APPROVED_NOTE}\nproperty fresh_yes:\n  called(notes.append) implies prev((not called(notes.append)) since returned(approve.ask, value != \"deny\"))\n\nproperty every_result_answers_a_call:\n  (match event {{ in(e) => match e.input {{ ret(r) => true, _ => false }}, _ => false }}) implies exists k in (match event {{ out(e) => match e.action {{ call(a) => [a.call], _ => [] }}, _ => [] }}): match event {{ in(e) => match e.input {{ ret(r) => k == r.call, _ => false }}, _ => false }}\n"
     );
     let out = elaborated(&source);
-    let none = json!({ "allow": [], "once": [] });
+    let none = interface();
     let fresh = &out["properties"][2];
     assert_eq!(verdict(&out["harness"], fresh, none.clone()), "holds");
 

@@ -35,6 +35,11 @@ fn interface() -> Value {
                 "input": url(), "output": "String",
                 "pre": op("contains", vec![path("grant", &["netAllow"]), path("args", &["url"])]),
             }},
+            // An operator allowlists a URL. Every run starts with the empty grant, so this is how one gets in.
+            "channels": { "allow": {
+                "type": "String",
+                "onMsg": rec(vec![("netAllow", op("append", vec![path("grant", &["netAllow"]), var("value")]))]),
+            }},
             "grant": { "Record": { "netAllow": { "List": "String" } } },
         }},
         { "prefix": "notes", "capability": { "operations": {
@@ -125,12 +130,21 @@ fn agent(brain_op: &str, tools: &[&str]) -> Value {
     })
 }
 
+/// Started, with each of `allowed` allowlisted by the operator.
 fn started(harness: Value, allowed: Value) -> Value {
-    let ready = call(
-        json!({ "op": "init", "harness": harness, "interface": interface(), "grant": { "netAllow": allowed } }),
-    );
+    let ready = call(json!({ "op": "init", "harness": harness, "interface": interface() }));
     assert_eq!(ready["kind"], "ready", "{ready}");
-    deliver_all(ready["system"].clone(), vec![start(json!("go"))]).0
+    let allowing = allowed
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|u| msg("net.allow", u.clone()));
+    let deliveries = std::iter::once(start(json!("go")))
+        .chain(allowing)
+        .collect();
+    let system = deliver_all(ready["system"].clone(), deliveries).0;
+    assert_eq!(system["root"]["grant"]["netAllow"], allowed);
+    system
 }
 
 fn full() -> Value {

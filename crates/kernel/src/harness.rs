@@ -11,7 +11,7 @@
 use crate::check::{Problem, check, infer};
 use crate::ir::{Expr, Type};
 use crate::labeled::Label;
-use crate::types::{conforms, inhabits};
+use crate::types::{conforms, inhabits, zero};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::BTreeMap;
@@ -334,6 +334,8 @@ pub enum HarnessProblem {
         expected: Type,
         got: Type,
     },
+    /// The grant has no empty value to start from (`zero`): a variant in it has no `none` case that holds nothing.
+    Grant { got: Type },
 }
 
 fn scope(vars: &[(&str, &Type)]) -> Vec<(String, Type)> {
@@ -411,6 +413,9 @@ fn check_update(
 pub fn check_interface(interface: &Interface) -> Vec<HarnessProblem> {
     let mut problems = Vec::new();
     let grant = interface.grant.clone();
+    if zero(&grant).is_none() {
+        problems.push(HarnessProblem::Grant { got: grant.clone() });
+    }
     let sources = Type::List(Box::new(Type::String));
     for (name, o) in &interface.operations {
         let at = |part: &str| Place::Operation {

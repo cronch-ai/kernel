@@ -29,10 +29,8 @@ impl Recorder {
         response["result"].clone()
     }
 
-    fn init(&mut self, harness: Value, interface: Value, grant: Value) -> Value {
-        let ready = self.call(
-            json!({ "op": "init", "harness": harness, "interface": interface, "grant": grant }),
-        );
+    fn init(&mut self, harness: Value, interface: Value) -> Value {
+        let ready = self.call(json!({ "op": "init", "harness": harness, "interface": interface }));
         ready["system"].clone()
     }
 
@@ -132,14 +130,14 @@ fn cases() -> Vec<Case> {
             "run",
             "A run that fetches and sends, a refused call, withheld inputs, and a harness its interface can't run.",
             |r| {
-                let system = r.init(leaky(), interface(), Value::Null);
+                let system = r.init(leaky(), interface());
                 let (system, _) = r.deliver(system, start(json!({})));
                 let (system, _) = r.deliver(system, ret(7, json!("no such call")));
                 let (system, _) = r.deliver(system, ret(0, json!(3)));
                 r.deliver(system, ret(0, json!("page")));
                 let mut closed = interface();
                 closed["operations"]["net.fetch"]["pre"] = lit(json!(false));
-                let refusing = r.init(leaky(), closed, Value::Null);
+                let refusing = r.init(leaky(), closed);
                 r.deliver(refusing, start(json!({})));
                 r.call(json!({ "op": "init", "harness": leaky(), "interface": {} }));
             },
@@ -149,7 +147,7 @@ fn cases() -> Vec<Case> {
             "A result withheld leaves the configuration as it was, a failure on the same call ends it, and nothing can answer it after that.",
             |r| {
                 let failed = || json!({ "input": { "kind": "failed", "call": 0, "error": "no result that fits" } });
-                let system = r.init(leaky(), interface(), Value::Null);
+                let system = r.init(leaky(), interface());
                 let (system, _) = r.deliver(system, start(json!({})));
                 let (system, _) = r.deliver(system, ret(0, json!(3)));
                 let (system, _) = r.deliver(system, failed());
@@ -161,7 +159,7 @@ fn cases() -> Vec<Case> {
             "grants",
             "A child narrowed and approved: an \"always\" in the child widens its parent.",
             |r| {
-                let system = r.init(actor(), tools(), json!({ "allow": [], "once": [] }));
+                let system = r.init(actor(), tools());
                 let (system, _) = r.deliver(system, start(json!({})));
                 let publish = json!(["npm", "publish"]);
                 let run = msg(
@@ -185,7 +183,7 @@ fn cases() -> Vec<Case> {
             "monitoring",
             "Properties monitored over traces, whole and step by step, reading each event as its view: a leak, and effects after stop.",
             |r| {
-                let system = r.init(leaky(), interface(), Value::Null);
+                let system = r.init(leaky(), interface());
                 let (system, a) = r.deliver(system, start(json!({})));
                 let (_, b) = r.deliver(system, ret(0, json!("page")));
                 let trace: Vec<Value> = a
@@ -301,7 +299,6 @@ fn cases() -> Vec<Case> {
                 ]}));
                 r.call(
                     json!({ "op": "ruleObligations", "interface": installed["interface"],
-                        "grant": { "netAllow": [], "fsAllow": [] },
                         "rule": { "op": "net.act", "approvedBy": [{
                             "op": "net.ask",
                             "when": op("and", vec![

@@ -104,14 +104,9 @@ fn problems(source: &str) -> Vec<Value> {
     out["problems"].as_array().unwrap().clone()
 }
 
-fn no_grant() -> Value {
-    json!({ "allow": [], "once": [] })
-}
-
 /// Every event of the run these inputs give, and the system it ends in.
-fn run(harness: &Value, grant: Value, inputs: &[Value]) -> (Vec<Value>, Value) {
-    let ready =
-        call(json!({ "op": "init", "harness": harness, "interface": interface(), "grant": grant }));
+fn run(harness: &Value, inputs: &[Value]) -> (Vec<Value>, Value) {
+    let ready = call(json!({ "op": "init", "harness": harness, "interface": interface() }));
     assert_eq!(ready["kind"], "ready", "{ready}");
     let mut system = ready["system"].clone();
     let mut events = Vec::new();
@@ -167,7 +162,6 @@ fn the_agent_goes_round_until_the_model_answers() {
     let note = json!({ "text": "buy milk" });
     let (events, system) = run(
         &harness,
-        no_grant(),
         &[
             start(),
             ret(0, chooses("notes.append", note.clone())),
@@ -210,7 +204,6 @@ fn a_choice_that_is_denied_or_not_offered_is_not_performed() {
     // Denied: the owner says no.
     let (events, _) = run(
         &harness,
-        no_grant(),
         &[
             start(),
             ret(0, chooses("notes.append", json!({ "text": "x" }))),
@@ -227,7 +220,6 @@ fn a_choice_that_is_denied_or_not_offered_is_not_performed() {
     // harness never sees it.
     let (events, _) = run(
         &harness,
-        no_grant(),
         &[start(), ret(0, chooses("notes.delete", json!({})))],
     );
     assert_eq!(actions(&events), ["call brain.choose"]);
@@ -246,7 +238,6 @@ fn a_performed_call_the_grant_forbids_is_refused() {
     let harness = elaborated(&heedless)["harness"].clone();
     let (events, _) = run(
         &harness,
-        no_grant(),
         &[
             start(),
             ret(0, chooses("notes.append", json!({ "text": "x" }))),
@@ -264,13 +255,12 @@ fn a_performed_call_the_grant_forbids_is_refused() {
 fn an_interrupt_ends_the_turn_wherever_it_comes() {
     let harness = elaborated(AGENT)["harness"].clone();
     // While the model thinks: its call is cancelled, and its failure ends the run through `otherwise`.
-    let (events, system) = run(&harness, no_grant(), &[start(), says("stop")]);
+    let (events, system) = run(&harness, &[start(), says("stop")]);
     assert_eq!(actions(&events), ["call brain.choose", "cancel", "halt"]);
     assert_eq!(system["root"]["outcome"]["value"], json!("interrupted"));
     // While the owner decides: the approval is cancelled, nothing is performed, and the round ends interrupted.
     let (events, system) = run(
         &harness,
-        no_grant(),
         &[
             start(),
             ret(0, chooses("notes.append", json!({ "text": "x" }))),
@@ -285,7 +275,6 @@ fn an_interrupt_ends_the_turn_wherever_it_comes() {
     // Something else said doesn't interrupt.
     let (events, _) = run(
         &harness,
-        no_grant(),
         &[
             start(),
             says("hurry"),
@@ -302,7 +291,6 @@ fn the_rounds_are_bounded() {
     let note = || chooses("notes.append", json!({ "text": "x" }));
     let (events, system) = run(
         &harness,
-        no_grant(),
         &[
             start(),
             ret(0, note()),
@@ -383,7 +371,6 @@ otherwise return k
     let harness = elaborated(counter)["harness"].clone();
     let (events, system) = run(
         &harness,
-        no_grant(),
         &[
             json!({ "kind": "start", "value": 5 }),
             ret(0, json!([])),
@@ -397,11 +384,7 @@ otherwise return k
     // Every call skipped: the next round would wait on nothing, so the run stalls, and `otherwise` says what it gives.
     let idle = counter.replace("notes.read()", "notes.read() when k < 0");
     let harness = elaborated(&idle)["harness"].clone();
-    let (_, system) = run(
-        &harness,
-        no_grant(),
-        &[json!({ "kind": "start", "value": 5 })],
-    );
+    let (_, system) = run(&harness, &[json!({ "kind": "start", "value": 5 })]);
     assert_eq!(system["root"]["outcome"]["value"], json!(6));
 }
 

@@ -93,8 +93,8 @@ const approvedBy = (prefix, key) => [
 ];
 const netRule = { op: "net.act", approvedBy: approvedBy("net", "url") };
 
-const obligations = (iface, rule, grant) => {
-  const out = kernel.ruleObligations({ interface: iface, rule, grant });
+const obligations = (iface, rule) => {
+  const out = kernel.ruleObligations({ interface: iface, rule });
   assert.equal(out.kind, "obligations", JSON.stringify(out));
   return out;
 };
@@ -127,8 +127,7 @@ function assertCounterexample(out, expected) {
   assert.equal(results[expected], "sat", JSON.stringify(results));
 }
 
-const grant = { netAllow: [] };
-const proved = assertProved(obligations(install(net()), netRule, grant));
+const proved = assertProved(obligations(install(net()), netRule));
 
 test("a rule's obligations are proved, and the proofs check against them", () => {
   assert.deepEqual(Object.keys(proved), ["initial", "net.ask.onResult"]);
@@ -155,21 +154,14 @@ test("broken contracts give counterexamples", () => {
   const unguarded = gated("netAllow", "url");
   delete unguarded.operations.act.pre;
   assertCounterexample(
-    obligations(install({ prefix: "net", capability: unguarded }), netRule, grant),
+    obligations(install({ prefix: "net", capability: unguarded }), netRule),
     "initial",
   );
-  // A grant that starts open.
-  assertCounterexample(
-    obligations(install(net()), netRule, { netAllow: ["https://example.com"] }),
-    "initial",
-  );
+  // A grant that starts open can't be had: every run starts with the empty grant, so `ruleObligations` takes none.
   // A person's "deny" grants as well.
-  assertCounterexample(
-    obligations(install(net((added) => added)), netRule, grant),
-    "net.ask.onResult",
-  );
+  assertCounterexample(obligations(install(net((added) => added)), netRule), "net.ask.onResult");
   // No approval is named, so nothing can count as one.
-  assertCounterexample(obligations(install(net()), { op: "net.act" }, grant), "net.ask.onResult");
+  assertCounterexample(obligations(install(net()), { op: "net.act" }), "net.ask.onResult");
   // A new capability writes the field with no person behind it.
   const rogue = {
     prefix: "rogue",
@@ -188,7 +180,7 @@ test("broken contracts give counterexamples", () => {
       grant: { Record: { netAllow: { List: "String" } } },
     },
   };
-  assertCounterexample(obligations(install(net(), rogue), netRule, grant), "rogue.unlock.onResult");
+  assertCounterexample(obligations(install(net(), rogue), netRule), "rogue.unlock.onResult");
 });
 
 const { query, proof } = proved["net.ask.onResult"];
@@ -196,7 +188,7 @@ const lines = proof.split("\n");
 const steps = lines.flatMap((l, i) => (l.startsWith("(step ") ? [i] : []));
 const middle = steps[Math.floor(steps.length / 2)];
 const denyGrants = write(
-  obligations(install(net((added) => added)), netRule, grant).obligations.find(
+  obligations(install(net((added) => added)), netRule).obligations.find(
     (o) => o.name === "net.ask.onResult",
   ).text,
 );
@@ -387,7 +379,7 @@ test("a Float grant field no obligation needs is left out of the query, and the 
 test("the real reading gets a correct from Ethos, for a statement the kernel's own arithmetic refutes", () => {
   const pre = op("not", eq(op("add", lit(0.1), lit(0.2)), lit(0.3)));
   const iface = floating(pre, { Record: { amount: "Float" } });
-  const claim = { interface: iface, rule: payRule, grant: { limit: 0 } };
+  const claim = { interface: iface, rule: payRule };
   // Proved and checked: this precondition holds of nothing.
   assert.deepEqual(
     Object.keys(assertProved(kernel.ruleObligations({ ...claim, floats: "real" }))),

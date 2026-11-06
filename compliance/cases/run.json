@@ -3,7 +3,6 @@
   "exchanges": [
     {
       "request": {
-        "grant": null,
         "harness": {
           "arg": {
             "Record": {}
@@ -2858,7 +2857,6 @@
     },
     {
       "request": {
-        "grant": null,
         "harness": {
           "arg": {
             "Record": {}

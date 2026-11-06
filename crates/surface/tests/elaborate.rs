@@ -66,7 +66,7 @@ fn problems(source: &str, capabilities: Value) -> Vec<Value> {
 /// The run's outcome and every call it performed, in order, after these inputs.
 fn run(harness: &Value, interface: &Value, inputs: &[Value]) -> (Value, Vec<Value>) {
     let ready = call(json!({
-        "op": "init", "harness": harness, "interface": interface, "grant": { "allow": [], "once": [] },
+        "op": "init", "harness": harness, "interface": interface,
     }));
     assert_eq!(ready["kind"], "ready", "{ready}");
     let mut system = ready["system"].clone();
@@ -171,9 +171,9 @@ fn approved_note_proves_as_the_hand_written_harness_does() {
     alphabet.push(
         json!({ "input": { "kind": "failed", "op": "notes.append", "error": "unavailable" } }),
     );
-    let prove = |harness: Value, grant: Value| {
+    let prove = |harness: Value, interface: Value| {
         let out = call(json!({
-            "op": "prove", "harness": harness, "interface": platform_interface(), "grant": grant,
+            "op": "prove", "harness": harness, "interface": interface,
             "property": fixture("no-effect-without-approval"),
             "method": { "kind": "exhaustive", "alphabet": alphabet },
         }));
@@ -181,20 +181,23 @@ fn approved_note_proves_as_the_hand_written_harness_does() {
         out["evidence"]["verdict"].clone()
     };
     let harness = elaborated(APPROVED_NOTE, platform())["harness"].clone();
+    assert_eq!(prove(harness.clone(), platform_interface()), "holds");
     assert_eq!(
-        prove(harness.clone(), json!({ "allow": [], "once": [] })),
-        "holds"
-    );
-    assert_eq!(
-        prove(fixture("approved-note"), json!({ "allow": [], "once": [] })),
+        prove(fixture("approved-note"), platform_interface()),
         "holds"
     );
 
-    // Without the guard, only the grant stands between the harness and the effect.
+    // Every run starts with the empty grant, so the gate stops the reckless harness, which writes after a deny.
     let reckless = APPROVED_NOTE.replace(r#" when decision != "deny""#, "");
     let reckless = elaborated(&reckless, platform())["harness"].clone();
-    let allowed = json!({ "allow": ["notes.append"], "once": [] });
-    assert_eq!(prove(reckless, allowed), "refuted");
+    assert_eq!(prove(reckless.clone(), platform_interface()), "holds");
+    // Without the gate, only the harness's guard stands between it and the effect, and this one has none.
+    let mut ungated = platform_interface();
+    ungated["operations"]["notes.append"]
+        .as_object_mut()
+        .unwrap()
+        .remove("pre");
+    assert_eq!(prove(reckless, ungated), "refuted");
 }
 
 fn math() -> Value {

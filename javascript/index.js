@@ -55,8 +55,7 @@ export async function instantiate(source) {
     checkInterface: (iface) => call({ op: "checkInterface", interface: iface }).problems,
     install: (capabilities) => call({ op: "install", capabilities }),
     narrow: (iface, narrowings) => call({ op: "narrow", interface: iface, narrowings }),
-    init: ({ harness, interface: iface, grant }) =>
-      call({ op: "init", harness, interface: iface ?? {}, grant: grant ?? null }),
+    init: ({ harness, interface: iface }) => call({ op: "init", harness, interface: iface ?? {} }),
     deliver: (system, delivery) => call({ op: "deliver", system, delivery }),
     view: (events) => call({ op: "view", events }).events,
     eventType: (harness, iface) => call({ op: "eventType", harness, interface: iface }).type,
@@ -84,8 +83,8 @@ export async function instantiate(source) {
       call({ op: "elaborate", source, capabilities, harnesses: harnesses ?? {} }),
     key: (kind, object) => call({ op: "objectKey", kind, object }).key,
     smtlib: (definitions, floats) => call({ op: "smtlib", definitions, floats: floats ?? "exact" }),
-    ruleObligations: ({ interface: iface, rule, grant, floats }) =>
-      call({ op: "ruleObligations", interface: iface, rule, grant, floats: floats ?? "exact" }),
+    ruleObligations: ({ interface: iface, rule, floats }) =>
+      call({ op: "ruleObligations", interface: iface, rule, floats: floats ?? "exact" }),
     readValues: (reply, types) => call({ op: "readValues", reply, types }),
   };
 }

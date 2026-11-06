@@ -218,17 +218,21 @@ fn a_halt_has_the_harness_s_result_type() {
 }
 
 #[test]
-fn a_grant_has_the_interface_s_grant_type() {
+fn a_grant_starts_empty_at_the_interface_s_grant_type() {
+    // Whatever a host passes, a run starts with the empty grant: nothing pre-fills one.
     let mut interface = interface();
     interface["grant"] = json!({ "Record": { "allow": { "List": "String" } } });
-    let bad = call(
-        json!({ "op": "init", "harness": puppet(json!("String")), "interface": interface, "grant": { "allow": 1 } }),
-    );
-    assert_ne!(bad["kind"], "ready", "{bad}");
-    let good = call(
-        json!({ "op": "init", "harness": puppet(json!("String")), "interface": interface, "grant": { "allow": [] } }),
-    );
-    assert_eq!(good["kind"], "ready", "{good}");
+    for given in [
+        json!(null),
+        json!({ "allow": 1 }),
+        json!({ "allow": ["x"] }),
+    ] {
+        let ready = call(
+            json!({ "op": "init", "harness": puppet(json!("String")), "interface": interface, "grant": given }),
+        );
+        assert_eq!(ready["kind"], "ready", "{ready}");
+        assert_eq!(ready["system"]["root"]["grant"], json!({ "allow": [] }));
+    }
 }
 
 #[test]
@@ -236,9 +240,8 @@ fn an_update_has_the_interface_s_grant_type() {
     let mut interface = interface();
     interface["grant"] = json!({ "Record": { "allow": { "List": "String" } } });
     interface["operations"]["fetch"]["onResult"] = rec(vec![("allow", lit(json!(1)))]);
-    let out = call(
-        json!({ "op": "init", "harness": puppet(json!("String")), "interface": interface, "grant": { "allow": [] } }),
-    );
+    let out =
+        call(json!({ "op": "init", "harness": puppet(json!("String")), "interface": interface }));
     assert_eq!(out["kind"], "refused", "{out}");
 }
 

@@ -44,7 +44,7 @@ There is no `Json` type and no `is`. A value is an `Int`, `Float`, `String`, `Bo
 | Child's result → parent          | the signature's `result`                                         | statically, then at its halt  | the child fails   |
 | Harness's result                 | the harness's `result`, which it must declare                    | statically, then at the halt  | the run fails     |
 | Harness's next state             | the harness's `state`                                            | after each step               | the run fails     |
-| Initial grant                    | the interface's `grant`                                          | at `init`                     | refused           |
+| Initial grant                    | the empty value of the interface's `grant`: nothing passes one   | when the interface is checked | refused           |
 | Update → grant                   | the interface's `grant`                                          | statically                    | refused at `init` |
 | World's failure detail → harness | it is `String`                                                   | always text                   | nothing           |
 | A failed child's error → parent  | it is `String`                                                   | always text                   | nothing           |
@@ -84,7 +84,7 @@ Agreed on 2026-11-05 and 2026-11-06.
 
 A grant is plain data, keyed on what the precondition reads. `net`'s precondition reads a URL, so its grant holds the approved URLs. An entry is there or it isn't, and a call that needs one is refused without it.
 
-Every run starts with an empty grant. For a precondition such as `net`'s, a non-empty start grant makes the rule's `initial` query `sat`.
+Every run starts with an empty grant, by construction: `init`, `ruleObligations` and evidence take none. The kernel starts every run at the empty value of the interface's grant type: lists empty, records empty field by field, numbers at zero, strings empty, `Bool` false, and a variant at a `none` case that holds nothing. A grant type with no such value, a variant with no empty `none` case, is refused when the interface is checked. A mode starts empty, too, and is set through a contract, such as a trusted channel's `onMsg`.
 
 Every entry comes through a contract's update. A saved "always" or "session" approval reaches a run by the host answering yes when the harness asks through the approving operation, such as `net.ask`. The host never pre-fills or edits the grant. So an entry still means a person's answer, and the proof of that stays intact.
 

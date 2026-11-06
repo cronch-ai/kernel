@@ -7,9 +7,7 @@ use common::*;
 use serde_json::{Value, json};
 
 fn system() -> Value {
-    let ready = call(
-        json!({ "op": "init", "harness": actor(), "interface": tools(), "grant": { "allow": [], "once": [] } }),
-    );
+    let ready = call(json!({ "op": "init", "harness": actor(), "interface": tools() }));
     assert_eq!(ready["kind"], "ready", "{ready}");
     deliver_all(ready["system"].clone(), vec![start(json!({}))]).0
 }
