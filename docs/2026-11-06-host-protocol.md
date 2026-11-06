@@ -33,9 +33,7 @@ A host that edits the configuration steps outside the semantics. For example, ed
 
 ### H2. Start every run with an empty grant
 
-`init` takes a `grant`. A host passes the empty one. Every entry then comes through a contract's update, such as a person's answer to `net.ask`. A saved "always" approval reaches a run by the host answering an ask with yes, never by pre-filling the grant.
-
-A non-empty start grant makes a rule's `initial` query `sat`, so the rule's proof doesn't hold of that run.
+The kernel enforces this: `init` takes no grant, and starts every run at the empty value of the interface's grant type. Every entry then comes through a contract's update, such as a person's answer to `net.ask`. A saved "always" approval reaches a run by the host answering an ask with yes. What is left to a host is not to work around it, for example by editing the configuration (H1).
 
 ### H3. One delivery at a time
 
@@ -78,7 +76,7 @@ This one isn't safety. Under F8, a run that waits forever breaks no safety prope
 | Obligation                     | Checked by the kernel                         | If a host breaks it                                        |
 | ------------------------------ | --------------------------------------------- | ---------------------------------------------------------- |
 | H1 configuration unchanged     | no                                            | the run is no run of the semantics, and no proof covers it |
-| H2 empty start grant           | no: `init` accepts any grant                  | rule proofs don't hold of that run                         |
+| H2 empty start grant           | yes: `init` takes none                        | it can't                                                   |
 | H3 one at a time               | no                                            | inputs are lost, and the log forks                         |
 | H4 only the world's inputs     | partly: anything inadmissible is withheld     | forged well-typed results are admitted                     |
 | H5 exactly the performed calls | no                                            | effects happen that no event records                       |
@@ -102,7 +100,7 @@ These are a host's own choices. The protocol says nothing about them:
 What each obligation looks like in the platform, from reading its `main`:
 
 - **H1:** the run object stores the configuration as returned, and hands it back.
-- **H2: broken.** `create` takes a user's grant by key and passes it to `init`. That came before the owner's decision of 2026-11-06.
+- **H2:** `create` takes a user's grant by key and passes it to `init`. Since the kernel took no grant, that grant is ignored; the platform should stop taking one.
 - **H3:** a delivery is stepped and stored with no `await` in between, in one Durable Object ([run.gleam](https://github.com/cronch-ai/platform/blob/main/src/run.gleam)).
 - **H4:** `admits` lets users deliver only `start` and `msg`, and only the dispatcher `ret`, `end` and `failed`. A user's `start` reaches the kernel with whatever label the user gave. That fits H4 only while every user who starts a run is a trusted principal.
 - **H5:** the dispatcher routes each performed call to its capability.
@@ -114,7 +112,6 @@ What each obligation looks like in the platform, from reading its `main`:
 
 ## Open
 
-- **Should `init` refuse a non-empty grant?** That would make H2 checked rather than trusted. A test harness that wants a pre-filled grant could still deliver approvals the usual way.
 - **Should H1 be checkable?** The kernel could key the configuration it returns, and a host could log that key, so an audit replaying the log would show an edit. Replaying already shows one if the log is complete.
-- **Vectors.** H4's withholding is pinned by the compliance vectors. H2 and H8 could get vectors of their own. The others are about what a host does outside the kernel, so no vector reaches them.
+- **Vectors.** H4's withholding is pinned by the compliance vectors. H8 could get vectors of its own. The others are about what a host does outside the kernel, so no vector reaches them.
 - **A local host.** A small one in `@cronch/kernel` would be G2's reference, and a second host to test this document against.
