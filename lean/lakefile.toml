@@ -1,0 +1,8 @@
+name = "cronch"
+defaultTargets = ["Cronch", "Spike"]
+
+[[lean_lib]]
+name = "Cronch"
+
+[[lean_lib]]
+name = "Spike"
