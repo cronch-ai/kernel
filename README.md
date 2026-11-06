@@ -33,7 +33,7 @@ The definitions are in [harness.rs](crates/kernel/src/harness.rs), [run.rs](crat
 - `crates/kernel-abi`: the WASM exports `cronch_alloc`, `cronch_call` and `cronch_free`, through `surface`.
 - `javascript`: the JS loader, the CBOR codec and the TypeScript types.
 - `compliance`: cross-implementation test vectors, replayed by both the Rust crates and the WASM build.
-- `proofs`: proves a rule's queries with cvc5 and checks the proofs with Ethos, using no part of the kernel but its queries.
+- `proofs`: proves a rule's queries with cvc5 and checks the proofs with Ethos, using no part of the kernel but its queries. `check-lean.mjs` checks a Lean proof of a rule's Lean statement with Lake's `comparator`, which needs `bwrap`.
 
 ## Development
 
