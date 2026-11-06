@@ -908,3 +908,58 @@ fn no_event_value_is_refused() {
         json!({ "not": "an Int" })
     );
 }
+
+/// Spawns its declared `kid`, which takes `{n: Int}`, with `arg` as soon as it starts: a value the step makes.
+fn spawning(arg: Value) -> Value {
+    let child = json!({ "arg": { "Record": { "n": "Int" } }, "result": "Int", "state": { "Record": {} }, "init": {},
+        "step": step(var("state"), vec![]) });
+    let spawned = rec(vec![
+        ("kind", lit(json!("spawn"))),
+        ("name", lit(json!("kid"))),
+        ("harness", lit(written(&child))),
+        ("arg", arg),
+        ("narrow", lit(json!("[]"))),
+    ]);
+    json!({
+        "arg": "Int", "result": "Int", "state": { "Record": {} }, "init": {},
+        "spawns": { "kid": { "arg": { "Record": { "n": "Int" } }, "result": "Int" } },
+        "step": on(vec![("start", step(var("state"), vec![spawned]))], step(var("state"), vec![])),
+    })
+}
+
+#[test]
+fn a_spawn_s_argument_a_step_makes_has_the_child_s_argument_type_exactly() {
+    // The checker reads it by width subtyping; the interpreter refuses the spawn, so the child never sees `x`.
+    let padded = rec(vec![("n", lit(json!(1))), ("x", lit(json!(2)))]);
+    let (system, events) = deliver_all(init(spawning(padded), json!({})), vec![start(json!(1))]);
+    assert_eq!(heard(&events)[0]["kind"], "refused", "{events:#?}");
+    assert_eq!(system["root"]["children"], Value::Null);
+
+    let exact = rec(vec![("n", lit(json!(1)))]);
+    let (system, events) = deliver_all(init(spawning(exact), json!({})), vec![start(json!(1))]);
+    assert!(heard(&events).is_empty(), "{events:#?}");
+    assert_eq!(system["root"]["children"][0]["run"]["started"], true);
+}
+
+/// Halts with `value` as soon as it starts, against a result of `{a: String}`.
+fn halting(value: Value) -> Value {
+    json!({
+        "arg": "Int", "result": { "Record": { "a": "String" } }, "state": { "Record": {} }, "init": {},
+        "step": on(vec![("start", step(var("state"), vec![halt(value)]))], step(var("state"), vec![])),
+    })
+}
+
+#[test]
+fn a_halt_s_value_a_step_makes_has_the_result_type_exactly() {
+    let padded = rec(vec![("a", lit(json!("x"))), ("b", lit(json!(1)))]);
+    let (system, _) = deliver_all(init(halting(padded), json!({})), vec![start(json!(1))]);
+    assert_eq!(system["root"]["outcome"]["kind"], "failed", "{system}");
+
+    let exact = rec(vec![("a", lit(json!("x")))]);
+    let (system, _) = deliver_all(init(halting(exact), json!({})), vec![start(json!(1))]);
+    assert_eq!(
+        system["root"]["outcome"]["value"],
+        json!({ "a": "x" }),
+        "{system}"
+    );
+}
