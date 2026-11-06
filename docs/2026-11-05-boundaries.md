@@ -10,7 +10,7 @@ Agreed by the owner:
 - No `Json` and no `is`.
 - A model's answer is a plain variant, read with `match`.
 - No new per-interface types: see [what this leaves out](#what-this-leaves-out-on-purpose).
-- [Approvals](#approvals).
+- [Approvals](#approvals), on 2026-11-05 and 2026-11-06.
 
 Proposed, and not yet seen by the owner:
 
@@ -69,16 +69,17 @@ What it costs:
 
 ## Approvals
 
+Agreed on 2026-11-05 and 2026-11-06.
+
 A grant is plain data, keyed on what the precondition reads. `net`'s precondition reads a URL, so its grant holds the approved URLs. An entry is there or it isn't, and a call that needs one is refused without it.
 
-The format has no once, always, session, expiry or revocation. Duration state belongs to the host: how long an entry stays, its scope, and removing it. "Approve this one call" is a host feature: grant, then remove. It isn't part of the kernel, and the kernel has no way to consume an approval of its own.
+Every run starts with an empty grant. For a precondition such as `net`'s, a non-empty start grant makes the rule's `initial` query `sat`.
 
-Two claims follow, and they rest on different things:
+Every entry comes through a contract's update. A saved "always" or "session" approval reaches a run by the host answering yes when the harness asks through the approving operation, such as `net.ask`. The host never pre-fills or edits the grant. So an entry still means a person's answer, and the proof of that stays intact.
 
-- **No call without a grant entry.** The interpreter checks the precondition at every call, so this holds whatever a host does about durations.
-- **A one-time approval is used once.** Its trusted base is the host removing the entry. A host that fails to do so leaves an approval standing for longer than a person meant. That weakens this claim, which is only ergonomic, and not the one above.
+An entry stands for the rest of the run: the kernel never removes one on its own. The format has no once, always, session, expiry or revocation. Those are how the host decides to answer an ask, and whatever its own capability implementation enforces. The kernel proves none of them, and a harness run elsewhere gets whatever its host implements.
 
-A harness run elsewhere gets whatever duration semantics its host implements. The format promises none.
+The proved claim, in the owner's words: "there is no path to the sequence of events where a certain action occurs before approval is given." It rests on the interpreter checking the precondition at every call, and on the approving operation's answer being a person's, given now or earlier under a policy they set.
 
 If a future property needs exactly one call per approval, that is a new owner decision.
 
@@ -105,8 +106,6 @@ The closed stack's `Call`, `Returned`, `@none`, approvals as text, and `op` in c
 
 ## Open
 
-- **How a host adds an entry.** The owner is deciding this. A person's answer through an `onResult` that the rule's `approvedBy` names is in a query, and proves. A trusted channel's `onMsg` that appends gets a counterexample from its query. Editing the `System` a host keeps adds an entry and the call is performed, but no query reads it, and [index.d.ts](../javascript/index.d.ts) says a host hands that value back unchanged. A non-empty start grant appears in `initial`, which is then `sat`.
-- **How a host removes one entry.** The owner is deciding this. The kernel has no operation for it, and each way today has a cost. A trusted channel's `onMsg` can filter the list with a `fold`, but `ruleObligations` refuses that update. An `onMsg` that empties the list proves if the empty list is typed with a `let`, since a bare `[]` is refused as `untyped`, but it removes every entry. Editing the `System` a host keeps works, but [index.d.ts](../javascript/index.d.ts) says a host hands it back unchanged and [run.rs](../crates/kernel/src/run.rs) says only contracts change a grant. An `onMsg` also reaches only the run it's delivered to and that run's ancestors, not a child's copy.
 - **Update → grant is only checked statically.** The interpreter merges an update's fields without checking them again. That is sound while the checker is, and a second interpreter has nothing to compare against.
 - **A `ret` label that can't evaluate withholds `failed` too.** `admit` needs the label for a failure as it does for a result. `init` accepts an operation whose `ret` is `[str(div(1, 0))]`. A `failed` on its call is then withheld as `returnLabel` and the call stays pending, so a compliant host can't end that call.
 - **A record's undeclared fields cross.** `inhabits` reads only the declared fields, so `{url: "u", x: 1}` has the type `{url: String}`. "What doesn't fit doesn't cross" doesn't say this. The owner decided on 2026-11-06 that a model's answer drops or rejects such fields, and a fix is in progress on `fix/extra-fields`. What was observed before it:
