@@ -14,7 +14,8 @@
 //!   preconditions are the parent's strengthened, and it starts with its parent's grant state, so a child can never
 //!   do what its parent couldn't. When the child halts,
 //!   its value comes back to the parent as `ret(k, v)`, labelled as the child's own evaluation labelled it; if it
-//!   fails, as `failed(k, e)`. A spawn that can't start (an ill-formed harness, a narrowing of something the
+//!   fails, as `failed(k, e)`. Everything the child computes carries the sources of its harness text, so a literal in
+//!   a child a model wrote is as untrusted as the model. A spawn that can't start (an ill-formed harness, a narrowing of something the
 //!   interface lacks, an argument of the wrong type) is refused.
 //! * `halt(v)` ends the run; later actions of the step are discarded.
 //!
@@ -102,6 +103,11 @@ pub struct Run {
     /// The join of the labels of every input delivered: what the run's behaviour may depend on.
     #[serde(default, skip_serializing_if = "Label::is_empty")]
     pub seen: Label,
+    /// What every value this run computes carries: the sources of the harness text it was spawned from, which include
+    /// its parent's. Empty at the root. A literal in a harness a model wrote depends on the model, as a branch's
+    /// values depend on its condition.
+    #[serde(default, skip_serializing_if = "Label::is_empty")]
+    pub floor: Label,
     /// Children spawned and still running, in the order they were spawned.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub children: Vec<Child>,
@@ -452,6 +458,7 @@ impl Run {
             outcome: None,
             grant: Value::Null,
             seen: Label::new(),
+            floor: Label::new(),
             children: Vec::new(),
         }
     }
@@ -523,7 +530,7 @@ impl Run {
                 },
                 Some(Outcome::Failed { error }) => Inbound {
                     input: json!({ "kind": "failed", "call": c.call, "op": c.op, "error": { "kind": "child", "error": text(&json!(error)) } }),
-                    label: c.run.seen,
+                    label: c.run.seen.union(&c.run.floor).cloned().collect(),
                 },
                 None => unreachable!("partitioned on outcome"),
             };
@@ -669,8 +676,10 @@ impl Run {
 
     /// The child a spawn action starts, if it can start. A spawn that names a declared child starts only a harness
     /// with that child's signature, with an argument the signature takes. The harness and the narrowing arrive as
-    /// text, since a term has no Cronch type, and are read here: text that isn't one refuses the spawn.
-    fn child(&self, action: &Value, arg: &LValue) -> Option<Run> {
+    /// text, since a term has no Cronch type, and are read here: text that isn't one refuses the spawn. The child's
+    /// floor is the harness text's label.
+    fn child(&self, labelled: &LValue, arg: &LValue) -> Option<Run> {
+        let action = &labelled.value();
         let harness: Harness = serde_json::from_str(action.get("harness")?.as_str()?).ok()?;
         let signature = self.harness.spawns.get(action.get("name")?.as_str()?)?;
         if !signature.admits(&harness) || !inhabits(&arg.value(), &signature.arg) {
@@ -685,6 +694,10 @@ impl Run {
         well_formed.then(|| {
             let mut run = Run::new(harness, interface);
             run.grant = self.grant.clone();
+            run.floor = labelled
+                .field("harness")
+                .map(|h| h.label())
+                .unwrap_or_default();
             run
         })
     }
@@ -719,7 +732,8 @@ impl Run {
         let result = match labeled::eval(&step, scope) {
             Ok(r) => r,
             Err(e) => return self.fail(origin, inbound.input, eval_error(e), events),
-        };
+        }
+        .raised(&self.floor);
         let (Some(state), Some(LValue::List { label, items })) =
             (result.field("state"), result.field("actions"))
         else {
@@ -800,7 +814,7 @@ impl Run {
                         .field("arg")
                         .unwrap_or_else(|| LValue::new(&Value::Null, action.top()));
                     let op = spawn_op(value["name"].as_str().unwrap_or_default());
-                    match self.child(&value, &arg) {
+                    match self.child(&action, &arg) {
                         Some(mut run) => {
                             events.push(out(Some(k), true, false, None));
                             run.queue.push_back(Inbound {
