@@ -8,6 +8,9 @@
 // - Ethos must say `correct`. It says `incomplete` of a proof with unchecked steps.
 // - A proof holds only the commands cvc5 writes, and names only its own `@` terms. Nothing else may change what the
 //   query's symbols mean by the time its assumptions are compared with it.
+// - A `define` is only of the shape cvc5 writes, a nullary `@t<n>`, and nothing else binds its name. Ethos's
+//   `define` of a bound name overloads it, and an overload can be selected where the name is used, premises included,
+//   so a proof may never give a name a second meaning: not a query's, not the signature's, not its own.
 
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -20,7 +23,7 @@ export const tools =
 
 const ALLOWED = new Set(["define", "assume", "assume-push", "step", "step-pop"]);
 
-/** The top-level commands of a proof, as `[name, first argument]`, or why it isn't a list of commands. */
+/** The top-level commands of a proof, as `[name, first argument, the rest]`, or why it isn't a list of commands. */
 function commands(proof) {
   const out = [];
   let depth = 0;
@@ -43,7 +46,10 @@ function commands(proof) {
     } else if (c === ")") {
       depth--;
       if (depth < 0) return { error: "an unmatched parenthesis" };
-      if (depth === 0) out.push(proof.slice(start + 1, i).match(/^\s*(\S+)(?:\s+(\S+))?/) ?? []);
+      if (depth === 0) {
+        const command = proof.slice(start + 1, i);
+        out.push(command.match(/^\s*([^\s()]+)(?:\s+([^\s()]+))?([\s\S]*)$/) ?? [command]);
+      }
     } else if (depth === 0 && !/\s/.test(c)) {
       return { error: `text outside a command at offset ${i}` };
     }
@@ -55,9 +61,21 @@ function commands(proof) {
 export function forbidden(proof) {
   const parsed = commands(proof);
   if (parsed.error) return parsed.error;
-  for (const [, name, first] of parsed.commands) {
+  // cvc5 reuses a step's name in another scope, so only a definition's name must be bound once.
+  const defined = new Set();
+  const named = new Set();
+  for (const [, name, first, rest] of parsed.commands) {
     if (!ALLOWED.has(name)) return `the command ${name}`;
-    if (name === "define" && !first?.startsWith("@")) return `a definition of ${first}`;
+    if (name === "define") {
+      if (!(/^@t\d+$/.test(first ?? "") && /^\s*\(\s*\)/.test(rest))) {
+        return `a definition of ${first}`;
+      }
+      if (defined.has(first) || named.has(first)) return `a second binding of ${first}`;
+      defined.add(first);
+    } else if (first !== undefined) {
+      if (defined.has(first)) return `a second binding of ${first}`;
+      named.add(first);
+    }
   }
   return null;
 }

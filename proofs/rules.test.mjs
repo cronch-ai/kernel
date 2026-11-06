@@ -210,6 +210,10 @@ const attacks = {
   "a proof that stops before false": [query, lines.slice(0, steps.at(-1)).join("\n")],
   "a query's constant redefined": [query, `(define |v:rule:result| () "deny")\n${proof}`],
   "a query's selector redefined": [query, `(define |rule:selector| () 0)\n${proof}`],
+  "a signature's symbol defined": [query, `(define @div_by_zero () 0)\n${proof}`],
+  "a definition with parameters": [query, `(define @t0 ((x Int)) x)\n${proof}`],
+  "a definition made again": [query, `${proof}(define @t1 () true)\n`],
+  "a step's name defined": [query, `(define @p1 () false)\n${proof}`],
   "a constant declared again": [query, `(declare-const |v:rule:result| String)\n${proof}`],
   "another reference": [query, `(reference "${denyGrants}")\n${proof}`],
   "an include": [query, `(include "${denyGrants}")\n${proof}`],
@@ -277,6 +281,35 @@ test("the selector define cannot make Ethos accept a proof against a false query
   assert.match(withDefine.last, /was not part of the referenced assertions/);
   // The allowlist rejects the define before Ethos runs, so it never reaches even this inert state through check.mjs.
   assert.match(forbidden(`(define ${selector} () 0)\n${proof}`), /a definition of/);
+});
+
+// The same holds of an overload of a name the proof binds itself. These pin where Ethos selects one: everywhere the
+// name is used, so the allowlist refuses each before Ethos runs.
+const premised = lines.findIndex((l) => /:premises \(@p\d+/.test(l));
+const premise = lines[premised].match(/:premises \((@p\d+)/)[1];
+const before = (at, line) => [...lines.slice(0, at), line, ...lines.slice(at)].join("\n");
+
+test("an overload of a premise's name reaches the premise: Ethos selects it, and the proof breaks", () => {
+  const text = before(premised, `(define ${premise} () false)`);
+  const out = rawEthos(query, text);
+  assert.notEqual(out.status, 0);
+  // Where a premise is wanted, Ethos is handed the overload's `false`; how it says so depends on the rule.
+  assert.match(out.last, /Provided args: \[false\]|premise is not a proof/);
+  assert.match(forbidden(text), /a definition of/);
+});
+
+test("an overload of a definition is selected after it, and breaks the steps that use it", () => {
+  const defined = lines.findIndex((l) => l.startsWith("(define @t1 "));
+  const text = before(defined + 1, "(define @t1 () false)");
+  assert.notEqual(rawEthos(query, text).status, 0);
+  assert.match(forbidden(text), /a second binding of @t1/);
+});
+
+test("Ethos accepts an overload that nothing selects; the allowlist refuses it anyway", () => {
+  for (const text of [`${proof}(define @t1 () true)\n`, `(define @div_by_zero () 0)\n${proof}`]) {
+    assert.deepEqual(rawEthos(query, text), { status: 0, last: "correct" });
+    assert.notEqual(forbidden(text), null);
+  }
 });
 
 test("cvc5's proofs hold nothing but what the verifier allows", () => {
