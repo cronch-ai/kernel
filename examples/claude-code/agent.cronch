@@ -1,0 +1,31 @@
+harness claude_code(task: String) -> String
+
+uses brain, fs, shell, net, session
+
+type Message = {role: String, content: String}
+
+carry history: List[Message] = [{role: "user", content: task}]
+carry turns: Int = 0
+
+stop   = receive said from session.user when said == "stop"
+reply  = brain.choose(messages: history) until stop
+choice = reply
+url    = match choice { net.fetch(c) => c.url, shell.online(c) => c.url, _ => "" }
+asked  = net.ask(url: url) when url != "" until stop
+result = perform choice when (match asked { ok(a) => a == "allow", skipped => true, _ => false }) until stop
+
+answer = match choice { answer(a) => a.text, _ => "" }
+seen   = match result {
+  ok(v)     => v
+  failed(e) => concat("failed: ", e)
+  refused   => "not allowed"
+  skipped   => "denied"
+}
+heard  = match stop { ok(s) => true, skipped => false }
+
+next history = append(append(history, {role: "assistant", content: str(choice)}), {role: "tool", content: seen})
+next turns   = turns + 1
+
+return (if heard then "interrupted" else answer) when heard or answer != "" or turns >= 20
+
+otherwise return "interrupted"

@@ -44,16 +44,21 @@ fn puppet() -> Value {
     })
 }
 
-fn init_with(harness: Value, grant: Value) -> Value {
-    call(
-        json!({ "op": "init", "harness": harness, "interface": acting_on(installed()), "grant": grant }),
-    )
+fn init_with(harness: Value) -> Value {
+    call(json!({ "op": "init", "harness": harness, "interface": acting_on(installed()) }))
 }
 
+/// Started, and a person has allowed each of `allowed` through `net.ask`: the one way an entry gets in.
 fn started(allowed: &[&str]) -> Value {
-    let ready = init_with(puppet(), json!({ "netAllow": allowed }));
+    let ready = init_with(puppet());
     assert_eq!(ready["kind"], "ready", "{ready}");
-    deliver_all(ready["system"].clone(), vec![start(json!(0))]).0
+    let mut system = deliver_all(ready["system"].clone(), vec![start(json!(0))]).0;
+    for (k, url) in allowed.iter().enumerate() {
+        let asking = act("net.ask", json!({ "url": url }));
+        system = deliver_all(system, vec![asking, ret(k as u64, json!("allow"))]).0;
+    }
+    assert_eq!(system["root"]["grant"]["netAllow"], json!(allowed));
+    system
 }
 
 fn act(operation: &str, args: Value) -> Value {
@@ -140,17 +145,10 @@ fn the_model_is_offered_each_tool_with_its_input_and_cannot_ask() {
 }
 
 #[test]
-fn a_grant_is_checked_at_init() {
-    for bad in [
-        json!({ "netAllow": "https://a.example/" }),
-        json!({ "netAllow": [1] }),
-        json!({}),
-    ] {
-        let out = init_with(puppet(), bad.clone());
-        assert_eq!(out["kind"], "refused", "{bad}: {out}");
-    }
-    let out = init_with(puppet(), json!({ "netAllow": [A] }));
+fn every_run_starts_with_no_entries() {
+    let out = init_with(puppet());
     assert_eq!(out["kind"], "ready", "{out}");
+    assert_eq!(out["system"]["root"]["grant"], json!({ "netAllow": [] }));
 }
 
 #[test]
@@ -244,7 +242,7 @@ fn malformed_arguments_are_refused_before_the_run() {
         ("fs.write", rec(vec![("path", lit(json!("/x")))])),
         ("net.delete", rec(vec![("url", lit(json!(A)))])),
     ] {
-        let out = init_with(calling(operation, args.clone()), json!({ "netAllow": [A] }));
+        let out = init_with(calling(operation, args.clone()));
         assert_eq!(out["kind"], "refused", "{operation} {args}: {out}");
     }
 }
