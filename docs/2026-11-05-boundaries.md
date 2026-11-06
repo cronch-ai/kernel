@@ -1,6 +1,6 @@
 # Boundaries
 
-Written on 2026-11-05, and only partly agreed. What a value's type promises as it passes between a harness, its capabilities, its children and the world. It replaces [Typed boundaries](2026-11-02-typed-boundaries.md), and is meant to become the first section of the VHF spec.
+Written on 2026-11-05, and agreed but for one item. What a value's type promises as it passes between a harness, its capabilities, its children and the world. It replaces [Typed boundaries](2026-11-02-typed-boundaries.md), and is meant to become the first section of the VHF spec.
 
 ## Status
 
@@ -11,16 +11,16 @@ Agreed by the owner:
 - A model's answer is a plain variant, read with `match`.
 - No new per-interface types: see [what this leaves out](#what-this-leaves-out-on-purpose).
 - [Approvals](#approvals), on 2026-11-05 and 2026-11-06.
+- On 2026-11-06:
+  1. A model operation per set of tools, from [what it costs](#a-models-chosen-call).
+  2. Adding a tool changes the harness and its hash, from the same list.
+  3. [Per-capability approvals](#grants).
+  4. [No recursive types](#data-with-no-fixed-shape), for T1.
+  5. What a property reads becomes event variants, the last row of [the table](#the-table).
 
-Proposed, and not yet seen by the owner:
+Proposed, and not yet agreed:
 
-1. A model operation per set of tools, from [what it costs](#a-models-chosen-call).
-2. Adding a tool changes the harness and its hash, from the same list.
-3. [Per-capability approvals](#grants).
-4. [No recursive types](#data-with-no-fixed-shape).
-5. What a property reads becomes event variants, the last row of [the table](#the-table).
-
-`main` may already work this way. That doesn't make these five agreed. The rest of this document carries no mark either way.
+- The model's capability must end every call, from [what it costs](#a-models-chosen-call). The [host protocol](2026-11-06-host-protocol.md) has it as H8, a liveness obligation.
 
 ## The rule
 
@@ -87,11 +87,13 @@ A fact about today, not a decision: a harness author can write consumption with 
 
 ## Grants
 
-**Proposed.** Each capability keeps its own approvals: `net` keeps the URLs a person approved. [Approvals](#approvals) says what such a grant holds. There is no generic `approve` holding calls of any operation, so nothing needs a type for "any call". A proof reads a grant, so this also removes what stopped Ethos checking a real approval.
+**Agreed on 2026-11-06.** Each capability keeps its own approvals: `net` keeps the URLs a person approved. [Approvals](#approvals) says what such a grant holds. There is no generic `approve` holding calls of any operation, so nothing needs a type for "any call". A proof reads a grant, so this also removes what stopped Ethos checking a real approval.
 
 ## Data with no fixed shape
 
-**Proposed.** There are no recursive types, so a deeply nested value such as an arbitrary tool schema can't be described. It crosses as `String`, and a capability parses it under a contract. A fetched page is text for the same reason.
+**Agreed on 2026-11-06, for T1.** There are no recursive types, so a deeply nested value such as an arbitrary tool schema can't be described. It crosses as `String`, and a capability parses it under a contract. A fetched page is text for the same reason.
+
+What such a string holds is out of reach of properties and proofs: neither can read a field inside it. Recursive types may come back after T1, if a property needs to.
 
 A value that may be absent is a variant, `none | some {value: T}`.
 
@@ -102,7 +104,7 @@ The closed stack's `Call`, `Returned`, `@none`, approvals as text, and `op` in c
 ## Order
 
 1. The harness of T1, on this.
-2. The platform adopts it when it hosts that harness, including its `model`, `notes` and `approve`.
+2. The platform adopts it when it hosts that harness, including its `model` and `notes`. Its generic `approve` gives way to each capability's own, as [Grants](#grants) says.
 
 ## Open
 
