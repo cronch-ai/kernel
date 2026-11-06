@@ -778,6 +778,8 @@ export interface Kernel {
     readonly interface: Interface;
     readonly rule: Rule;
     readonly floats?: Floats;
+    /** `"lean"` writes each obligation as the Lean statement that its query is `unsat`. */
+    readonly format?: "smtlib" | "lean";
   }):
     | {
         readonly kind: "obligations";

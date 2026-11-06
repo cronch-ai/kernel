@@ -30,7 +30,7 @@
 use crate::harness::{HarnessProblem, Interface, check_interface};
 use crate::induction::each_use;
 use crate::ir::{Case, Expr, Param, Type};
-use crate::smtlib::{self, Floats, Refusal};
+use crate::smtlib::{self, Floats, Format, Refusal};
 use crate::types::zero;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -367,6 +367,7 @@ pub fn obligations(
     interface: &Interface,
     rule: &Rule,
     floats: Floats,
+    format: Format,
 ) -> Result<Obligations, RuleError> {
     let problems = check_interface(interface);
     if !problems.is_empty() {
@@ -396,11 +397,15 @@ pub fn obligations(
     let pre = guarded.pre.clone().unwrap_or(Expr::Lit {
         v: Value::Bool(true),
     });
-    let header = |name: &str| {
-        format!(
+    let header = |name: &str| match format {
+        Format::Smtlib => format!(
             "Rule: {} needs an approval. Obligation: {name}.\nunsat is what the rule needs; sat gives a counterexample. Unsat is not the kernel's verdict: check a proof against this query.",
             rule.op
-        )
+        ),
+        Format::Lean => format!(
+            "Rule: {} needs an approval. Obligation: {name}.\nA proof of `statement` is what the rule needs: check it against this statement.",
+            rule.op
+        ),
     };
     let refused = |place: &str| {
         let place = place.to_string();
@@ -427,6 +432,7 @@ pub fn obligations(
         &[("grant", &initial_grant)],
         &pre,
         floats,
+        format,
     )
     .map_err(refused("initial"))?;
     let mut out = Obligations {
@@ -485,8 +491,15 @@ pub fn obligations(
             .into_iter()
             .reduce(|a, b| op("and", vec![a, b]))
             .expect("at least the invariant");
-        let text = smtlib::refutation(&header(&update.name), &params, &[], &formula, floats)
-            .map_err(refused(&update.name))?;
+        let text = smtlib::refutation(
+            &header(&update.name),
+            &params,
+            &[],
+            &formula,
+            floats,
+            format,
+        )
+        .map_err(refused(&update.name))?;
         out.obligations.push(Obligation {
             name: update.name,
             text,

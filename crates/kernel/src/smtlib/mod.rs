@@ -23,6 +23,7 @@
 //! an export is never the kernel's: the kernel only accepts what it can check itself.
 
 mod encode;
+mod lean;
 pub mod readings;
 pub mod script;
 pub mod values;
@@ -35,6 +36,15 @@ use encode::Encoder;
 use script::Script;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+
+/// How a refutation is written: as an SMT-LIB query, or as the Lean statement that the query is `unsat`.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Default)]
+#[serde(rename_all = "camelCase")]
+pub enum Format {
+    #[default]
+    Smtlib,
+    Lean,
+}
 
 /// A named function of typed parameters.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -87,6 +97,8 @@ pub enum NoReading {
     Character { code: u32 },
     /// A value that doesn't inhabit the type it is read at.
     Value { expected: Type, got: Value },
+    /// A part with no Lean reading yet: a float, a variant, a recursive function.
+    Lean { what: String },
     /// A formula the kernel can fail to evaluate. A refutation doesn't assume it evaluates: that would prove less
     /// than it says.
     Partial,
@@ -306,6 +318,7 @@ pub fn refutation(
     fixed: &[(&str, &Value)],
     formula: &Expr,
     floats: Floats,
+    format: Format,
 ) -> Result<String, Refusal> {
     let refused = |error| Refusal {
         definition: String::new(),
@@ -377,7 +390,10 @@ pub fn refutation(
             },
         ],
     };
-    Ok(script.to_string())
+    match format {
+        Format::Smtlib => Ok(script.to_string()),
+        Format::Lean => lean::statement(&script).map_err(at),
+    }
 }
 
 /// A value as the term an export writes for it at this type.

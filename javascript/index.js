@@ -83,8 +83,14 @@ export async function instantiate(source) {
       call({ op: "elaborate", source, capabilities, harnesses: harnesses ?? {} }),
     key: (kind, object) => call({ op: "objectKey", kind, object }).key,
     smtlib: (definitions, floats) => call({ op: "smtlib", definitions, floats: floats ?? "exact" }),
-    ruleObligations: ({ interface: iface, rule, floats }) =>
-      call({ op: "ruleObligations", interface: iface, rule, floats: floats ?? "exact" }),
+    ruleObligations: ({ interface: iface, rule, floats, format }) =>
+      call({
+        op: "ruleObligations",
+        interface: iface,
+        rule,
+        floats: floats ?? "exact",
+        format: format ?? "smtlib",
+      }),
     readValues: (reply, types) => call({ op: "readValues", reply, types }),
   };
 }

@@ -14,7 +14,7 @@ use crate::labeled::{self, LValue};
 use crate::property::{MonitorState, Property, check_property, monitor, monitor_step};
 use crate::rules::{Rule, obligations};
 use crate::run::{Delivery, Event, System};
-use crate::smtlib::{self, Definition, Floats};
+use crate::smtlib::{self, Definition, Floats, Format};
 use crate::view::{event_type, view};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -156,6 +156,9 @@ pub enum Request {
         rule: Rule,
         #[serde(default)]
         floats: Floats,
+        /// `"lean"` writes each obligation as the Lean statement that its query is `unsat`.
+        #[serde(default)]
+        format: Format,
     },
     /// A solver's `get-value` reply, as values of these types.
     ReadValues { reply: String, types: Vec<Type> },
@@ -329,7 +332,8 @@ fn respond(request: Request) -> Value {
             interface,
             rule,
             floats,
-        } => match obligations(&interface, &rule, floats) {
+            format,
+        } => match obligations(&interface, &rule, floats, format) {
             Ok(out) => json!({
                 "kind": "obligations",
                 "obligations": out.obligations,

@@ -20,16 +20,16 @@ structure «record:7dc8022b» where
 /-- `net.fetch.initial.smt2` -/
 theorem net_fetch_initial :
     ∀ (args : «record:8742a65a») (grant : «record:2e5c7a65»),
-      ¬ (grant = ⟨[]⟩ ∧ contains grant.netAllow [args.url]) := by
+      ¬ (grant = ⟨[]⟩ ∧ seq.contains grant.netAllow [args.url]) := by
   grind
 
 /-- `net.fetch.net.ask.onResult.smt2` -/
 theorem net_fetch_on_result :
     ∀ (call : «record:8742a65a») (approved : Bool) (grant : «record:2e5c7a65»)
       (args : «record:8742a65a») (result : String),
-      ¬ (((¬ contains grant.netAllow [call.url] ∨ approved = true)
-          ∧ contains ["allow", "deny"] [result])
-        ∧ ¬ (¬ contains
+      ¬ (((¬ seq.contains grant.netAllow [call.url] ∨ approved = true)
+          ∧ seq.contains ["allow", "deny"] [result])
+        ∧ ¬ (¬ seq.contains
                 (if result = "allow" then («record:2e5c7a65».mk (grant.netAllow ++ [args.url])) else grant).netAllow
                 [call.url]
               ∨ (approved = true ∨ (result = "allow" ∧ args.url = call.url)))) := by
@@ -38,16 +38,16 @@ theorem net_fetch_on_result :
 /-- `shell.online.initial.smt2` -/
 theorem shell_online_initial :
     ∀ (args : «record:7dc8022b») (grant : «record:2e5c7a65»),
-      ¬ (grant = ⟨[]⟩ ∧ contains grant.netAllow [args.url]) := by
+      ¬ (grant = ⟨[]⟩ ∧ seq.contains grant.netAllow [args.url]) := by
   grind
 
 /-- `shell.online.net.ask.onResult.smt2` -/
 theorem shell_online_on_result :
     ∀ (call : «record:7dc8022b») (approved : Bool) (grant : «record:2e5c7a65»)
       (args : «record:8742a65a») (result : String),
-      ¬ (((¬ contains grant.netAllow [call.url] ∨ approved = true)
-          ∧ contains ["allow", "deny"] [result])
-        ∧ ¬ (¬ contains
+      ¬ (((¬ seq.contains grant.netAllow [call.url] ∨ approved = true)
+          ∧ seq.contains ["allow", "deny"] [result])
+        ∧ ¬ (¬ seq.contains
                 (if result = "allow" then («record:2e5c7a65».mk (grant.netAllow ++ [args.url])) else grant).netAllow
                 [call.url]
               ∨ (approved = true ∨ (result = "allow" ∧ args.url = call.url)))) := by
