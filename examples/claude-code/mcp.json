@@ -1,0 +1,25 @@
+{
+  "operations": {
+    "call": {
+      "input": { "Record": { "server": "String", "tool": "String", "input": "String" } },
+      "output": "String",
+      "effect": true,
+      "pre": {
+        "e": "op",
+        "op": "contains",
+        "args": [
+          { "e": "get", "of": { "e": "var", "name": "grant" }, "field": "netAllow" },
+          { "e": "get", "of": { "e": "var", "name": "args" }, "field": "server" }
+        ]
+      },
+      "ret": { "e": "list", "items": [{ "e": "lit", "v": "web" }] },
+      "footprint": {
+        "e": "record",
+        "fields": {
+          "reaches": { "e": "get", "of": { "e": "var", "name": "args" }, "field": "server" }
+        }
+      }
+    }
+  },
+  "grant": { "Record": { "netAllow": { "List": "String" } } }
+}
