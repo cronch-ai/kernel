@@ -172,11 +172,6 @@
                       "Record": {
                         "value": "String"
                       }
-                    },
-                    "spawn": {
-                      "Record": {
-                        "name": "String"
-                      }
                     }
                   },
                   "tag": "kind"
@@ -503,11 +498,6 @@
                                 "Record": {
                                   "value": "String"
                                 }
-                              },
-                              "spawn": {
-                                "Record": {
-                                  "name": "String"
-                                }
                               }
                             },
                             "tag": "kind"
@@ -722,11 +712,6 @@
                               "halt": {
                                 "Record": {
                                   "value": "String"
-                                }
-                              },
-                              "spawn": {
-                                "Record": {
-                                  "name": "String"
                                 }
                               }
                             },
@@ -978,11 +963,6 @@
                               "halt": {
                                 "Record": {
                                   "value": "String"
-                                }
-                              },
-                              "spawn": {
-                                "Record": {
-                                  "name": "String"
                                 }
                               }
                             },
@@ -1221,11 +1201,6 @@
                                 "Record": {
                                   "value": "String"
                                 }
-                              },
-                              "spawn": {
-                                "Record": {
-                                  "name": "String"
-                                }
                               }
                             },
                             "tag": "kind"
@@ -1456,11 +1431,6 @@
                               "halt": {
                                 "Record": {
                                   "value": "String"
-                                }
-                              },
-                              "spawn": {
-                                "Record": {
-                                  "name": "String"
                                 }
                               }
                             },
@@ -1700,11 +1670,6 @@
                       "Record": {
                         "value": "String"
                       }
-                    },
-                    "spawn": {
-                      "Record": {
-                        "name": "String"
-                      }
                     }
                   },
                   "tag": "kind"
@@ -1932,11 +1897,6 @@
                                 "Record": {
                                   "value": "String"
                                 }
-                              },
-                              "spawn": {
-                                "Record": {
-                                  "name": "String"
-                                }
                               }
                             },
                             "tag": "kind"
@@ -2152,11 +2112,6 @@
                                 "Record": {
                                   "value": "String"
                                 }
-                              },
-                              "spawn": {
-                                "Record": {
-                                  "name": "String"
-                                }
                               }
                             },
                             "tag": "kind"
@@ -2407,11 +2362,6 @@
                               "halt": {
                                 "Record": {
                                   "value": "String"
-                                }
-                              },
-                              "spawn": {
-                                "Record": {
-                                  "name": "String"
                                 }
                               }
                             },
@@ -2650,11 +2600,6 @@
                                 "Record": {
                                   "value": "String"
                                 }
-                              },
-                              "spawn": {
-                                "Record": {
-                                  "name": "String"
-                                }
                               }
                             },
                             "tag": "kind"
@@ -2885,11 +2830,6 @@
                               "halt": {
                                 "Record": {
                                   "value": "String"
-                                }
-                              },
-                              "spawn": {
-                                "Record": {
-                                  "name": "String"
                                 }
                               }
                             },
@@ -3085,7 +3025,7 @@
           "evidence": {
             "assumptions": [
               {
-                "interface": "sha256:ba56c6a5f94b9c4c68bb39e19fb117de4ff986df045c458dff7d099a590a4ce0",
+                "interface": "sha256:84f6e5efe591086a6fb3b4aaaf3b592e39905d47b0d4a1128c475bf0e8875e2b",
                 "kind": "contracts"
               },
               {
@@ -3102,7 +3042,7 @@
             ],
             "grant": "sha256:f192c92f3aeac8e9398fb4e40a7802990f13a78467067fd77e22ea4f4c634dff",
             "harness": "sha256:e805598bacb8275bb998f9e0f3cd7d676a4dc0f0401cfa2d8602e53837a1fc0a",
-            "interface": "sha256:ba56c6a5f94b9c4c68bb39e19fb117de4ff986df045c458dff7d099a590a4ce0",
+            "interface": "sha256:84f6e5efe591086a6fb3b4aaaf3b592e39905d47b0d4a1128c475bf0e8875e2b",
             "method": {
               "alphabet": [
                 {
@@ -3281,11 +3221,6 @@
                                   "halt": {
                                     "Record": {
                                       "value": "String"
-                                    }
-                                  },
-                                  "spawn": {
-                                    "Record": {
-                                      "name": "String"
                                     }
                                   }
                                 },
@@ -3502,11 +3437,6 @@
                                     "Record": {
                                       "value": "String"
                                     }
-                                  },
-                                  "spawn": {
-                                    "Record": {
-                                      "name": "String"
-                                    }
                                   }
                                 },
                                 "tag": "kind"
@@ -3757,11 +3687,6 @@
                                   "halt": {
                                     "Record": {
                                       "value": "String"
-                                    }
-                                  },
-                                  "spawn": {
-                                    "Record": {
-                                      "name": "String"
                                     }
                                   }
                                 },
@@ -4000,11 +3925,6 @@
                                     "Record": {
                                       "value": "String"
                                     }
-                                  },
-                                  "spawn": {
-                                    "Record": {
-                                      "name": "String"
-                                    }
                                   }
                                 },
                                 "tag": "kind"
@@ -4235,11 +4155,6 @@
                                   "halt": {
                                     "Record": {
                                       "value": "String"
-                                    }
-                                  },
-                                  "spawn": {
-                                    "Record": {
-                                      "name": "String"
                                     }
                                   }
                                 },
@@ -4313,7 +4228,7 @@
             "property": "sha256:044e72fbb412811697057948cb8e00415bcff097b46254a1a8d0e35d21e4d958",
             "verdict": "holds"
           },
-          "key": "sha256:88a1d246ca1c574f160feabdcd412fa786b25979205fb027ba5d46a93708db29",
+          "key": "sha256:8c85ce4d3fd6df01c16424f1aff8b0cd5d42c371cd378ba47c49fada9833df1b",
           "kind": "evidence"
         }
       }

@@ -118,6 +118,38 @@ pub fn inhabits(value: &Value, ty: &Type) -> bool {
     }
 }
 
+/// The value inhabits the type and has no field the type doesn't declare, at any depth. This is how a value from the
+/// world is checked on arrival: what doesn't fit doesn't cross, and an undeclared field doesn't fit.
+///
+/// `inhabits` reads only the declared fields, as width subtyping does for the values a harness makes itself. A
+/// variant's value holds its tag beside its case's fields, so the tags of every variant enclosing a record are
+/// allowed at that record's level.
+pub fn inhabits_exactly(value: &Value, ty: &Type) -> bool {
+    exactly(value, ty, &[])
+}
+
+fn exactly(value: &Value, ty: &Type, tags: &[&str]) -> bool {
+    match (ty, value) {
+        (Type::List(t), Value::Array(items)) => items.iter().all(|i| exactly(i, t, &[])),
+        (Type::Record(fields), Value::Object(map)) => {
+            map.keys()
+                .all(|k| fields.contains_key(k) || tags.contains(&k.as_str()))
+                && fields
+                    .iter()
+                    .all(|(name, t)| map.get(name).is_some_and(|v| exactly(v, t, &[])))
+        }
+        (Type::Variant { tag, cases }, Value::Object(map)) => {
+            let mut enclosing = tags.to_vec();
+            enclosing.push(tag);
+            map.get(tag)
+                .and_then(Value::as_str)
+                .and_then(|case| cases.get(case))
+                .is_some_and(|t| exactly(value, t, &enclosing))
+        }
+        _ => inhabits(value, ty),
+    }
+}
+
 /// The most precise type of a value, used for literals. `null` has none, and nor does an empty list: it takes the type
 /// expected where it appears. A list has the join of its items' types, and none if an item doesn't inhabit that.
 pub fn of_value(value: &Value) -> Option<Type> {

@@ -171,7 +171,7 @@ fn cases() -> Vec<Case> {
                 let (system, _) = r.deliver(system, run.clone());
                 let spawn = msg(
                     "act",
-                    json!({ "kind": "spawn", "name": "worker", "harness": worker(), "narrow": [{ "kind": "only", "ops": ["shell.approve"] }],
+                    json!({ "kind": "spawn", "name": "worker", "harness": written(&worker()), "narrow": written(&json!([{ "kind": "only", "ops": ["shell.approve"] }])),
                                             "arg": { "kind": "call", "op": "shell.approve", "args": { "argv": publish } } }),
                 );
                 let (system, _) = r.deliver(system, spawn);

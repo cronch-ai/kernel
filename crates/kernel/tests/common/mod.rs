@@ -95,14 +95,31 @@ pub fn calls_of(interface: &Value) -> Value {
 }
 
 /// The interface with a channel `act` that can hold any action of it, as plain data.
-pub fn acting_on(mut interface: Value) -> Value {
-    let action = action_type(&interface);
+pub fn acting_on(interface: Value) -> Value {
+    acting_on_with(interface, json!({}))
+}
+
+/// The same, for a harness that declares these children: `act` can hold a spawn of each.
+pub fn acting_on_with(mut interface: Value, spawns: Value) -> Value {
+    let action = action_type_with(&interface, &spawns);
     interface["channels"]["act"] = json!({ "type": action });
     interface
 }
 
 pub fn action_type(interface: &Value) -> Value {
-    call(json!({ "op": "actionType", "interface": interface, "result": "String" }))["type"].clone()
+    action_type_with(interface, &json!({}))
+}
+
+pub fn action_type_with(interface: &Value, spawns: &Value) -> Value {
+    call(
+        json!({ "op": "actionType", "interface": interface, "result": "String", "spawns": spawns }),
+    )["type"]
+        .clone()
+}
+
+/// A term as a spawn carries it: as text. A term has no Cronch type, so it crosses as `String`.
+pub fn written(term: &Value) -> Value {
+    json!(term.to_string())
 }
 
 pub fn halt(value: Value) -> Value {

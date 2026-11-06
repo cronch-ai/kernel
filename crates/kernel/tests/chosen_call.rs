@@ -227,8 +227,8 @@ fn parent(child: Value) -> Value {
     let spawned = rec(vec![
         ("kind", lit(json!("spawn"))),
         ("name", lit(json!("reader"))),
-        ("harness", lit(child)),
-        ("narrow", lit(narrow)),
+        ("harness", lit(written(&child))),
+        ("narrow", lit(written(&narrow))),
         ("arg", path("input", &["value"])),
     ]);
     json!({

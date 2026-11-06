@@ -197,11 +197,6 @@
                       "Record": {
                         "value": "String"
                       }
-                    },
-                    "spawn": {
-                      "Record": {
-                        "name": "String"
-                      }
                     }
                   },
                   "tag": "kind"
@@ -394,7 +389,7 @@
           "evidence": {
             "assumptions": [
               {
-                "interface": "sha256:ba56c6a5f94b9c4c68bb39e19fb117de4ff986df045c458dff7d099a590a4ce0",
+                "interface": "sha256:84f6e5efe591086a6fb3b4aaaf3b592e39905d47b0d4a1128c475bf0e8875e2b",
                 "kind": "contracts"
               },
               {
@@ -423,7 +418,7 @@
             ],
             "grant": "sha256:f192c92f3aeac8e9398fb4e40a7802990f13a78467067fd77e22ea4f4c634dff",
             "harness": "sha256:6d513afe7b75b30afcc117770e18e06fa36e017c1a12eb4de3a75655d9faf17a",
-            "interface": "sha256:ba56c6a5f94b9c4c68bb39e19fb117de4ff986df045c458dff7d099a590a4ce0",
+            "interface": "sha256:84f6e5efe591086a6fb3b4aaaf3b592e39905d47b0d4a1128c475bf0e8875e2b",
             "method": {
               "deliveries": [
                 {
@@ -448,7 +443,7 @@
             "property": "sha256:044e72fbb412811697057948cb8e00415bcff097b46254a1a8d0e35d21e4d958",
             "verdict": "refuted"
           },
-          "key": "sha256:8df5a9e29f070d87c0d5f90a8b2619b99d6802bdf1b43e7cb0cdd9080cd8badc",
+          "key": "sha256:3c8a526d1bb05ec8d553a4fa414eff6c118b73361ef02da21a74de55fbc6af3f",
           "kind": "evidence"
         }
       }
@@ -458,7 +453,7 @@
         "evidence": {
           "assumptions": [
             {
-              "interface": "sha256:ba56c6a5f94b9c4c68bb39e19fb117de4ff986df045c458dff7d099a590a4ce0",
+              "interface": "sha256:84f6e5efe591086a6fb3b4aaaf3b592e39905d47b0d4a1128c475bf0e8875e2b",
               "kind": "contracts"
             },
             {
@@ -487,7 +482,7 @@
           ],
           "grant": "sha256:f192c92f3aeac8e9398fb4e40a7802990f13a78467067fd77e22ea4f4c634dff",
           "harness": "sha256:6d513afe7b75b30afcc117770e18e06fa36e017c1a12eb4de3a75655d9faf17a",
-          "interface": "sha256:ba56c6a5f94b9c4c68bb39e19fb117de4ff986df045c458dff7d099a590a4ce0",
+          "interface": "sha256:84f6e5efe591086a6fb3b4aaaf3b592e39905d47b0d4a1128c475bf0e8875e2b",
           "method": {
             "deliveries": [
               {
@@ -705,11 +700,6 @@
                     "halt": {
                       "Record": {
                         "value": "String"
-                      }
-                    },
-                    "spawn": {
-                      "Record": {
-                        "name": "String"
                       }
                     }
                   },
@@ -1035,11 +1025,6 @@
                       "Record": {
                         "value": "String"
                       }
-                    },
-                    "spawn": {
-                      "Record": {
-                        "name": "String"
-                      }
                     }
                   },
                   "tag": "kind"
@@ -1240,7 +1225,7 @@
           "evidence": {
             "assumptions": [
               {
-                "interface": "sha256:ba56c6a5f94b9c4c68bb39e19fb117de4ff986df045c458dff7d099a590a4ce0",
+                "interface": "sha256:84f6e5efe591086a6fb3b4aaaf3b592e39905d47b0d4a1128c475bf0e8875e2b",
                 "kind": "contracts"
               },
               {
@@ -1258,7 +1243,7 @@
             "depth": 3,
             "grant": "sha256:f192c92f3aeac8e9398fb4e40a7802990f13a78467067fd77e22ea4f4c634dff",
             "harness": "sha256:e805598bacb8275bb998f9e0f3cd7d676a4dc0f0401cfa2d8602e53837a1fc0a",
-            "interface": "sha256:ba56c6a5f94b9c4c68bb39e19fb117de4ff986df045c458dff7d099a590a4ce0",
+            "interface": "sha256:84f6e5efe591086a6fb3b4aaaf3b592e39905d47b0d4a1128c475bf0e8875e2b",
             "method": {
               "alphabet": [
                 {
@@ -1289,7 +1274,7 @@
             "property": "sha256:044e72fbb412811697057948cb8e00415bcff097b46254a1a8d0e35d21e4d958",
             "verdict": "holdsUpTo"
           },
-          "key": "sha256:2b929f4e2dd6cc4fae9d05ff21dcbe7e51b8be050e3a29d9393ea072c8818969",
+          "key": "sha256:4f29b8d6f04fa60702435b13e30d5d44cb44eb6fefbd10220bd5deb5cd2c6e87",
           "kind": "evidence"
         }
       }
@@ -1442,11 +1427,6 @@
                     "halt": {
                       "Record": {
                         "value": "String"
-                      }
-                    },
-                    "spawn": {
-                      "Record": {
-                        "name": "String"
                       }
                     }
                   },
@@ -1647,7 +1627,7 @@
           "evidence": {
             "assumptions": [
               {
-                "interface": "sha256:ba56c6a5f94b9c4c68bb39e19fb117de4ff986df045c458dff7d099a590a4ce0",
+                "interface": "sha256:84f6e5efe591086a6fb3b4aaaf3b592e39905d47b0d4a1128c475bf0e8875e2b",
                 "kind": "contracts"
               },
               {
@@ -1664,7 +1644,7 @@
             ],
             "grant": "sha256:f192c92f3aeac8e9398fb4e40a7802990f13a78467067fd77e22ea4f4c634dff",
             "harness": "sha256:e805598bacb8275bb998f9e0f3cd7d676a4dc0f0401cfa2d8602e53837a1fc0a",
-            "interface": "sha256:ba56c6a5f94b9c4c68bb39e19fb117de4ff986df045c458dff7d099a590a4ce0",
+            "interface": "sha256:84f6e5efe591086a6fb3b4aaaf3b592e39905d47b0d4a1128c475bf0e8875e2b",
             "method": {
               "alphabet": [
                 {
@@ -1695,7 +1675,7 @@
             "property": "sha256:044e72fbb412811697057948cb8e00415bcff097b46254a1a8d0e35d21e4d958",
             "verdict": "holds"
           },
-          "key": "sha256:04f9176dfc02dc4f7a2fa9417c9d4563cc3de190e71fc015af8b47a04a723156",
+          "key": "sha256:9862609b04b3c9c0fc6149a56205ae1a2d2e91ee777d3b7fe2f3d9dbfcef6baf",
           "kind": "evidence"
         }
       }
@@ -1705,7 +1685,7 @@
         "evidence": {
           "assumptions": [
             {
-              "interface": "sha256:ba56c6a5f94b9c4c68bb39e19fb117de4ff986df045c458dff7d099a590a4ce0",
+              "interface": "sha256:84f6e5efe591086a6fb3b4aaaf3b592e39905d47b0d4a1128c475bf0e8875e2b",
               "kind": "contracts"
             },
             {
@@ -1722,7 +1702,7 @@
           ],
           "grant": "sha256:f192c92f3aeac8e9398fb4e40a7802990f13a78467067fd77e22ea4f4c634dff",
           "harness": "sha256:e805598bacb8275bb998f9e0f3cd7d676a4dc0f0401cfa2d8602e53837a1fc0a",
-          "interface": "sha256:ba56c6a5f94b9c4c68bb39e19fb117de4ff986df045c458dff7d099a590a4ce0",
+          "interface": "sha256:84f6e5efe591086a6fb3b4aaaf3b592e39905d47b0d4a1128c475bf0e8875e2b",
           "method": {
             "alphabet": [
               {
@@ -1899,11 +1879,6 @@
                     "halt": {
                       "Record": {
                         "value": "String"
-                      }
-                    },
-                    "spawn": {
-                      "Record": {
-                        "name": "String"
                       }
                     }
                   },

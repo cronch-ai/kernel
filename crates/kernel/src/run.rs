@@ -9,7 +9,8 @@
 //!   queued. The interpreter checks the precondition itself, at the point of the call, so it holds whatever `δ` does.
 //! * `cancel(k)` is passed to the world. It is a request: `k` stays pending and its results may still arrive.
 //! * `spawn(harness, narrow, arg)` gets the next identifier and starts a child run of `harness` with `arg`, against the
-//!   parent's interface narrowed by `narrow`. The child's calls go through the same implementations, its
+//!   parent's interface narrowed by `narrow`. The harness and the narrowing are text, since a term has no Cronch type,
+//!   and are read here. The child's calls go through the same implementations, its
 //!   preconditions are the parent's strengthened, and it starts with its parent's grant state, so a child can never
 //!   do what its parent couldn't. When the child halts,
 //!   its value comes back to the parent as `ret(k, v)`, labelled as the child's own evaluation labelled it; if it
@@ -46,7 +47,7 @@ use crate::harness::{
 use crate::ir::{Expr, Type};
 use crate::labeled::{self, EvalError, LValue, Label};
 use crate::ops::text;
-use crate::types::inhabits;
+use crate::types::{inhabits, inhabits_exactly};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::collections::VecDeque;
@@ -548,8 +549,9 @@ impl Run {
         }
     }
 
+    /// What arrives from the world has its declared type exactly: a field the type doesn't declare doesn't cross.
     fn typed(value: &Value, expected: &Type) -> Result<(), Withheld> {
-        if inhabits(value, expected) {
+        if inhabits_exactly(value, expected) {
             Ok(())
         } else {
             Err(Withheld::Mismatch {
@@ -684,17 +686,16 @@ impl Run {
     }
 
     /// The child a spawn action starts, if it can start. A spawn that names a declared child starts only a harness
-    /// with that child's signature, with an argument the signature takes.
+    /// with that child's signature, with an argument the signature takes. The harness and the narrowing arrive as
+    /// text, since a term has no Cronch type, and are read here: text that isn't one refuses the spawn.
     fn child(&self, action: &Value, arg: &LValue) -> Option<Run> {
-        let harness: Harness = serde_json::from_value(action.get("harness")?.clone()).ok()?;
+        let harness: Harness = serde_json::from_str(action.get("harness")?.as_str()?).ok()?;
         let signature = self.harness.spawns.get(action.get("name")?.as_str()?)?;
         if !signature.admits(&harness) || !inhabits(&arg.value(), &signature.arg) {
             return None;
         }
-        let narrowings: Vec<Narrowing> = match action.get("narrow") {
-            None => Vec::new(),
-            Some(n) => serde_json::from_value(n.clone()).ok()?,
-        };
+        let narrowings: Vec<Narrowing> =
+            serde_json::from_str(action.get("narrow")?.as_str()?).ok()?;
         let interface = narrow(&self.interface, &narrowings).ok()?;
         let well_formed = check_harness(&harness, &interface).is_empty()
             && check_interface(&interface).is_empty()

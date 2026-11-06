@@ -482,12 +482,19 @@ pub fn step_type(state: &Type, action: &Type) -> Type {
 /// * `call`, a variant over `op` with a case for each of the interface's operations, holding its `args`;
 /// * `cancel`, of a call identifier;
 /// * `halt`, with a value of the harness's result type, `result`;
-/// * `spawn`, naming a declared child. Its other fields are checked when the child starts.
+/// * `spawn`, a variant over the declared children (`name`). A case holds the child's harness and its narrowing as
+///   text, which the interpreter reads when the child starts, and its argument at the signature's `arg`. A term has
+///   no Cronch type, so it crosses as `String`, as data with no fixed shape does. With no declared children, there is
+///   no `spawn` case.
 ///
 /// So a step that could call an operation the interface lacks, or with arguments of the wrong type, or halt with
 /// the wrong value, is caught by `checkHarness`, not refused when it runs. Preconditions are still checked at each
 /// call: they depend on the grant state and the arguments' values, which only the run has.
-pub fn action_type(result: &Type, interface: &Interface) -> Type {
+pub fn action_type(
+    result: &Type,
+    interface: &Interface,
+    spawns: &BTreeMap<String, Signature>,
+) -> Type {
     let record = |fields: Vec<(&str, Type)>| {
         Type::Record(
             fields
@@ -501,20 +508,40 @@ pub fn action_type(result: &Type, interface: &Interface) -> Type {
         .iter()
         .map(|(name, o)| (name.clone(), record(vec![("args", o.input.clone())])))
         .collect();
+    let mut cases = BTreeMap::from([
+        (
+            "call".to_string(),
+            Type::Variant {
+                tag: "op".to_string(),
+                cases: calls,
+            },
+        ),
+        ("cancel".to_string(), record(vec![("call", Type::Int)])),
+        ("halt".to_string(), record(vec![("value", result.clone())])),
+    ]);
+    if !spawns.is_empty() {
+        let children = spawns
+            .iter()
+            .map(|(name, signature)| {
+                let fields = vec![
+                    ("harness", Type::String),
+                    ("narrow", Type::String),
+                    ("arg", signature.arg.clone()),
+                ];
+                (name.clone(), record(fields))
+            })
+            .collect();
+        cases.insert(
+            "spawn".to_string(),
+            Type::Variant {
+                tag: "name".to_string(),
+                cases: children,
+            },
+        );
+    }
     Type::Variant {
         tag: "kind".to_string(),
-        cases: BTreeMap::from([
-            (
-                "call".to_string(),
-                Type::Variant {
-                    tag: "op".to_string(),
-                    cases: calls,
-                },
-            ),
-            ("cancel".to_string(), record(vec![("call", Type::Int)])),
-            ("halt".to_string(), record(vec![("value", result.clone())])),
-            ("spawn".to_string(), record(vec![("name", Type::String)])),
-        ]),
+        cases,
     }
 }
 
@@ -624,7 +651,7 @@ pub fn check_harness(harness: &Harness, interface: &Interface) -> Vec<HarnessPro
         ("input".to_string(), input),
     ];
     // The step is checked against its type, so the state it builds can hold variants.
-    let action = action_type(&harness.result, interface);
+    let action = action_type(&harness.result, interface, &harness.spawns);
     let step = harness.step.clone();
     let (_, found) = check(&step, &step_type(&harness.state, &action), scope);
     for problem in found {

@@ -439,6 +439,22 @@ fn fold_into(over: K, init: K, item: &str, body: K, ty: Option<Type>) -> K {
 }
 
 impl<'a> Cx<'a> {
+    /// Each child the harness spawns, by the name its header binds it to.
+    fn spawns(&self) -> BTreeMap<String, Signature> {
+        self.calls
+            .values()
+            .filter_map(|c| {
+                let (child, _) = c.child.as_ref()?;
+                let name = c.target.strip_prefix("spawn.")?.to_string();
+                let signature = Signature {
+                    arg: child.arg.clone(),
+                    result: child.result.clone(),
+                };
+                Some((name, signature))
+            })
+            .collect()
+    }
+
     pub(crate) fn report(&mut self, span: Span, what: What) {
         self.problems.push(problem(span, what));
     }
@@ -1529,8 +1545,8 @@ impl Cx<'_> {
                 let action = rec(vec![
                     ("kind", lit(json!("spawn"))),
                     ("name", lit(json!(name))),
-                    ("harness", lit(json!(child))),
-                    ("narrow", lit(json!(narrowings))),
+                    ("harness", lit(json!(json!(child).to_string()))),
+                    ("narrow", lit(json!(json!(narrowings).to_string()))),
                     ("arg", lowered.args[&n].clone()),
                 ]);
                 issued(one(), running(), op("append", vec![actions, action]))
@@ -2088,20 +2104,7 @@ impl Cx<'_> {
             .iter()
             .map(|(&i, c)| (self.node_name(i).to_string(), initial_slot(c)))
             .collect();
-        // Each child the harness spawns, by the name its header binds it to.
-        let spawns = self
-            .calls
-            .values()
-            .filter_map(|c| {
-                let (child, _) = c.child.as_ref()?;
-                let name = c.target.strip_prefix("spawn.")?.to_string();
-                let signature = Signature {
-                    arg: child.arg.clone(),
-                    result: child.result.clone(),
-                };
-                Some((name, signature))
-            })
-            .collect();
+        let spawns = self.spawns();
         let mut init = json!({ "arg": default_value(&plan.arg), "next": 0, "nodes": waiting });
         if !self.carries.is_empty() {
             init["carry"] = Value::Object(
@@ -2733,7 +2736,7 @@ pub fn elaborate(
             }
         }
     }
-    let action = action_type(&result, &used);
+    let action = action_type(&result, &used, &cx.spawns());
     let step = step_type(&cx.state_type(&arg), &action);
     let plan = Plan {
         step,

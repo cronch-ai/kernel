@@ -160,10 +160,10 @@ otherwise return -1
     );
     assert_eq!(actions[0]["kind"], "spawn");
     assert_eq!(actions[0]["arg"], json!(5));
-    assert_eq!(
-        actions[0]["narrow"],
-        json!([{ "kind": "only", "ops": ["m.double"] }])
-    );
+    // The narrowing and the child's harness cross as text: a term has no Cronch type.
+    let narrow: Value = serde_json::from_str(actions[0]["narrow"].as_str().unwrap()).unwrap();
+    assert_eq!(narrow, json!([{ "kind": "only", "ops": ["m.double"] }]));
+    assert!(actions[0]["harness"].is_string());
     assert_eq!(outcome["value"], json!(10));
 }
 

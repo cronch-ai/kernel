@@ -657,8 +657,11 @@ export interface Kernel {
   /** The harness's input is typed by `inputType`, and its actions by the interface's operations. */
   checkHarness(harness: Harness, iface: Interface): readonly HarnessProblem[];
   inputType(harness: Harness, iface: Interface): Type;
-  /** What `Action` is against an interface, halting with a value of `result`. */
-  actionType(iface: Interface, result: Type): Type;
+  /**
+   * What a step's actions are against an interface, halting with a value of `result`. A spawn is a variant over
+   * `spawns`, each case holding the child's harness and narrowing as text and its argument at the signature's `arg`.
+   */
+  actionType(iface: Interface, result: Type, spawns?: Readonly<Record<string, Signature>>): Type;
   checkInterface(iface: Interface): readonly HarnessProblem[];
   install(
     capabilities: readonly Installation[],
