@@ -215,3 +215,21 @@ fn the_operations_must_be_the_interface_s_and_the_grant_starts_empty() {
         json!({ "kind": "noSuchOperation", "name": "net.nope" })
     );
 }
+
+#[test]
+fn obligations_can_be_written_as_lean_statements() {
+    let interface = install(json!([net()]));
+    let smtlib = obligations(interface.clone());
+    let lean = call(json!({
+        "op": "ruleObligations", "interface": interface, "rule": rule(), "format": "lean",
+    }));
+    assert_eq!(lean["kind"], "obligations", "{lean}");
+    assert_eq!(names(&lean, "obligations"), names(&smtlib, "obligations"));
+    for o in lean["obligations"].as_array().unwrap() {
+        let text = o["text"].as_str().unwrap();
+        assert!(text.contains("import Cronch.Smt"), "{text}");
+        assert!(text.contains("abbrev statement : Prop :="), "{text}");
+        assert!(text.contains("Smt.seq.contains"), "{text}");
+        assert!(!text.contains("(assert"), "{text}");
+    }
+}

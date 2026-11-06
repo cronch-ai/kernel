@@ -33,4 +33,7 @@ jobs:
           node-version: 24
       - run: npm test --prefix javascript
       - run: ./scripts/install-proof-tools.sh
+      - run: ./scripts/install-lean.sh
+      - run: ../.proof-tools/lean/bin/lake build
+        working-directory: lean
       - run: npm run test:proofs
