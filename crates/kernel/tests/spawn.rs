@@ -330,3 +330,54 @@ fn a_step_that_spawns_an_undeclared_child_does_not_check() {
             .clone();
     assert_ne!(problems, json!([]), "{problems:#}");
 }
+
+/// A child whose every value is a literal: it writes a fixed path, then halts with "done", or fails if the write does.
+fn scribe() -> Value {
+    json!({
+        "result": "String", "arg": calls_of(&tools()),
+        "state": { "Record": {} },
+        "init": {},
+        "step": on(
+            vec![
+                ("start", step(var("state"), vec![call_action("fs.write", rec(vec![("path", lit(json!("/workspace/a")))]))])),
+                ("ret", step(var("state"), vec![halt(lit(json!("done")))])),
+            ],
+            // Dividing by zero can't evaluate, so this step fails the child.
+            step(var("state"), vec![halt(op("str", vec![op("div", vec![lit(json!(1)), lit(json!(0))])]))]),
+        ),
+    })
+}
+
+#[test]
+fn a_child_written_by_an_untrusted_source_carries_its_label() {
+    let mut interface = tools();
+    interface["channels"]["act"]["label"] = json!(["model"]);
+    let ready = call(json!({ "op": "init", "harness": actor(), "interface": interface }));
+    assert_eq!(ready["kind"], "ready", "{ready}");
+    let system = deliver_all(ready["system"].clone(), vec![start(json!({}))]).0;
+    let spawn = act(
+        json!({ "kind": "spawn", "name": "worker", "harness": written(&scribe()), "narrow": written(&json!([])),
+        "arg": { "kind": "call", "op": "net.fetch", "args": { "url": "https://example.com" } } }),
+    );
+    let (system, events) = deliver_all(system, vec![spawn]);
+    assert_eq!(
+        shape(&events),
+        ["in:msg", "out:spawn", "in:start", "out:call"]
+    );
+    // The literal path the child writes depends on whoever wrote the child.
+    assert_eq!(events[3]["labels"]["args"]["path"], json!(["model"]));
+
+    // So does the literal it halts with, and so what its parent hears.
+    let (_, events) = deliver_all(system.clone(), vec![to(vec![0], ret(0, json!(1)))]);
+    let parent_hears = events.last().unwrap();
+    assert_eq!(parent_hears["origin"], json!([]));
+    assert_eq!(parent_hears["label"], json!(["model"]));
+
+    // And a failure of the child.
+    let failed =
+        json!({ "to": [0], "input": { "kind": "failed", "call": 0, "error": "unreachable" } });
+    let (_, events) = deliver_all(system, vec![failed]);
+    let parent_hears = events.last().unwrap();
+    assert_eq!(parent_hears["input"]["kind"], "failed", "{events:?}");
+    assert_eq!(parent_hears["label"], json!(["model"]));
+}
