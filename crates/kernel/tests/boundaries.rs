@@ -207,6 +207,36 @@ fn a_chosen_call_with_a_field_it_doesn_t_declare_is_withheld() {
     }
 }
 
+/// Calls `fetch` with `args` as soon as it starts: a value the step makes, not one from the world.
+fn caller(args: Value) -> Value {
+    json!({
+        "arg": "Int",
+        "result": "String",
+        "state": { "Record": {} },
+        "init": {},
+        "step": on(
+            vec![("start", step(var("state"), vec![call_action("fetch", args)]))],
+            step(var("state"), vec![]),
+        ),
+    })
+}
+
+#[test]
+fn a_call_s_arguments_a_step_makes_have_the_operation_s_input_type_exactly() {
+    // The checker reads a step's values by width subtyping, so this harness checks. At the call, the interpreter
+    // reads the arguments exactly, so the capability never receives `x`.
+    let padded = rec(vec![("url", lit(json!("evil"))), ("x", lit(json!(1)))]);
+    let system = init(caller(padded), interface());
+    let (_, events) = deliver_all(system, vec![start(json!(1))]);
+    assert_eq!(shape(&events), ["in:start", "out:call", "in:refused"]);
+    assert!(!performed(&events), "{events:?}");
+
+    let exact = rec(vec![("url", lit(json!("evil")))]);
+    let system = init(caller(exact), interface());
+    let (_, events) = deliver_all(system, vec![start(json!(1))]);
+    assert!(performed(&events), "{events:?}");
+}
+
 #[test]
 fn a_halt_has_the_harness_s_result_type() {
     // Checked before the run starts: this step halts with `String` where the harness declares `Int`.
