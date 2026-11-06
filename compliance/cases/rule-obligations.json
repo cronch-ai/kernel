@@ -3,10 +3,6 @@
   "exchanges": [
     {
       "request": {
-        "grant": {
-          "fsAllow": [],
-          "netAllow": []
-        },
         "interface": {
           "grant": {
             "Record": {

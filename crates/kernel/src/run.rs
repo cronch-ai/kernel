@@ -47,7 +47,7 @@ use crate::harness::{
 use crate::ir::{Expr, Type};
 use crate::labeled::{self, EvalError, LValue, Label};
 use crate::ops::text;
-use crate::types::{inhabits, inhabits_exactly};
+use crate::types::{inhabits, inhabits_exactly, zero};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::collections::VecDeque;
@@ -284,17 +284,8 @@ pub enum Event {
 #[derive(Serialize, Clone, Debug, PartialEq)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum InitError {
-    Harness {
-        problems: Vec<HarnessProblem>,
-    },
-    Interface {
-        problems: Vec<HarnessProblem>,
-    },
-    /// The grant state the run would start with isn't of the type the interface's contracts declare.
-    Grant {
-        expected: Type,
-        got: Value,
-    },
+    Harness { problems: Vec<HarnessProblem> },
+    Interface { problems: Vec<HarnessProblem> },
 }
 
 /// The value of a contract's expression, or `None` if it fails to evaluate.
@@ -353,8 +344,8 @@ struct Admitted {
 }
 
 impl System {
-    /// A system that hasn't started: the harness at `s₀`, against the interface, with the root grant state.
-    pub fn new(harness: Harness, interface: Interface, grant: Value) -> Result<System, InitError> {
+    /// A system that hasn't started: the harness at `s₀`, against the interface, with the empty grant.
+    pub fn new(harness: Harness, interface: Interface) -> Result<System, InitError> {
         let problems = check_harness(&harness, &interface);
         if !problems.is_empty() {
             return Err(InitError::Harness { problems });
@@ -363,17 +354,8 @@ impl System {
         if !problems.is_empty() {
             return Err(InitError::Interface { problems });
         }
-        // No grant given: the empty one, which is all an interface whose capabilities declare no part of it has.
-        let grant = match grant {
-            Value::Null => json!({}),
-            given => given,
-        };
-        if !inhabits(&grant, &interface.grant) {
-            return Err(InitError::Grant {
-                expected: interface.grant.clone(),
-                got: grant,
-            });
-        }
+        // Every run starts with the empty grant: only contracts add to it. `check_interface` refused a grant with none.
+        let grant = zero(&interface.grant).unwrap_or_else(|| json!({}));
         let mut root = Run::new(harness, interface);
         root.grant = grant;
         Ok(System { root })

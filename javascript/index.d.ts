@@ -229,6 +229,8 @@ export type HarnessProblem =
   | { readonly kind: "init"; readonly expected: Type; readonly got: Value }
   | { readonly kind: "step"; readonly expected: Type; readonly got: Type }
   | { readonly kind: "spawnClash"; readonly name: string }
+  /** The grant has no empty value to start from: a variant in it has no `none` case that holds nothing. */
+  | { readonly kind: "grant"; readonly got: Type }
   | {
       readonly kind: "part";
       readonly place: HarnessPlace;
@@ -379,7 +381,7 @@ export interface Run {
   readonly queue: readonly { readonly input: Value; readonly label?: Label }[];
   readonly started: boolean;
   readonly outcome?: Outcome;
-  /** What this run's preconditions read: the root principal's grant at the root, a copy of its parent's in a child. */
+  /** What this run's preconditions read. The root starts with the empty grant; a child with a copy of its parent's. */
   readonly grant: Value;
   readonly seen?: Label;
   readonly children?: readonly { readonly call: number; readonly run: Run }[];
@@ -501,7 +503,6 @@ export type MonitorError =
 export interface Subject {
   readonly harness: Harness;
   readonly interface?: Interface;
-  readonly grant?: Value;
   readonly property: Property;
 }
 
@@ -553,7 +554,6 @@ export type Assumption =
 export type Evidence = {
   readonly harness: string;
   readonly interface: string;
-  readonly grant: string;
   readonly property: string;
   readonly method: Method;
   readonly assumptions: readonly Assumption[];
@@ -574,8 +574,7 @@ export type ProveError =
 
 export type InitError =
   | { readonly kind: "harness"; readonly problems: readonly HarnessProblem[] }
-  | { readonly kind: "interface"; readonly problems: readonly HarnessProblem[] }
-  | { readonly kind: "grant"; readonly expected: Type; readonly got: Value };
+  | { readonly kind: "interface"; readonly problems: readonly HarnessProblem[] };
 
 /**
  * `logEntry`: an entry of a run's log, `{ seq, prev, delivery, events }`.
@@ -670,10 +669,10 @@ export interface Kernel {
     iface: Interface,
     narrowings: readonly Narrowing[],
   ): Refusable<"narrowed", { readonly interface: Interface }>;
+  /** Every run starts with the empty grant of the interface's grant type: nothing pre-fills one. */
   init(input: {
     readonly harness: Harness;
     readonly interface?: Interface;
-    readonly grant?: Value;
   }): Refusable<"ready", { readonly system: System }>;
   /** Deliver one input: the next configuration, and what happened. */
   deliver(
@@ -778,7 +777,6 @@ export interface Kernel {
   ruleObligations(input: {
     readonly interface: Interface;
     readonly rule: Rule;
-    readonly grant: Value;
     readonly floats?: Floats;
   }):
     | {
@@ -806,7 +804,6 @@ export type RuleError =
   | { readonly kind: "interface"; readonly problems: readonly unknown[] }
   | { readonly kind: "noSuchOperation"; readonly name: string }
   | { readonly kind: "grantNotARecord" }
-  | { readonly kind: "grant" }
   | { readonly kind: "unreadable"; readonly update: string }
   | { readonly kind: "refused"; readonly place: string; readonly refusal: SmtlibRefusal };
 

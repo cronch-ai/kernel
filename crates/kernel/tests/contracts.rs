@@ -161,8 +161,13 @@ fn drivers() -> Value {
             // A trusted message changes the mode, and leaves the rest of the grant as it was.
             "mode": { "type": "String", "onMsg": rec(vec![("mode", var("value"))]) },
             "spoof": { "type": "String", "label": ["model"], "onMsg": rec(vec![("mode", var("value"))]) },
+            // An operator allowlists an argv. Every run starts with the empty grant, so this is how one gets in.
+            "allow": {
+                "type": argv_list(),
+                "onMsg": rec(vec![("allow", op("append", vec![path("grant", &["allow"]), var("value")]))]),
+            },
         },
-        "grant": { "Record": { "mode": "String" } },
+        "grant": { "Record": { "mode": "String", "allow": { "List": argv_list() } } },
     })
 }
 
@@ -177,12 +182,15 @@ fn installed() -> Value {
     out["interface"].clone()
 }
 
+/// A started run whose operator has allowlisted `npm test`.
 fn system(interface: Value) -> Value {
-    let grant = json!({ "allow": [["npm", "test"]], "once": [], "mode": "default" });
-    let ready =
-        call(json!({ "op": "init", "harness": puppet(), "interface": interface, "grant": grant }));
+    let ready = call(json!({ "op": "init", "harness": puppet(), "interface": interface }));
     assert_eq!(ready["kind"], "ready", "{ready}");
-    let (system, _) = deliver_all(ready["system"].clone(), vec![start(json!({}))]);
+    let (system, _) = deliver_all(
+        ready["system"].clone(),
+        vec![start(json!({})), msg("allow", json!(["npm", "test"]))],
+    );
+    assert_eq!(system["root"]["grant"]["allow"], json!([["npm", "test"]]));
     system
 }
 
@@ -268,7 +276,7 @@ fn an_untrusted_answer_grants_nothing() {
 
     // Nor does an untrusted channel, whatever its contract says it would do.
     let (system, _) = deliver_all(system, vec![msg("spoof", json!("plan"))]);
-    assert_eq!(system["root"]["grant"]["mode"], "default");
+    assert_eq!(system["root"]["grant"]["mode"], "");
 }
 
 #[test]
@@ -340,9 +348,7 @@ fn results_carry_their_return_label_and_must_meet_their_postcondition() {
 }
 
 fn system_with(interface: Value) -> Value {
-    let ready = call(
-        json!({ "op": "init", "harness": puppet(), "interface": interface, "grant": { "mode": "default" } }),
-    );
+    let ready = call(json!({ "op": "init", "harness": puppet(), "interface": interface }));
     assert_eq!(ready["kind"], "ready", "{ready}");
     deliver_all(ready["system"].clone(), vec![start(json!({}))]).0
 }
@@ -471,16 +477,32 @@ fn capabilities_declare_their_part_of_the_grant_state() {
     assert_eq!(problems[0]["kind"], "expr", "{problems}");
     assert_eq!(problems[0]["place"]["part"], "onCall");
 
-    // And a run can't start with a grant state of another type.
+    // A run starts with the empty grant state, whatever a host asks for: nothing pre-fills it.
     let harness = json!({ "result": "String", "arg": "String", "state": { "Record": {} }, "init": {}, "step": step(var("state"), vec![]) });
-    let refused = call(
-        json!({ "op": "init", "harness": harness, "interface": counter, "grant": { "ticks": "none" } }),
-    );
-    assert_eq!(refused["error"]["kind"], "grant");
     let ready = call(
-        json!({ "op": "init", "harness": harness, "interface": counter, "grant": { "ticks": 0 } }),
+        json!({ "op": "init", "harness": harness, "interface": installed["interface"], "grant": { "ticks": 5, "allow": ["go"] } }),
     );
     assert_eq!(ready["kind"], "ready");
+    assert_eq!(
+        ready["system"]["root"]["grant"],
+        json!({ "ticks": 0, "allow": [] })
+    );
+
+    // A grant with no empty value is refused: a variant with no `none` case that holds nothing.
+    let mut chooser = counter.clone();
+    chooser["grant"] = json!({ "Record": { "ticks": { "Variant": { "tag": "k", "cases": { "a": { "Record": {} } } } } } });
+    chooser["operations"]["tick"]
+        .as_object_mut()
+        .unwrap()
+        .remove("onCall");
+    let problems =
+        call(json!({ "op": "checkInterface", "interface": chooser }))["problems"].clone();
+    assert_eq!(problems[0]["kind"], "grant", "{problems}");
+    let mut optional = chooser.clone();
+    optional["grant"]["Record"]["ticks"]["Variant"]["cases"]["none"] = json!({ "Record": {} });
+    let problems =
+        call(json!({ "op": "checkInterface", "interface": optional }))["problems"].clone();
+    assert_eq!(problems, json!([]), "{problems}");
 }
 
 #[test]

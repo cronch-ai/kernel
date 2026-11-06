@@ -150,6 +150,31 @@ fn exactly(value: &Value, ty: &Type, tags: &[&str]) -> bool {
     }
 }
 
+/// The grant state every run starts with: the empty value of its type. A list starts empty, a record with each field
+/// empty, a number at zero, a string empty and a `Bool` false. A variant starts at a `none` case that holds nothing,
+/// and one without such a case has no empty value: an interface whose grant has one is refused. Nothing but a
+/// contract's update changes a grant, so no run starts with an approval already given, or a mode already set.
+pub fn zero(ty: &Type) -> Option<Value> {
+    match ty {
+        Type::Int => Some(serde_json::json!(0)),
+        Type::Float => Some(serde_json::json!(0.0)),
+        Type::String => Some(serde_json::json!("")),
+        Type::Bool => Some(Value::Bool(false)),
+        Type::List(_) => Some(Value::Array(Vec::new())),
+        Type::Record(fields) => fields
+            .iter()
+            .map(|(name, t)| Some((name.clone(), zero(t)?)))
+            .collect::<Option<serde_json::Map<_, _>>>()
+            .map(Value::Object),
+        Type::Variant { tag, cases } => match cases.get("none") {
+            Some(Type::Record(fields)) if fields.is_empty() => {
+                Some(serde_json::json!({ tag.clone(): "none" }))
+            }
+            _ => None,
+        },
+    }
+}
+
 /// The most precise type of a value, used for literals. `null` has none, and nor does an empty list: it takes the type
 /// expected where it appears. A list has the join of its items' types, and none if an item doesn't inhabit that.
 pub fn of_value(value: &Value) -> Option<Type> {

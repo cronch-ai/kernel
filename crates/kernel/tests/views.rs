@@ -34,9 +34,7 @@ fn a_call_carries_its_identifier_and_a_refusal_is_its_own_kind() {
 
 #[test]
 fn a_refused_call_has_no_effect_and_a_child_has_no_state() {
-    let ready = call(
-        json!({ "op": "init", "harness": actor(), "interface": tools(), "grant": { "allow": [], "once": [] } }),
-    );
+    let ready = call(json!({ "op": "init", "harness": actor(), "interface": tools() }));
     let system = deliver_all(ready["system"].clone(), vec![start(json!({}))]).0;
     let refused = msg(
         "act",

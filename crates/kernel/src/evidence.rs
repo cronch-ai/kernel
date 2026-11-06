@@ -1,7 +1,7 @@
 //! Evidence: the kernel's verdict on a property of a harness, with what it rests on.
 //!
-//! A statement is about a subject: a harness, the interface it runs against, the grant state its root starts with,
-//! and a property. Evidence names each by key, says how the verdict was reached, and lists the assumptions it rests
+//! A statement is about a subject: a harness, the interface it runs against, and a property. Every run starts with
+//! the empty grant, so a subject names none. Evidence names each by key, says how the verdict was reached, and lists the assumptions it rests
 //! on. The kernel reaches every verdict itself, deterministically, so anyone can re-check evidence offline by asking
 //! the kernel again; a solver's bare answer is never a verdict.
 //!
@@ -45,8 +45,6 @@ pub struct Subject {
     pub harness: Harness,
     #[serde(default)]
     pub interface: Interface,
-    #[serde(default)]
-    pub grant: Value,
     pub property: Property,
 }
 
@@ -149,7 +147,6 @@ pub enum Assumption {
 pub struct Evidence {
     pub harness: String,
     pub interface: String,
-    pub grant: String,
     pub property: String,
     pub method: Method,
     #[serde(flatten)]
@@ -204,7 +201,7 @@ pub enum ProveError {
 #[derive(Serialize, Clone, Debug, PartialEq)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum VerifyError {
-    /// The evidence names a different harness, interface, grant or property.
+    /// The evidence names a different harness, interface or property.
     WrongSubject,
     /// The kernel doesn't reach this verdict.
     Disagrees {
@@ -224,12 +221,8 @@ fn events_as_values(events: &[Event]) -> Vec<Value> {
 }
 
 fn start(subject: &Subject) -> Result<System, ProveError> {
-    System::new(
-        subject.harness.clone(),
-        subject.interface.clone(),
-        subject.grant.clone(),
-    )
-    .map_err(|error| ProveError::Init { error })
+    System::new(subject.harness.clone(), subject.interface.clone())
+        .map_err(|error| ProveError::Init { error })
 }
 
 /// Every live run with its path, in spawn order.
@@ -576,7 +569,6 @@ pub fn prove(subject: &Subject, method: &Method) -> Result<Evidence, ProveError>
     Ok(Evidence {
         harness: key(Kind::Harness, &subject.harness),
         interface: key(Kind::Interface, &subject.interface),
-        grant: key(Kind::Grant, &subject.grant),
         property: key(Kind::Property, &subject.property),
         method: method.clone(),
         verdict,
@@ -589,7 +581,6 @@ pub fn prove(subject: &Subject, method: &Method) -> Result<Evidence, ProveError>
 pub fn verify(subject: &Subject, evidence: &Evidence) -> Result<(), VerifyError> {
     let about = key(Kind::Harness, &subject.harness) == evidence.harness
         && key(Kind::Interface, &subject.interface) == evidence.interface
-        && key(Kind::Grant, &subject.grant) == evidence.grant
         && key(Kind::Property, &subject.property) == evidence.property;
     if !about {
         return Err(VerifyError::WrongSubject);

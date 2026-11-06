@@ -72,9 +72,6 @@ pub enum Request {
         harness: Harness,
         #[serde(default)]
         interface: Interface,
-        /// The grant state the root principal starts the run with.
-        #[serde(default)]
-        grant: Value,
     },
     /// Deliver one input to a system: the next configuration, and what happened.
     Deliver { system: System, delivery: Delivery },
@@ -157,7 +154,6 @@ pub enum Request {
     RuleObligations {
         interface: Interface,
         rule: Rule,
-        grant: Value,
         #[serde(default)]
         floats: Floats,
     },
@@ -232,11 +228,9 @@ fn respond(request: Request) -> Value {
             interface,
             narrowings,
         } => refused_or("narrowed", "interface", narrow(&interface, &narrowings)),
-        Request::Init {
-            harness,
-            interface,
-            grant,
-        } => refused_or("ready", "system", System::new(harness, interface, grant)),
+        Request::Init { harness, interface } => {
+            refused_or("ready", "system", System::new(harness, interface))
+        }
         Request::Deliver {
             mut system,
             delivery,
@@ -334,9 +328,8 @@ fn respond(request: Request) -> Value {
         Request::RuleObligations {
             interface,
             rule,
-            grant,
             floats,
-        } => match obligations(&interface, &rule, &grant, floats) {
+        } => match obligations(&interface, &rule, floats) {
             Ok(out) => json!({
                 "kind": "obligations",
                 "obligations": out.obligations,

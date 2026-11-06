@@ -40,8 +40,8 @@ fn rule() -> Value {
     }]})
 }
 
-fn obligations(interface: Value, grant: Value) -> Value {
-    call(json!({ "op": "ruleObligations", "interface": interface, "rule": rule(), "grant": grant }))
+fn obligations(interface: Value) -> Value {
+    call(json!({ "op": "ruleObligations", "interface": interface, "rule": rule() }))
 }
 
 fn names(out: &Value, field: &str) -> Vec<String> {
@@ -59,7 +59,7 @@ fn net() -> Value {
 
 #[test]
 fn a_rule_owes_the_initial_grant_and_each_update_that_writes_what_it_reads() {
-    let out = obligations(install(json!([net()])), json!({ "netAllow": [] }));
+    let out = obligations(install(json!([net()])));
     assert_eq!(out["kind"], "obligations", "{out}");
     assert_eq!(names(&out, "obligations"), ["initial", "net.ask.onResult"]);
     assert_eq!(names(&out, "framed"), Vec::<String>::new());
@@ -67,7 +67,7 @@ fn a_rule_owes_the_initial_grant_and_each_update_that_writes_what_it_reads() {
 
 #[test]
 fn a_query_is_written_out_for_a_proof_to_be_compared_with_it() {
-    let out = obligations(install(json!([net()])), json!({ "netAllow": [] }));
+    let out = obligations(install(json!([net()])));
     for o in out["obligations"].as_array().unwrap() {
         let text = o["text"].as_str().unwrap();
         assert!(!text.contains("define-fun"), "{text}");
@@ -85,12 +85,9 @@ fn a_query_is_written_out_for_a_proof_to_be_compared_with_it() {
 
 #[test]
 fn a_capability_that_leaves_the_field_alone_owes_nothing_and_changes_nothing() {
-    let alone = obligations(install(json!([net()])), json!({ "netAllow": [] }));
+    let alone = obligations(install(json!([net()])));
     let fs = json!({ "prefix": "fs", "capability": gated("fsAllow", "path") });
-    let both = obligations(
-        install(json!([net(), fs])),
-        json!({ "netAllow": [], "fsAllow": [] }),
-    );
+    let both = obligations(install(json!([net(), fs])));
     // The same queries to the byte, so a proof of them still checks.
     assert_eq!(both["obligations"], alone["obligations"]);
     assert_eq!(names(&both, "framed"), ["fs.ask.onResult"]);
@@ -106,10 +103,7 @@ fn a_query_holds_what_an_update_reads_of_other_fields() {
         } },
         "grant": { "Record": { "netAllow": { "List": "String" }, "other": { "List": "String" } } },
     }});
-    let out = obligations(
-        install(json!([net(), copy])),
-        json!({ "netAllow": [], "other": [] }),
-    );
+    let out = obligations(install(json!([net(), copy])));
     let found = out["obligations"]
         .as_array()
         .unwrap()
@@ -137,7 +131,7 @@ fn a_capability_that_writes_the_field_owes_an_obligation() {
         } },
         "grant": { "Record": { "netAllow": { "List": "String" } } },
     }});
-    let out = obligations(install(json!([net(), rogue])), json!({ "netAllow": [] }));
+    let out = obligations(install(json!([net(), rogue])));
     assert_eq!(
         names(&out, "obligations"),
         ["initial", "net.ask.onResult", "rogue.unlock.onResult"]
@@ -158,10 +152,7 @@ fn a_field_only_one_branch_writes_still_counts_as_written() {
         } },
         "grant": { "Record": { "netAllow": { "List": "String" }, "other": "Int" } },
     }});
-    let out = obligations(
-        install(json!([net(), sneaky])),
-        json!({ "netAllow": [], "other": 0 }),
-    );
+    let out = obligations(install(json!([net(), sneaky])));
     assert_eq!(names(&out, "framed"), Vec::<String>::new(), "{out}");
     assert!(names(&out, "obligations").contains(&"sneaky.go.onResult".to_string()));
 }
@@ -175,7 +166,7 @@ fn an_update_that_can_t_be_read_is_refused_rather_than_assumed_harmless() {
         } },
         "grant": { "Record": { "netAllow": { "List": "String" } } },
     }});
-    let out = obligations(install(json!([net(), opaque])), json!({ "netAllow": [] }));
+    let out = obligations(install(json!([net(), opaque])));
     assert_eq!(out["kind"], "refused", "{out}");
     assert_eq!(
         out["error"],
@@ -200,9 +191,7 @@ fn a_contract_the_kernel_can_fail_to_evaluate_is_refused() {
         .remove("onResult");
     let interface = install(json!([{ "prefix": "net", "capability": cap }]));
     let rule = json!({ "op": "net.act" });
-    let out = call(
-        json!({ "op": "ruleObligations", "interface": interface, "rule": rule, "grant": { "n": 1 } }),
-    );
+    let out = call(json!({ "op": "ruleObligations", "interface": interface, "rule": rule }));
     assert_eq!(out["kind"], "refused", "{out}");
     assert_eq!(
         out["error"]["refusal"]["reason"]["kind"], "partial",
@@ -211,12 +200,15 @@ fn a_contract_the_kernel_can_fail_to_evaluate_is_refused() {
 }
 
 #[test]
-fn the_grant_and_the_operations_must_be_the_interface_s() {
+fn the_operations_must_be_the_interface_s_and_the_grant_starts_empty() {
+    // A host's grant is ignored: `initial` is over the empty grant, as every run starts with.
     let interface = install(json!([net()]));
-    let out = obligations(interface.clone(), json!({ "netAllow": 1 }));
-    assert_eq!(out["error"]["kind"], "grant", "{out}");
+    let given = call(
+        json!({ "op": "ruleObligations", "interface": interface, "rule": rule(), "grant": { "netAllow": ["https://evil"] } }),
+    );
+    assert_eq!(given, obligations(interface.clone()));
     let out = call(
-        json!({ "op": "ruleObligations", "interface": interface, "rule": { "op": "net.nope" }, "grant": { "netAllow": [] } }),
+        json!({ "op": "ruleObligations", "interface": interface, "rule": { "op": "net.nope" } }),
     );
     assert_eq!(
         out["error"],

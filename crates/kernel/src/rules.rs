@@ -31,7 +31,7 @@ use crate::harness::{HarnessProblem, Interface, check_interface};
 use crate::induction::each_use;
 use crate::ir::{Case, Expr, Param, Type};
 use crate::smtlib::{self, Floats, Refusal};
-use crate::types::inhabits;
+use crate::types::zero;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet};
@@ -76,8 +76,6 @@ pub enum RuleError {
     NoSuchOperation { name: String },
     /// A rule reads a grant state as a record of fields.
     GrantNotARecord,
-    /// The initial grant doesn't have the interface's grant type.
-    Grant,
     /// This update isn't made of records, branches and bindings, so what it writes can't be read off it.
     Unreadable { update: String },
     /// A part has no faithful reading in SMT-LIB.
@@ -364,11 +362,10 @@ fn invariant(pre: &Expr, grant: Expr, approved: Expr) -> Expr {
     )
 }
 
-/// The obligations of `rule` over `interface`, for runs that start from `grant`.
+/// The obligations of `rule` over `interface`, for runs that start from the empty grant, as every run does.
 pub fn obligations(
     interface: &Interface,
     rule: &Rule,
-    grant: &Value,
     floats: Floats,
 ) -> Result<Obligations, RuleError> {
     let problems = check_interface(interface);
@@ -392,9 +389,9 @@ pub fn obligations(
     let Type::Record(declared) = &interface.grant else {
         return Err(RuleError::GrantNotARecord);
     };
-    if !inhabits(grant, &interface.grant) {
-        return Err(RuleError::Grant);
-    }
+    // `check_interface` refused a grant with no empty value.
+    let initial = zero(&interface.grant).unwrap_or_else(|| Value::Object(Default::default()));
+    let grant = &initial;
     // Absent, a precondition is `true`, and `initial` gives the counterexample.
     let pre = guarded.pre.clone().unwrap_or(Expr::Lit {
         v: Value::Bool(true),
