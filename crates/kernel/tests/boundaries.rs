@@ -127,6 +127,86 @@ fn a_message_has_the_channel_s_type_and_invariant() {
     assert_eq!(withheld(&events), None, "{events:?}");
 }
 
+/// Takes a record, calls `get` on start, and listens on `note`: each of its boundaries has a record type.
+fn recording() -> (Value, Value) {
+    let harness = json!({
+        "arg": { "Record": { "url": "String" } },
+        "result": "String",
+        "state": { "Record": {} },
+        "init": {},
+        "step": on(
+            vec![("start", step(var("state"), vec![call_action(
+                "get",
+                rec(vec![("url", path("input", &["value", "url"]))]),
+            )]))],
+            step(var("state"), vec![]),
+        ),
+    });
+    let interface = json!({
+        "operations": {
+            "get": {
+                "input": { "Record": { "url": "String" } },
+                "output": { "Record": { "pages": { "List": { "Record": { "text": "String" } } } } },
+            },
+        },
+        "channels": { "note": { "type": { "Record": { "text": "String" } } } },
+    });
+    (harness, interface)
+}
+
+#[test]
+fn a_field_the_type_doesn_t_declare_doesn_t_cross() {
+    let (harness, interface) = recording();
+    let fresh = || init(harness.clone(), interface.clone());
+    let reason = |events: &[Value]| withheld(events).map(|w| w["reason"]["kind"].clone());
+
+    // A start value.
+    let (_, events) = deliver_all(fresh(), vec![start(json!({ "url": "u", "x": 1 }))]);
+    assert_eq!(reason(&events), Some(json!("mismatch")), "{events:#?}");
+    let (system, events) = deliver_all(fresh(), vec![start(json!({ "url": "u" }))]);
+    assert_eq!(reason(&events), None, "{events:#?}");
+
+    // A result, at any depth: here inside a list's items.
+    for extra in [
+        json!({ "pages": [], "x": 1 }),
+        json!({ "pages": [{ "text": "a" }, { "text": "b", "x": 1 }] }),
+    ] {
+        let (_, events) = deliver_all(system.clone(), vec![ret(0, extra)]);
+        assert_eq!(reason(&events), Some(json!("mismatch")), "{events:#?}");
+    }
+    let (_, events) = deliver_all(
+        system.clone(),
+        vec![ret(0, json!({ "pages": [{ "text": "a" }] }))],
+    );
+    assert_eq!(reason(&events), None, "{events:#?}");
+
+    // A message.
+    let (_, events) = deliver_all(
+        system.clone(),
+        vec![msg("note", json!({ "text": "t", "x": 1 }))],
+    );
+    assert_eq!(reason(&events), Some(json!("mismatch")), "{events:#?}");
+    let (_, events) = deliver_all(system, vec![msg("note", json!({ "text": "t" }))]);
+    assert_eq!(reason(&events), None, "{events:#?}");
+}
+
+#[test]
+fn a_chosen_call_with_a_field_it_doesn_t_declare_is_withheld() {
+    // A variant's tags sit beside its case's fields, so `kind` and `op` are declared. Anything else isn't: beside
+    // them, or in the arguments.
+    for answer in [
+        json!({ "kind": "call", "op": "fetch", "args": { "url": "x", "x": 1 } }),
+        json!({ "kind": "call", "op": "fetch", "args": { "url": "x" }, "why": "because" }),
+    ] {
+        let (_, events) = deliver_all(started(), vec![msg("model", answer)]);
+        assert_eq!(
+            withheld(&events).expect("withheld")["reason"]["kind"],
+            "mismatch"
+        );
+        assert!(!performed(&events), "{events:?}");
+    }
+}
+
 #[test]
 fn a_halt_has_the_harness_s_result_type() {
     // Checked before the run starts: this step halts with `String` where the harness declares `Int`.
@@ -203,9 +283,9 @@ fn parent_of(child: Value) -> Value {
     let spawned = rec(vec![
         ("kind", lit(json!("spawn"))),
         ("name", lit(json!("kid"))),
-        ("harness", lit(child)),
+        ("harness", lit(written(&child))),
         ("arg", path("input", &["value"])),
-        ("narrow", lit(json!([]))),
+        ("narrow", lit(json!("[]"))),
     ]);
     json!({
         "arg": "Int", "result": "Int", "state": { "Record": {} }, "init": {},

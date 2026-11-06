@@ -278,7 +278,7 @@ pub fn tools() -> Value {
         ),
     );
     let argv = json!({ "Record": { "argv": { "List": "String" } } });
-    acting_on(json!({
+    let base = json!({
         "operations": {
             "fs.write": { "input": { "Record": { "path": "String" } }, "output": "Int", "effect": true, "pre": within("/workspace/") },
             "net.fetch": { "input": { "Record": { "url": "String" } }, "output": "String", "ret": list(vec![lit(json!("web"))]) },
@@ -287,5 +287,7 @@ pub fn tools() -> Value {
         },
         // The shell's part of the grant state: argv prefixes allowed always, and argvs approved once.
         "grant": { "Record": { "allow": { "List": { "List": "String" } }, "once": { "List": { "List": "String" } } } },
-    }))
+    });
+    let spawns = json!({ "worker": { "arg": calls_of(&base), "result": "String" } });
+    acting_on_with(base, spawns)
 }

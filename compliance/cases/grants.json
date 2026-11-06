@@ -213,8 +213,70 @@
                       }
                     },
                     "spawn": {
-                      "Record": {
-                        "name": "String"
+                      "Variant": {
+                        "cases": {
+                          "worker": {
+                            "Record": {
+                              "arg": {
+                                "Variant": {
+                                  "cases": {
+                                    "call": {
+                                      "Variant": {
+                                        "cases": {
+                                          "fs.write": {
+                                            "Record": {
+                                              "args": {
+                                                "Record": {
+                                                  "path": "String"
+                                                }
+                                              }
+                                            }
+                                          },
+                                          "net.fetch": {
+                                            "Record": {
+                                              "args": {
+                                                "Record": {
+                                                  "url": "String"
+                                                }
+                                              }
+                                            }
+                                          },
+                                          "shell.approve": {
+                                            "Record": {
+                                              "args": {
+                                                "Record": {
+                                                  "argv": {
+                                                    "List": "String"
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          },
+                                          "shell.run": {
+                                            "Record": {
+                                              "args": {
+                                                "Record": {
+                                                  "argv": {
+                                                    "List": "String"
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        },
+                                        "tag": "op"
+                                      }
+                                    }
+                                  },
+                                  "tag": "kind"
+                                }
+                              },
+                              "harness": "String",
+                              "narrow": "String"
+                            }
+                          }
+                        },
+                        "tag": "name"
                       }
                     }
                   },
@@ -777,8 +839,70 @@
                             }
                           },
                           "spawn": {
-                            "Record": {
-                              "name": "String"
+                            "Variant": {
+                              "cases": {
+                                "worker": {
+                                  "Record": {
+                                    "arg": {
+                                      "Variant": {
+                                        "cases": {
+                                          "call": {
+                                            "Variant": {
+                                              "cases": {
+                                                "fs.write": {
+                                                  "Record": {
+                                                    "args": {
+                                                      "Record": {
+                                                        "path": "String"
+                                                      }
+                                                    }
+                                                  }
+                                                },
+                                                "net.fetch": {
+                                                  "Record": {
+                                                    "args": {
+                                                      "Record": {
+                                                        "url": "String"
+                                                      }
+                                                    }
+                                                  }
+                                                },
+                                                "shell.approve": {
+                                                  "Record": {
+                                                    "args": {
+                                                      "Record": {
+                                                        "argv": {
+                                                          "List": "String"
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                },
+                                                "shell.run": {
+                                                  "Record": {
+                                                    "args": {
+                                                      "Record": {
+                                                        "argv": {
+                                                          "List": "String"
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              },
+                                              "tag": "op"
+                                            }
+                                          }
+                                        },
+                                        "tag": "kind"
+                                      }
+                                    },
+                                    "harness": "String",
+                                    "narrow": "String"
+                                  }
+                                }
+                              },
+                              "tag": "name"
                             }
                           }
                         },
@@ -1358,8 +1482,70 @@
                           }
                         },
                         "spawn": {
-                          "Record": {
-                            "name": "String"
+                          "Variant": {
+                            "cases": {
+                              "worker": {
+                                "Record": {
+                                  "arg": {
+                                    "Variant": {
+                                      "cases": {
+                                        "call": {
+                                          "Variant": {
+                                            "cases": {
+                                              "fs.write": {
+                                                "Record": {
+                                                  "args": {
+                                                    "Record": {
+                                                      "path": "String"
+                                                    }
+                                                  }
+                                                }
+                                              },
+                                              "net.fetch": {
+                                                "Record": {
+                                                  "args": {
+                                                    "Record": {
+                                                      "url": "String"
+                                                    }
+                                                  }
+                                                }
+                                              },
+                                              "shell.approve": {
+                                                "Record": {
+                                                  "args": {
+                                                    "Record": {
+                                                      "argv": {
+                                                        "List": "String"
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              },
+                                              "shell.run": {
+                                                "Record": {
+                                                  "args": {
+                                                    "Record": {
+                                                      "argv": {
+                                                        "List": "String"
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            },
+                                            "tag": "op"
+                                          }
+                                        }
+                                      },
+                                      "tag": "kind"
+                                    }
+                                  },
+                                  "harness": "String",
+                                  "narrow": "String"
+                                }
+                              }
+                            },
+                            "tag": "name"
                           }
                         }
                       },
@@ -1942,8 +2128,70 @@
                             }
                           },
                           "spawn": {
-                            "Record": {
-                              "name": "String"
+                            "Variant": {
+                              "cases": {
+                                "worker": {
+                                  "Record": {
+                                    "arg": {
+                                      "Variant": {
+                                        "cases": {
+                                          "call": {
+                                            "Variant": {
+                                              "cases": {
+                                                "fs.write": {
+                                                  "Record": {
+                                                    "args": {
+                                                      "Record": {
+                                                        "path": "String"
+                                                      }
+                                                    }
+                                                  }
+                                                },
+                                                "net.fetch": {
+                                                  "Record": {
+                                                    "args": {
+                                                      "Record": {
+                                                        "url": "String"
+                                                      }
+                                                    }
+                                                  }
+                                                },
+                                                "shell.approve": {
+                                                  "Record": {
+                                                    "args": {
+                                                      "Record": {
+                                                        "argv": {
+                                                          "List": "String"
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                },
+                                                "shell.run": {
+                                                  "Record": {
+                                                    "args": {
+                                                      "Record": {
+                                                        "argv": {
+                                                          "List": "String"
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              },
+                                              "tag": "op"
+                                            }
+                                          }
+                                        },
+                                        "tag": "kind"
+                                      }
+                                    },
+                                    "harness": "String",
+                                    "narrow": "String"
+                                  }
+                                }
+                              },
+                              "tag": "name"
                             }
                           }
                         },
@@ -2530,8 +2778,70 @@
                           }
                         },
                         "spawn": {
-                          "Record": {
-                            "name": "String"
+                          "Variant": {
+                            "cases": {
+                              "worker": {
+                                "Record": {
+                                  "arg": {
+                                    "Variant": {
+                                      "cases": {
+                                        "call": {
+                                          "Variant": {
+                                            "cases": {
+                                              "fs.write": {
+                                                "Record": {
+                                                  "args": {
+                                                    "Record": {
+                                                      "path": "String"
+                                                    }
+                                                  }
+                                                }
+                                              },
+                                              "net.fetch": {
+                                                "Record": {
+                                                  "args": {
+                                                    "Record": {
+                                                      "url": "String"
+                                                    }
+                                                  }
+                                                }
+                                              },
+                                              "shell.approve": {
+                                                "Record": {
+                                                  "args": {
+                                                    "Record": {
+                                                      "argv": {
+                                                        "List": "String"
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              },
+                                              "shell.run": {
+                                                "Record": {
+                                                  "args": {
+                                                    "Record": {
+                                                      "argv": {
+                                                        "List": "String"
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            },
+                                            "tag": "op"
+                                          }
+                                        }
+                                      },
+                                      "tag": "kind"
+                                    }
+                                  },
+                                  "harness": "String",
+                                  "narrow": "String"
+                                }
+                              }
+                            },
+                            "tag": "name"
                           }
                         }
                       },
@@ -3152,8 +3462,70 @@
                             }
                           },
                           "spawn": {
-                            "Record": {
-                              "name": "String"
+                            "Variant": {
+                              "cases": {
+                                "worker": {
+                                  "Record": {
+                                    "arg": {
+                                      "Variant": {
+                                        "cases": {
+                                          "call": {
+                                            "Variant": {
+                                              "cases": {
+                                                "fs.write": {
+                                                  "Record": {
+                                                    "args": {
+                                                      "Record": {
+                                                        "path": "String"
+                                                      }
+                                                    }
+                                                  }
+                                                },
+                                                "net.fetch": {
+                                                  "Record": {
+                                                    "args": {
+                                                      "Record": {
+                                                        "url": "String"
+                                                      }
+                                                    }
+                                                  }
+                                                },
+                                                "shell.approve": {
+                                                  "Record": {
+                                                    "args": {
+                                                      "Record": {
+                                                        "argv": {
+                                                          "List": "String"
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                },
+                                                "shell.run": {
+                                                  "Record": {
+                                                    "args": {
+                                                      "Record": {
+                                                        "argv": {
+                                                          "List": "String"
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              },
+                                              "tag": "op"
+                                            }
+                                          }
+                                        },
+                                        "tag": "kind"
+                                      }
+                                    },
+                                    "harness": "String",
+                                    "narrow": "String"
+                                  }
+                                }
+                              },
+                              "tag": "name"
                             }
                           }
                         },
@@ -3526,202 +3898,10 @@
                 "kind": "call",
                 "op": "shell.approve"
               },
-              "harness": {
-                "arg": {
-                  "Variant": {
-                    "cases": {
-                      "call": {
-                        "Variant": {
-                          "cases": {
-                            "fs.write": {
-                              "Record": {
-                                "args": {
-                                  "Record": {
-                                    "path": "String"
-                                  }
-                                }
-                              }
-                            },
-                            "net.fetch": {
-                              "Record": {
-                                "args": {
-                                  "Record": {
-                                    "url": "String"
-                                  }
-                                }
-                              }
-                            },
-                            "shell.approve": {
-                              "Record": {
-                                "args": {
-                                  "Record": {
-                                    "argv": {
-                                      "List": "String"
-                                    }
-                                  }
-                                }
-                              }
-                            },
-                            "shell.run": {
-                              "Record": {
-                                "args": {
-                                  "Record": {
-                                    "argv": {
-                                      "List": "String"
-                                    }
-                                  }
-                                }
-                              }
-                            }
-                          },
-                          "tag": "op"
-                        }
-                      }
-                    },
-                    "tag": "kind"
-                  }
-                },
-                "init": {},
-                "result": "String",
-                "state": {
-                  "Record": {}
-                },
-                "step": {
-                  "cases": {
-                    "refused": {
-                      "bind": "input",
-                      "body": {
-                        "e": "record",
-                        "fields": {
-                          "actions": {
-                            "e": "list",
-                            "items": [
-                              {
-                                "e": "record",
-                                "fields": {
-                                  "kind": {
-                                    "e": "lit",
-                                    "v": "halt"
-                                  },
-                                  "value": {
-                                    "e": "lit",
-                                    "v": "denied"
-                                  }
-                                }
-                              }
-                            ]
-                          },
-                          "state": {
-                            "e": "var",
-                            "name": "state"
-                          }
-                        }
-                      }
-                    },
-                    "ret": {
-                      "bind": "input",
-                      "body": {
-                        "e": "record",
-                        "fields": {
-                          "actions": {
-                            "e": "list",
-                            "items": [
-                              {
-                                "e": "record",
-                                "fields": {
-                                  "kind": {
-                                    "e": "lit",
-                                    "v": "halt"
-                                  },
-                                  "value": {
-                                    "args": [
-                                      {
-                                        "e": "var",
-                                        "name": "input"
-                                      }
-                                    ],
-                                    "e": "op",
-                                    "op": "str"
-                                  }
-                                }
-                              }
-                            ]
-                          },
-                          "state": {
-                            "e": "var",
-                            "name": "state"
-                          }
-                        }
-                      }
-                    },
-                    "start": {
-                      "bind": "input",
-                      "body": {
-                        "e": "record",
-                        "fields": {
-                          "actions": {
-                            "e": "list",
-                            "items": [
-                              {
-                                "e": "get",
-                                "field": "value",
-                                "of": {
-                                  "e": "var",
-                                  "name": "input"
-                                }
-                              }
-                            ]
-                          },
-                          "state": {
-                            "e": "var",
-                            "name": "state"
-                          }
-                        }
-                      }
-                    }
-                  },
-                  "e": "match",
-                  "of": {
-                    "e": "var",
-                    "name": "input"
-                  },
-                  "otherwise": {
-                    "e": "record",
-                    "fields": {
-                      "actions": {
-                        "e": "list",
-                        "items": [
-                          {
-                            "e": "record",
-                            "fields": {
-                              "kind": {
-                                "e": "lit",
-                                "v": "halt"
-                              },
-                              "value": {
-                                "e": "lit",
-                                "v": "failed"
-                              }
-                            }
-                          }
-                        ]
-                      },
-                      "state": {
-                        "e": "var",
-                        "name": "state"
-                      }
-                    }
-                  }
-                }
-              },
+              "harness": "{\"arg\":{\"Variant\":{\"cases\":{\"call\":{\"Variant\":{\"cases\":{\"fs.write\":{\"Record\":{\"args\":{\"Record\":{\"path\":\"String\"}}}},\"net.fetch\":{\"Record\":{\"args\":{\"Record\":{\"url\":\"String\"}}}},\"shell.approve\":{\"Record\":{\"args\":{\"Record\":{\"argv\":{\"List\":\"String\"}}}}},\"shell.run\":{\"Record\":{\"args\":{\"Record\":{\"argv\":{\"List\":\"String\"}}}}}},\"tag\":\"op\"}}},\"tag\":\"kind\"}},\"init\":{},\"result\":\"String\",\"state\":{\"Record\":{}},\"step\":{\"cases\":{\"refused\":{\"bind\":\"input\",\"body\":{\"e\":\"record\",\"fields\":{\"actions\":{\"e\":\"list\",\"items\":[{\"e\":\"record\",\"fields\":{\"kind\":{\"e\":\"lit\",\"v\":\"halt\"},\"value\":{\"e\":\"lit\",\"v\":\"denied\"}}}]},\"state\":{\"e\":\"var\",\"name\":\"state\"}}}},\"ret\":{\"bind\":\"input\",\"body\":{\"e\":\"record\",\"fields\":{\"actions\":{\"e\":\"list\",\"items\":[{\"e\":\"record\",\"fields\":{\"kind\":{\"e\":\"lit\",\"v\":\"halt\"},\"value\":{\"args\":[{\"e\":\"var\",\"name\":\"input\"}],\"e\":\"op\",\"op\":\"str\"}}}]},\"state\":{\"e\":\"var\",\"name\":\"state\"}}}},\"start\":{\"bind\":\"input\",\"body\":{\"e\":\"record\",\"fields\":{\"actions\":{\"e\":\"list\",\"items\":[{\"e\":\"get\",\"field\":\"value\",\"of\":{\"e\":\"var\",\"name\":\"input\"}}]},\"state\":{\"e\":\"var\",\"name\":\"state\"}}}}},\"e\":\"match\",\"of\":{\"e\":\"var\",\"name\":\"input\"},\"otherwise\":{\"e\":\"record\",\"fields\":{\"actions\":{\"e\":\"list\",\"items\":[{\"e\":\"record\",\"fields\":{\"kind\":{\"e\":\"lit\",\"v\":\"halt\"},\"value\":{\"e\":\"lit\",\"v\":\"failed\"}}}]},\"state\":{\"e\":\"var\",\"name\":\"state\"}}}}}",
               "kind": "spawn",
               "name": "worker",
-              "narrow": [
-                {
-                  "kind": "only",
-                  "ops": ["shell.approve"]
-                }
-              ]
+              "narrow": "[{\"kind\":\"only\",\"ops\":[\"shell.approve\"]}]"
             }
           }
         },
@@ -3938,8 +4118,70 @@
                           }
                         },
                         "spawn": {
-                          "Record": {
-                            "name": "String"
+                          "Variant": {
+                            "cases": {
+                              "worker": {
+                                "Record": {
+                                  "arg": {
+                                    "Variant": {
+                                      "cases": {
+                                        "call": {
+                                          "Variant": {
+                                            "cases": {
+                                              "fs.write": {
+                                                "Record": {
+                                                  "args": {
+                                                    "Record": {
+                                                      "path": "String"
+                                                    }
+                                                  }
+                                                }
+                                              },
+                                              "net.fetch": {
+                                                "Record": {
+                                                  "args": {
+                                                    "Record": {
+                                                      "url": "String"
+                                                    }
+                                                  }
+                                                }
+                                              },
+                                              "shell.approve": {
+                                                "Record": {
+                                                  "args": {
+                                                    "Record": {
+                                                      "argv": {
+                                                        "List": "String"
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              },
+                                              "shell.run": {
+                                                "Record": {
+                                                  "args": {
+                                                    "Record": {
+                                                      "argv": {
+                                                        "List": "String"
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            },
+                                            "tag": "op"
+                                          }
+                                        }
+                                      },
+                                      "tag": "kind"
+                                    }
+                                  },
+                                  "harness": "String",
+                                  "narrow": "String"
+                                }
+                              }
+                            },
+                            "tag": "name"
                           }
                         }
                       },
@@ -4312,202 +4554,10 @@
                     "kind": "call",
                     "op": "shell.approve"
                   },
-                  "harness": {
-                    "arg": {
-                      "Variant": {
-                        "cases": {
-                          "call": {
-                            "Variant": {
-                              "cases": {
-                                "fs.write": {
-                                  "Record": {
-                                    "args": {
-                                      "Record": {
-                                        "path": "String"
-                                      }
-                                    }
-                                  }
-                                },
-                                "net.fetch": {
-                                  "Record": {
-                                    "args": {
-                                      "Record": {
-                                        "url": "String"
-                                      }
-                                    }
-                                  }
-                                },
-                                "shell.approve": {
-                                  "Record": {
-                                    "args": {
-                                      "Record": {
-                                        "argv": {
-                                          "List": "String"
-                                        }
-                                      }
-                                    }
-                                  }
-                                },
-                                "shell.run": {
-                                  "Record": {
-                                    "args": {
-                                      "Record": {
-                                        "argv": {
-                                          "List": "String"
-                                        }
-                                      }
-                                    }
-                                  }
-                                }
-                              },
-                              "tag": "op"
-                            }
-                          }
-                        },
-                        "tag": "kind"
-                      }
-                    },
-                    "init": {},
-                    "result": "String",
-                    "state": {
-                      "Record": {}
-                    },
-                    "step": {
-                      "cases": {
-                        "refused": {
-                          "bind": "input",
-                          "body": {
-                            "e": "record",
-                            "fields": {
-                              "actions": {
-                                "e": "list",
-                                "items": [
-                                  {
-                                    "e": "record",
-                                    "fields": {
-                                      "kind": {
-                                        "e": "lit",
-                                        "v": "halt"
-                                      },
-                                      "value": {
-                                        "e": "lit",
-                                        "v": "denied"
-                                      }
-                                    }
-                                  }
-                                ]
-                              },
-                              "state": {
-                                "e": "var",
-                                "name": "state"
-                              }
-                            }
-                          }
-                        },
-                        "ret": {
-                          "bind": "input",
-                          "body": {
-                            "e": "record",
-                            "fields": {
-                              "actions": {
-                                "e": "list",
-                                "items": [
-                                  {
-                                    "e": "record",
-                                    "fields": {
-                                      "kind": {
-                                        "e": "lit",
-                                        "v": "halt"
-                                      },
-                                      "value": {
-                                        "args": [
-                                          {
-                                            "e": "var",
-                                            "name": "input"
-                                          }
-                                        ],
-                                        "e": "op",
-                                        "op": "str"
-                                      }
-                                    }
-                                  }
-                                ]
-                              },
-                              "state": {
-                                "e": "var",
-                                "name": "state"
-                              }
-                            }
-                          }
-                        },
-                        "start": {
-                          "bind": "input",
-                          "body": {
-                            "e": "record",
-                            "fields": {
-                              "actions": {
-                                "e": "list",
-                                "items": [
-                                  {
-                                    "e": "get",
-                                    "field": "value",
-                                    "of": {
-                                      "e": "var",
-                                      "name": "input"
-                                    }
-                                  }
-                                ]
-                              },
-                              "state": {
-                                "e": "var",
-                                "name": "state"
-                              }
-                            }
-                          }
-                        }
-                      },
-                      "e": "match",
-                      "of": {
-                        "e": "var",
-                        "name": "input"
-                      },
-                      "otherwise": {
-                        "e": "record",
-                        "fields": {
-                          "actions": {
-                            "e": "list",
-                            "items": [
-                              {
-                                "e": "record",
-                                "fields": {
-                                  "kind": {
-                                    "e": "lit",
-                                    "v": "halt"
-                                  },
-                                  "value": {
-                                    "e": "lit",
-                                    "v": "failed"
-                                  }
-                                }
-                              }
-                            ]
-                          },
-                          "state": {
-                            "e": "var",
-                            "name": "state"
-                          }
-                        }
-                      }
-                    }
-                  },
+                  "harness": "{\"arg\":{\"Variant\":{\"cases\":{\"call\":{\"Variant\":{\"cases\":{\"fs.write\":{\"Record\":{\"args\":{\"Record\":{\"path\":\"String\"}}}},\"net.fetch\":{\"Record\":{\"args\":{\"Record\":{\"url\":\"String\"}}}},\"shell.approve\":{\"Record\":{\"args\":{\"Record\":{\"argv\":{\"List\":\"String\"}}}}},\"shell.run\":{\"Record\":{\"args\":{\"Record\":{\"argv\":{\"List\":\"String\"}}}}}},\"tag\":\"op\"}}},\"tag\":\"kind\"}},\"init\":{},\"result\":\"String\",\"state\":{\"Record\":{}},\"step\":{\"cases\":{\"refused\":{\"bind\":\"input\",\"body\":{\"e\":\"record\",\"fields\":{\"actions\":{\"e\":\"list\",\"items\":[{\"e\":\"record\",\"fields\":{\"kind\":{\"e\":\"lit\",\"v\":\"halt\"},\"value\":{\"e\":\"lit\",\"v\":\"denied\"}}}]},\"state\":{\"e\":\"var\",\"name\":\"state\"}}}},\"ret\":{\"bind\":\"input\",\"body\":{\"e\":\"record\",\"fields\":{\"actions\":{\"e\":\"list\",\"items\":[{\"e\":\"record\",\"fields\":{\"kind\":{\"e\":\"lit\",\"v\":\"halt\"},\"value\":{\"args\":[{\"e\":\"var\",\"name\":\"input\"}],\"e\":\"op\",\"op\":\"str\"}}}]},\"state\":{\"e\":\"var\",\"name\":\"state\"}}}},\"start\":{\"bind\":\"input\",\"body\":{\"e\":\"record\",\"fields\":{\"actions\":{\"e\":\"list\",\"items\":[{\"e\":\"get\",\"field\":\"value\",\"of\":{\"e\":\"var\",\"name\":\"input\"}}]},\"state\":{\"e\":\"var\",\"name\":\"state\"}}}}},\"e\":\"match\",\"of\":{\"e\":\"var\",\"name\":\"input\"},\"otherwise\":{\"e\":\"record\",\"fields\":{\"actions\":{\"e\":\"list\",\"items\":[{\"e\":\"record\",\"fields\":{\"kind\":{\"e\":\"lit\",\"v\":\"halt\"},\"value\":{\"e\":\"lit\",\"v\":\"failed\"}}}]},\"state\":{\"e\":\"var\",\"name\":\"state\"}}}}}",
                   "kind": "spawn",
                   "name": "worker",
-                  "narrow": [
-                    {
-                      "kind": "only",
-                      "ops": ["shell.approve"]
-                    }
-                  ]
+                  "narrow": "[{\"kind\":\"only\",\"ops\":[\"shell.approve\"]}]"
                 }
               },
               "kind": "in",
@@ -4523,202 +4573,10 @@
                   "kind": "call",
                   "op": "shell.approve"
                 },
-                "harness": {
-                  "arg": {
-                    "Variant": {
-                      "cases": {
-                        "call": {
-                          "Variant": {
-                            "cases": {
-                              "fs.write": {
-                                "Record": {
-                                  "args": {
-                                    "Record": {
-                                      "path": "String"
-                                    }
-                                  }
-                                }
-                              },
-                              "net.fetch": {
-                                "Record": {
-                                  "args": {
-                                    "Record": {
-                                      "url": "String"
-                                    }
-                                  }
-                                }
-                              },
-                              "shell.approve": {
-                                "Record": {
-                                  "args": {
-                                    "Record": {
-                                      "argv": {
-                                        "List": "String"
-                                      }
-                                    }
-                                  }
-                                }
-                              },
-                              "shell.run": {
-                                "Record": {
-                                  "args": {
-                                    "Record": {
-                                      "argv": {
-                                        "List": "String"
-                                      }
-                                    }
-                                  }
-                                }
-                              }
-                            },
-                            "tag": "op"
-                          }
-                        }
-                      },
-                      "tag": "kind"
-                    }
-                  },
-                  "init": {},
-                  "result": "String",
-                  "state": {
-                    "Record": {}
-                  },
-                  "step": {
-                    "cases": {
-                      "refused": {
-                        "bind": "input",
-                        "body": {
-                          "e": "record",
-                          "fields": {
-                            "actions": {
-                              "e": "list",
-                              "items": [
-                                {
-                                  "e": "record",
-                                  "fields": {
-                                    "kind": {
-                                      "e": "lit",
-                                      "v": "halt"
-                                    },
-                                    "value": {
-                                      "e": "lit",
-                                      "v": "denied"
-                                    }
-                                  }
-                                }
-                              ]
-                            },
-                            "state": {
-                              "e": "var",
-                              "name": "state"
-                            }
-                          }
-                        }
-                      },
-                      "ret": {
-                        "bind": "input",
-                        "body": {
-                          "e": "record",
-                          "fields": {
-                            "actions": {
-                              "e": "list",
-                              "items": [
-                                {
-                                  "e": "record",
-                                  "fields": {
-                                    "kind": {
-                                      "e": "lit",
-                                      "v": "halt"
-                                    },
-                                    "value": {
-                                      "args": [
-                                        {
-                                          "e": "var",
-                                          "name": "input"
-                                        }
-                                      ],
-                                      "e": "op",
-                                      "op": "str"
-                                    }
-                                  }
-                                }
-                              ]
-                            },
-                            "state": {
-                              "e": "var",
-                              "name": "state"
-                            }
-                          }
-                        }
-                      },
-                      "start": {
-                        "bind": "input",
-                        "body": {
-                          "e": "record",
-                          "fields": {
-                            "actions": {
-                              "e": "list",
-                              "items": [
-                                {
-                                  "e": "get",
-                                  "field": "value",
-                                  "of": {
-                                    "e": "var",
-                                    "name": "input"
-                                  }
-                                }
-                              ]
-                            },
-                            "state": {
-                              "e": "var",
-                              "name": "state"
-                            }
-                          }
-                        }
-                      }
-                    },
-                    "e": "match",
-                    "of": {
-                      "e": "var",
-                      "name": "input"
-                    },
-                    "otherwise": {
-                      "e": "record",
-                      "fields": {
-                        "actions": {
-                          "e": "list",
-                          "items": [
-                            {
-                              "e": "record",
-                              "fields": {
-                                "kind": {
-                                  "e": "lit",
-                                  "v": "halt"
-                                },
-                                "value": {
-                                  "e": "lit",
-                                  "v": "failed"
-                                }
-                              }
-                            }
-                          ]
-                        },
-                        "state": {
-                          "e": "var",
-                          "name": "state"
-                        }
-                      }
-                    }
-                  }
-                },
+                "harness": "{\"arg\":{\"Variant\":{\"cases\":{\"call\":{\"Variant\":{\"cases\":{\"fs.write\":{\"Record\":{\"args\":{\"Record\":{\"path\":\"String\"}}}},\"net.fetch\":{\"Record\":{\"args\":{\"Record\":{\"url\":\"String\"}}}},\"shell.approve\":{\"Record\":{\"args\":{\"Record\":{\"argv\":{\"List\":\"String\"}}}}},\"shell.run\":{\"Record\":{\"args\":{\"Record\":{\"argv\":{\"List\":\"String\"}}}}}},\"tag\":\"op\"}}},\"tag\":\"kind\"}},\"init\":{},\"result\":\"String\",\"state\":{\"Record\":{}},\"step\":{\"cases\":{\"refused\":{\"bind\":\"input\",\"body\":{\"e\":\"record\",\"fields\":{\"actions\":{\"e\":\"list\",\"items\":[{\"e\":\"record\",\"fields\":{\"kind\":{\"e\":\"lit\",\"v\":\"halt\"},\"value\":{\"e\":\"lit\",\"v\":\"denied\"}}}]},\"state\":{\"e\":\"var\",\"name\":\"state\"}}}},\"ret\":{\"bind\":\"input\",\"body\":{\"e\":\"record\",\"fields\":{\"actions\":{\"e\":\"list\",\"items\":[{\"e\":\"record\",\"fields\":{\"kind\":{\"e\":\"lit\",\"v\":\"halt\"},\"value\":{\"args\":[{\"e\":\"var\",\"name\":\"input\"}],\"e\":\"op\",\"op\":\"str\"}}}]},\"state\":{\"e\":\"var\",\"name\":\"state\"}}}},\"start\":{\"bind\":\"input\",\"body\":{\"e\":\"record\",\"fields\":{\"actions\":{\"e\":\"list\",\"items\":[{\"e\":\"get\",\"field\":\"value\",\"of\":{\"e\":\"var\",\"name\":\"input\"}}]},\"state\":{\"e\":\"var\",\"name\":\"state\"}}}}},\"e\":\"match\",\"of\":{\"e\":\"var\",\"name\":\"input\"},\"otherwise\":{\"e\":\"record\",\"fields\":{\"actions\":{\"e\":\"list\",\"items\":[{\"e\":\"record\",\"fields\":{\"kind\":{\"e\":\"lit\",\"v\":\"halt\"},\"value\":{\"e\":\"lit\",\"v\":\"failed\"}}}]},\"state\":{\"e\":\"var\",\"name\":\"state\"}}}}}",
                 "kind": "spawn",
                 "name": "worker",
-                "narrow": [
-                  {
-                    "kind": "only",
-                    "ops": ["shell.approve"]
-                  }
-                ]
+                "narrow": "[{\"kind\":\"only\",\"ops\":[\"shell.approve\"]}]"
               },
               "call": 1,
               "kind": "out",
@@ -4730,202 +4588,10 @@
                   "kind": [],
                   "op": []
                 },
-                "harness": {
-                  "arg": {
-                    "Variant": {
-                      "cases": {
-                        "call": {
-                          "Variant": {
-                            "cases": {
-                              "fs.write": {
-                                "Record": {
-                                  "args": {
-                                    "Record": {
-                                      "path": []
-                                    }
-                                  }
-                                }
-                              },
-                              "net.fetch": {
-                                "Record": {
-                                  "args": {
-                                    "Record": {
-                                      "url": []
-                                    }
-                                  }
-                                }
-                              },
-                              "shell.approve": {
-                                "Record": {
-                                  "args": {
-                                    "Record": {
-                                      "argv": {
-                                        "List": []
-                                      }
-                                    }
-                                  }
-                                }
-                              },
-                              "shell.run": {
-                                "Record": {
-                                  "args": {
-                                    "Record": {
-                                      "argv": {
-                                        "List": []
-                                      }
-                                    }
-                                  }
-                                }
-                              }
-                            },
-                            "tag": []
-                          }
-                        }
-                      },
-                      "tag": []
-                    }
-                  },
-                  "init": {},
-                  "result": [],
-                  "state": {
-                    "Record": {}
-                  },
-                  "step": {
-                    "cases": {
-                      "refused": {
-                        "bind": [],
-                        "body": {
-                          "e": [],
-                          "fields": {
-                            "actions": {
-                              "e": [],
-                              "items": [
-                                {
-                                  "e": [],
-                                  "fields": {
-                                    "kind": {
-                                      "e": [],
-                                      "v": []
-                                    },
-                                    "value": {
-                                      "e": [],
-                                      "v": []
-                                    }
-                                  }
-                                }
-                              ]
-                            },
-                            "state": {
-                              "e": [],
-                              "name": []
-                            }
-                          }
-                        }
-                      },
-                      "ret": {
-                        "bind": [],
-                        "body": {
-                          "e": [],
-                          "fields": {
-                            "actions": {
-                              "e": [],
-                              "items": [
-                                {
-                                  "e": [],
-                                  "fields": {
-                                    "kind": {
-                                      "e": [],
-                                      "v": []
-                                    },
-                                    "value": {
-                                      "args": [
-                                        {
-                                          "e": [],
-                                          "name": []
-                                        }
-                                      ],
-                                      "e": [],
-                                      "op": []
-                                    }
-                                  }
-                                }
-                              ]
-                            },
-                            "state": {
-                              "e": [],
-                              "name": []
-                            }
-                          }
-                        }
-                      },
-                      "start": {
-                        "bind": [],
-                        "body": {
-                          "e": [],
-                          "fields": {
-                            "actions": {
-                              "e": [],
-                              "items": [
-                                {
-                                  "e": [],
-                                  "field": [],
-                                  "of": {
-                                    "e": [],
-                                    "name": []
-                                  }
-                                }
-                              ]
-                            },
-                            "state": {
-                              "e": [],
-                              "name": []
-                            }
-                          }
-                        }
-                      }
-                    },
-                    "e": [],
-                    "of": {
-                      "e": [],
-                      "name": []
-                    },
-                    "otherwise": {
-                      "e": [],
-                      "fields": {
-                        "actions": {
-                          "e": [],
-                          "items": [
-                            {
-                              "e": [],
-                              "fields": {
-                                "kind": {
-                                  "e": [],
-                                  "v": []
-                                },
-                                "value": {
-                                  "e": [],
-                                  "v": []
-                                }
-                              }
-                            }
-                          ]
-                        },
-                        "state": {
-                          "e": [],
-                          "name": []
-                        }
-                      }
-                    }
-                  }
-                },
+                "harness": [],
                 "kind": [],
                 "name": [],
-                "narrow": [
-                  {
-                    "kind": [],
-                    "ops": [[]]
-                  }
-                ]
+                "narrow": []
               },
               "origin": [],
               "performed": false,
@@ -5154,8 +4820,70 @@
                             }
                           },
                           "spawn": {
-                            "Record": {
-                              "name": "String"
+                            "Variant": {
+                              "cases": {
+                                "worker": {
+                                  "Record": {
+                                    "arg": {
+                                      "Variant": {
+                                        "cases": {
+                                          "call": {
+                                            "Variant": {
+                                              "cases": {
+                                                "fs.write": {
+                                                  "Record": {
+                                                    "args": {
+                                                      "Record": {
+                                                        "path": "String"
+                                                      }
+                                                    }
+                                                  }
+                                                },
+                                                "net.fetch": {
+                                                  "Record": {
+                                                    "args": {
+                                                      "Record": {
+                                                        "url": "String"
+                                                      }
+                                                    }
+                                                  }
+                                                },
+                                                "shell.approve": {
+                                                  "Record": {
+                                                    "args": {
+                                                      "Record": {
+                                                        "argv": {
+                                                          "List": "String"
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                },
+                                                "shell.run": {
+                                                  "Record": {
+                                                    "args": {
+                                                      "Record": {
+                                                        "argv": {
+                                                          "List": "String"
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              },
+                                              "tag": "op"
+                                            }
+                                          }
+                                        },
+                                        "tag": "kind"
+                                      }
+                                    },
+                                    "harness": "String",
+                                    "narrow": "String"
+                                  }
+                                }
+                              },
+                              "tag": "name"
                             }
                           }
                         },
@@ -5737,8 +5465,70 @@
                           }
                         },
                         "spawn": {
-                          "Record": {
-                            "name": "String"
+                          "Variant": {
+                            "cases": {
+                              "worker": {
+                                "Record": {
+                                  "arg": {
+                                    "Variant": {
+                                      "cases": {
+                                        "call": {
+                                          "Variant": {
+                                            "cases": {
+                                              "fs.write": {
+                                                "Record": {
+                                                  "args": {
+                                                    "Record": {
+                                                      "path": "String"
+                                                    }
+                                                  }
+                                                }
+                                              },
+                                              "net.fetch": {
+                                                "Record": {
+                                                  "args": {
+                                                    "Record": {
+                                                      "url": "String"
+                                                    }
+                                                  }
+                                                }
+                                              },
+                                              "shell.approve": {
+                                                "Record": {
+                                                  "args": {
+                                                    "Record": {
+                                                      "argv": {
+                                                        "List": "String"
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              },
+                                              "shell.run": {
+                                                "Record": {
+                                                  "args": {
+                                                    "Record": {
+                                                      "argv": {
+                                                        "List": "String"
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            },
+                                            "tag": "op"
+                                          }
+                                        }
+                                      },
+                                      "tag": "kind"
+                                    }
+                                  },
+                                  "harness": "String",
+                                  "narrow": "String"
+                                }
+                              }
+                            },
+                            "tag": "name"
                           }
                         }
                       },
@@ -6324,8 +6114,70 @@
                             }
                           },
                           "spawn": {
-                            "Record": {
-                              "name": "String"
+                            "Variant": {
+                              "cases": {
+                                "worker": {
+                                  "Record": {
+                                    "arg": {
+                                      "Variant": {
+                                        "cases": {
+                                          "call": {
+                                            "Variant": {
+                                              "cases": {
+                                                "fs.write": {
+                                                  "Record": {
+                                                    "args": {
+                                                      "Record": {
+                                                        "path": "String"
+                                                      }
+                                                    }
+                                                  }
+                                                },
+                                                "net.fetch": {
+                                                  "Record": {
+                                                    "args": {
+                                                      "Record": {
+                                                        "url": "String"
+                                                      }
+                                                    }
+                                                  }
+                                                },
+                                                "shell.approve": {
+                                                  "Record": {
+                                                    "args": {
+                                                      "Record": {
+                                                        "argv": {
+                                                          "List": "String"
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                },
+                                                "shell.run": {
+                                                  "Record": {
+                                                    "args": {
+                                                      "Record": {
+                                                        "argv": {
+                                                          "List": "String"
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              },
+                                              "tag": "op"
+                                            }
+                                          }
+                                        },
+                                        "tag": "kind"
+                                      }
+                                    },
+                                    "harness": "String",
+                                    "narrow": "String"
+                                  }
+                                }
+                              },
+                              "tag": "name"
                             }
                           }
                         },
@@ -6912,8 +6764,70 @@
                           }
                         },
                         "spawn": {
-                          "Record": {
-                            "name": "String"
+                          "Variant": {
+                            "cases": {
+                              "worker": {
+                                "Record": {
+                                  "arg": {
+                                    "Variant": {
+                                      "cases": {
+                                        "call": {
+                                          "Variant": {
+                                            "cases": {
+                                              "fs.write": {
+                                                "Record": {
+                                                  "args": {
+                                                    "Record": {
+                                                      "path": "String"
+                                                    }
+                                                  }
+                                                }
+                                              },
+                                              "net.fetch": {
+                                                "Record": {
+                                                  "args": {
+                                                    "Record": {
+                                                      "url": "String"
+                                                    }
+                                                  }
+                                                }
+                                              },
+                                              "shell.approve": {
+                                                "Record": {
+                                                  "args": {
+                                                    "Record": {
+                                                      "argv": {
+                                                        "List": "String"
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              },
+                                              "shell.run": {
+                                                "Record": {
+                                                  "args": {
+                                                    "Record": {
+                                                      "argv": {
+                                                        "List": "String"
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            },
+                                            "tag": "op"
+                                          }
+                                        }
+                                      },
+                                      "tag": "kind"
+                                    }
+                                  },
+                                  "harness": "String",
+                                  "narrow": "String"
+                                }
+                              }
+                            },
+                            "tag": "name"
                           }
                         }
                       },
@@ -7534,8 +7448,70 @@
                             }
                           },
                           "spawn": {
-                            "Record": {
-                              "name": "String"
+                            "Variant": {
+                              "cases": {
+                                "worker": {
+                                  "Record": {
+                                    "arg": {
+                                      "Variant": {
+                                        "cases": {
+                                          "call": {
+                                            "Variant": {
+                                              "cases": {
+                                                "fs.write": {
+                                                  "Record": {
+                                                    "args": {
+                                                      "Record": {
+                                                        "path": "String"
+                                                      }
+                                                    }
+                                                  }
+                                                },
+                                                "net.fetch": {
+                                                  "Record": {
+                                                    "args": {
+                                                      "Record": {
+                                                        "url": "String"
+                                                      }
+                                                    }
+                                                  }
+                                                },
+                                                "shell.approve": {
+                                                  "Record": {
+                                                    "args": {
+                                                      "Record": {
+                                                        "argv": {
+                                                          "List": "String"
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                },
+                                                "shell.run": {
+                                                  "Record": {
+                                                    "args": {
+                                                      "Record": {
+                                                        "argv": {
+                                                          "List": "String"
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              },
+                                              "tag": "op"
+                                            }
+                                          }
+                                        },
+                                        "tag": "kind"
+                                      }
+                                    },
+                                    "harness": "String",
+                                    "narrow": "String"
+                                  }
+                                }
+                              },
+                              "tag": "name"
                             }
                           }
                         },

@@ -4,8 +4,8 @@ use crate::cbor::{self, DecodeError};
 use crate::check::{check, infer};
 use crate::evidence::{Alphabet, Evidence, Method, Subject, certificate, prove, verify};
 use crate::harness::{
-    Harness, Installation, Interface, Narrowing, action_type, check_harness, check_interface,
-    input_type, install, narrow,
+    Harness, Installation, Interface, Narrowing, Signature, action_type, check_harness,
+    check_interface, input_type, install, narrow,
 };
 use crate::induction::{check_step, obligation};
 use crate::ir::{Expr, Type};
@@ -46,7 +46,12 @@ pub enum Request {
         interface: Interface,
     },
     /// The type of an action a harness's step may give against an interface, halting with a value of `result`.
-    ActionType { result: Type, interface: Interface },
+    ActionType {
+        result: Type,
+        interface: Interface,
+        #[serde(default)]
+        spawns: BTreeMap<String, Signature>,
+    },
     /// The type of what a harness's step receives against an interface.
     InputType {
         harness: Harness,
@@ -207,8 +212,12 @@ fn respond(request: Request) -> Value {
         Request::CheckHarness { harness, interface } => {
             json!({ "problems": check_harness(&harness, &interface) })
         }
-        Request::ActionType { result, interface } => {
-            json!({ "type": action_type(&result, &interface) })
+        Request::ActionType {
+            result,
+            interface,
+            spawns,
+        } => {
+            json!({ "type": action_type(&result, &interface, &spawns) })
         }
         Request::InputType { harness, interface } => {
             json!({ "type": input_type(&harness, &interface) })

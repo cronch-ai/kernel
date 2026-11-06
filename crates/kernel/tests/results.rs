@@ -23,7 +23,8 @@ fn parent(child: Value) -> Value {
     let spawned = rec(vec![
         ("kind", lit(json!("spawn"))),
         ("name", lit(json!("inc"))),
-        ("harness", lit(child)),
+        ("harness", lit(written(&child))),
+        ("narrow", lit(json!("[]"))),
         ("arg", path("s", &["value"])),
     ]);
     let results = match_(
@@ -95,16 +96,15 @@ fn a_child_without_the_declared_signature_is_refused() {
         json!({ "kind": "halted", "value": -1 })
     );
 
-    // An argument outside the signature is refused too: the child would accept it, the parent didn't declare it.
+    // An argument outside the signature doesn't check: the child would accept it, but the parent didn't declare it,
+    // and a spawn's argument has the signature's `arg`.
     let mut loose = increment();
     loose["arg"] = json!("Float");
     loose["step"]["cases"]["start"]["body"] = step(var("state"), vec![halt(lit(json!(5)))]);
     let mut p = parent(loose);
     p["arg"] = json!("Float");
-    assert_eq!(
-        outcome(p, json!(4.5)),
-        json!({ "kind": "halted", "value": -1 })
-    );
+    let refused = call(json!({ "op": "init", "harness": p, "interface": {} }));
+    assert_eq!(refused["error"]["kind"], "harness", "{refused}");
 }
 
 #[test]

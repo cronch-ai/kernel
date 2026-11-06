@@ -292,11 +292,6 @@
                       "Record": {
                         "value": "String"
                       }
-                    },
-                    "spawn": {
-                      "Record": {
-                        "name": "String"
-                      }
                     }
                   },
                   "tag": "kind"
@@ -351,7 +346,7 @@
       "response": {
         "ok": true,
         "result": {
-          "key": "sha256:ba56c6a5f94b9c4c68bb39e19fb117de4ff986df045c458dff7d099a590a4ce0"
+          "key": "sha256:84f6e5efe591086a6fb3b4aaaf3b592e39905d47b0d4a1128c475bf0e8875e2b"
         }
       }
     },

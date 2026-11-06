@@ -485,7 +485,8 @@ fn a_child_with_no_honest_result_cant_start() {
         let spawned = rec(vec![
             ("kind", lit(json!("spawn"))),
             ("name", lit(json!("kid"))),
-            ("harness", lit(child)),
+            ("harness", lit(written(&child))),
+            ("narrow", lit(json!("[]"))),
             ("arg", path("input", &["value"])),
         ]);
         let parent = json!({

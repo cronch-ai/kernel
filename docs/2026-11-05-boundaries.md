@@ -26,28 +26,39 @@ Proposed, and not yet agreed:
 
 **A value that crosses a boundary has a declared type made of pure Cronch datatypes, and the interpreter checks it on arrival. What doesn't fit doesn't cross.**
 
+What arrives from the world fits exactly: a record has the fields its type declares and no others, at any depth. See [undeclared fields](#undeclared-fields).
+
 There is no `Json` type and no `is`. A value is an `Int`, `Float`, `String`, `Bool`, list, record or variant, and `match` is how a variant is read. JSON stays a wire format where the kernel uses one. It isn't a type.
 
 ## The table
 
-| Boundary                         | Its type comes from                                             | Checked                      | What doesn't fit  |
-| -------------------------------- | --------------------------------------------------------------- | ---------------------------- | ----------------- |
-| Start value → harness            | the harness's `arg`                                             | on delivery                  | withheld          |
-| Capability result → harness      | the operation's `output`, then `post`                           | on delivery                  | withheld          |
-| Message → harness                | the channel's `type`, then `inv`                                | on delivery                  | withheld          |
-| Harness → call's arguments       | the operation's `input`, then `pre`                             | statically, then at the call | refused           |
-| Model's chosen call → harness    | the model operation's `output`: a variant of its tools          | on delivery                  | withheld          |
-| Parent → child's argument        | the signature's `arg`, then the child's own                     | at the spawn                 | refused           |
-| Child's result → parent          | the signature's `result`                                        | statically, then at its halt | the child fails   |
-| Harness's result                 | the harness's `result`, which it must declare                   | statically, then at the halt | the run fails     |
-| Harness's next state             | the harness's `state`                                           | after each step              | the run fails     |
-| Initial grant                    | the interface's `grant`                                         | at `init`                    | refused           |
-| Update → grant                   | the interface's `grant`                                         | statically                   | refused at `init` |
-| World's failure detail → harness | it is `String`                                                  | always text                  | nothing           |
-| A failed child's error → parent  | it is `String`                                                  | always text                  | nothing           |
-| Event → property                 | the event's variant, and `String` for what one type can't cover | never: it only reads         | nothing to refuse |
+| Boundary                         | Its type comes from                                              | Checked                       | What doesn't fit  |
+| -------------------------------- | ---------------------------------------------------------------- | ----------------------------- | ----------------- |
+| Start value → harness            | the harness's `arg`                                              | on delivery                   | withheld          |
+| Capability result → harness      | the operation's `output`, then `post`                            | on delivery                   | withheld          |
+| Message → harness                | the channel's `type`, then `inv`                                 | on delivery                   | withheld          |
+| Harness → call's arguments       | the operation's `input`, then `pre`                              | statically, then at the call  | refused           |
+| Model's chosen call → harness    | the model operation's `output`: a variant of its tools           | on delivery                   | withheld          |
+| Parent → child's argument        | the signature's `arg`, then the child's own                      | statically, then at the spawn | refused           |
+| Parent → child's harness         | `String`: the term as text, then the signature and the narrowing | at the spawn                  | refused           |
+| Child's result → parent          | the signature's `result`                                         | statically, then at its halt  | the child fails   |
+| Harness's result                 | the harness's `result`, which it must declare                    | statically, then at the halt  | the run fails     |
+| Harness's next state             | the harness's `state`                                            | after each step               | the run fails     |
+| Initial grant                    | the interface's `grant`                                          | at `init`                     | refused           |
+| Update → grant                   | the interface's `grant`                                          | statically                    | refused at `init` |
+| World's failure detail → harness | it is `String`                                                   | always text                   | nothing           |
+| A failed child's error → parent  | it is `String`                                                   | always text                   | nothing           |
+| Event → property                 | the event's variant, and `String` for what one type can't cover  | never: it only reads          | nothing to refuse |
 
 [boundaries.rs](../crates/kernel/tests/boundaries.rs) and [chosen_call.rs](../crates/kernel/tests/chosen_call.rs) pin the rows of a single run and the model's chosen call, and [spawn.rs](../crates/kernel/tests/spawn.rs) the refused spawn. [boundaries.rs](../crates/kernel/tests/boundaries.rs) also pins a child's result, the next state, and what a property reads.
+
+## Undeclared fields
+
+Agreed on 2026-11-06: a value from the world with a field its type doesn't declare is rejected, not stripped. A start value, a capability's result and a message are checked exactly on arrival, at any depth, and one with such a field is withheld like any other value that doesn't fit. A variant's tags sit beside its case's fields, so they are declared.
+
+The values a step makes are still checked by width subtyping, as the static checker reads them: see [Open](#open).
+
+A spawn names its child's harness and narrowing as text. A term has no Cronch type, since there are no [recursive types](#data-with-no-fixed-shape), so it crosses as `String`, and the interpreter reads it at the spawn. A spawn is a variant over the declared children, each with its signature's `arg`, so a step that spawns an undeclared child, or with the wrong argument, doesn't check. A world that chooses a child, such as a model writing one, sends its harness as text, and it is checked at the spawn like any other.
 
 ## A model's chosen call
 
@@ -110,10 +121,5 @@ The closed stack's `Call`, `Returned`, `@none`, approvals as text, and `op` in c
 
 - **Update → grant is only checked statically.** The interpreter merges an update's fields without checking them again. That is sound while the checker is, and a second interpreter has nothing to compare against.
 - **A `ret` label that can't evaluate withholds `failed` too.** `admit` needs the label for a failure as it does for a result. `init` accepts an operation whose `ret` is `[str(div(1, 0))]`. A `failed` on its call is then withheld as `returnLabel` and the call stays pending, so a compliant host can't end that call.
-- **A record's undeclared fields cross.** `inhabits` reads only the declared fields, so `{url: "u", x: 1}` has the type `{url: String}`. "What doesn't fit doesn't cross" doesn't say this. The owner decided on 2026-11-06 that a model's answer drops or rejects such fields, and a fix is in progress on `fix/extra-fields`. What was observed before it:
-  - On a message with such a field, to a channel of that type, `str` writes the field, and `m == {url: m.url}` is false.
-  - A property that compares `str` of the message with its declared fields holds without the field, and is violated with it.
-  - A step that passes the record whole as a call's arguments sends the field to the capability. A `pre` of `args != {url: "evil"}` holds for `{url: "evil", x: 1}`, and the call is performed. A `pre` of `args.url != "evil"` refuses it.
-  - The encoder has no reading of record equality because of these fields ([smtlib/mod.rs](../crates/kernel/src/smtlib/mod.rs)). It does read `str` of a record. With `flag` as the invariant and `str(m) == str({url: m.url})` as its next value, cvc5 says `unsat` for consecution, and the message makes `flag` false. The encoder's comment says an `unsat` that rests on `str` says nothing. `ruleObligations` accepts a `pre` that reads `str(args)`.
-  - `perform` builds a call's arguments from the declared fields, so a field a model added doesn't reach the call. It does reach a `str(choice)`.
+- **What a harness makes itself can still hold fields its type doesn't declare.** Width subtyping is how a step's values are checked, so a step can pass a record whole as a call's arguments, with a field the operation's `input` doesn't declare, and the capability receives it. A `pre` of `args != {url: "evil"}` then holds for `{url: "evil", x: 1}`, while `args.url != "evil"` refuses it. Nothing from the world reaches a step with such a field any more (see [undeclared fields](#undeclared-fields)), so such a field is one the harness wrote. The encoder still has no reading of record equality because of these fields ([smtlib/mod.rs](../crates/kernel/src/smtlib/mod.rs)).
 - **`Float` in a query.** Ethos reads `Float64` no more than it did under `Json`, so a rule over a `Float` can't be checked as the kernel computes it: Ethos says `Could not find symbol Float64`. [Rules](2026-11-05-rules.md) has the detail. Nothing needs one yet.

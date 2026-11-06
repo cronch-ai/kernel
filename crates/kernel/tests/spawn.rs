@@ -20,7 +20,7 @@ fn act(action: Value) -> Value {
 
 fn spawn(op_name: &str, args: Value, narrow: Value) -> Value {
     act(
-        json!({ "kind": "spawn", "name": "worker", "harness": worker(), "narrow": narrow, "arg": { "kind": "call", "op": op_name, "args": args } }),
+        json!({ "kind": "spawn", "name": "worker", "harness": written(&worker()), "narrow": written(&narrow), "arg": { "kind": "call", "op": op_name, "args": args } }),
     )
 }
 
@@ -210,18 +210,22 @@ fn cancelling_a_spawn_revokes_the_child() {
 fn a_spawn_that_cannot_start_is_refused() {
     let mut bad = worker();
     bad["init"] = json!(3);
+    let write = json!({ "kind": "call", "op": "fs.write", "args": { "path": "/workspace/a" } });
+    let spawning = |harness: Value, narrow: Value| {
+        act(
+            json!({ "kind": "spawn", "name": "worker", "harness": harness, "narrow": narrow, "arg": write }),
+        )
+    };
     let (_, events) = deliver_all(
         system(),
         vec![
-            act(json!({ "kind": "spawn", "name": "worker", "harness": bad, "arg": { "op": "x" } })),
-            spawn(
-                "x",
-                json!({}),
-                json!([{ "kind": "drop", "op": "fs.delete" }]),
+            // An ill-formed harness, a narrowing of what the interface lacks, and text that isn't a harness.
+            spawning(written(&bad), json!("[]")),
+            spawning(
+                written(&worker()),
+                written(&json!([{ "kind": "drop", "op": "fs.delete" }])),
             ),
-            act(
-                json!({ "kind": "spawn", "name": "worker", "harness": worker(), "arg": { "op": 3 } }),
-            ),
+            spawning(json!("not a harness"), json!("[]")),
         ],
     );
     let refused: Vec<&Value> = events
@@ -262,7 +266,8 @@ fn runs_that_only_answer_each_other_are_stopped() {
     let again = rec(vec![
         ("kind", lit(json!("spawn"))),
         ("name", lit(json!("quitter"))),
-        ("harness", lit(quitter)),
+        ("harness", lit(written(&quitter))),
+        ("narrow", lit(json!("[]"))),
         ("arg", rec(vec![])),
     ]);
     let looper = json!({
@@ -278,23 +283,52 @@ fn runs_that_only_answer_each_other_are_stopped() {
 
 #[test]
 fn a_spawn_must_name_a_declared_child() {
-    // Naming no child isn't an `Action`, so its message is withheld.
-    let (system, events) = deliver_all(
-        system(),
-        vec![act(
-            json!({ "kind": "spawn", "harness": worker(), "arg": { "op": "x" } }),
-        )],
-    );
-    assert_eq!(system["root"]["outcome"], Value::Null, "{events:#?}");
-    assert_eq!(shape(&events), ["withheld:mismatch"]);
+    // A spawn is a variant over the declared children: one naming no child, or one the harness doesn't declare,
+    // isn't an action of it, so its message is withheld.
+    let write = json!({ "kind": "call", "op": "fs.write", "args": { "path": "/workspace/a" } });
+    for action in [
+        json!({ "kind": "spawn", "harness": written(&worker()), "narrow": "[]", "arg": write }),
+        json!({ "kind": "spawn", "name": "stranger", "harness": written(&worker()), "narrow": "[]", "arg": write }),
+    ] {
+        let (system, events) = deliver_all(system(), vec![act(action)]);
+        assert_eq!(system["root"]["outcome"], Value::Null, "{events:#?}");
+        assert_eq!(shape(&events), ["withheld:mismatch"]);
+    }
+}
 
-    // Naming one the harness doesn't declare is refused, on that name's operation.
-    let (_, events) = deliver_all(
-        system,
-        vec![act(
-            json!({ "kind": "spawn", "name": "stranger", "harness": worker(), "arg": { "op": "x" } }),
-        )],
-    );
-    assert_eq!(events[2]["input"]["kind"], "refused", "{events:#?}");
-    assert_eq!(events[2]["input"]["op"], "spawn.stranger");
+#[test]
+fn a_spawn_carries_exactly_its_declared_fields() {
+    let write = json!({ "kind": "call", "op": "fs.write", "args": { "path": "/workspace/a" } });
+    for action in [
+        // The child's harness as a term, not text: a term has no Cronch type.
+        json!({ "kind": "spawn", "name": "worker", "harness": worker(), "narrow": "[]", "arg": write }),
+        // An argument outside the signature's `arg`.
+        json!({ "kind": "spawn", "name": "worker", "harness": written(&worker()), "narrow": "[]", "arg": { "op": 3 } }),
+        // No narrowing.
+        json!({ "kind": "spawn", "name": "worker", "harness": written(&worker()), "arg": write }),
+        // A field the action doesn't declare.
+        json!({ "kind": "spawn", "name": "worker", "harness": written(&worker()), "narrow": "[]", "arg": write, "x": 1 }),
+    ] {
+        let (_, events) = deliver_all(system(), vec![act(action)]);
+        assert_eq!(shape(&events), ["withheld:mismatch"], "{events:#?}");
+    }
+}
+
+#[test]
+fn a_step_that_spawns_an_undeclared_child_does_not_check() {
+    let spawned = rec(vec![
+        ("kind", lit(json!("spawn"))),
+        ("name", lit(json!("stranger"))),
+        ("harness", lit(written(&worker()))),
+        ("narrow", lit(json!("[]"))),
+        ("arg", rec(vec![])),
+    ]);
+    let harness = json!({
+        "result": "String", "arg": { "Record": {} }, "state": { "Record": {} }, "init": {},
+        "step": step(var("state"), vec![spawned]),
+    });
+    let problems =
+        call(json!({ "op": "checkHarness", "harness": harness, "interface": {} }))["problems"]
+            .clone();
+    assert_ne!(problems, json!([]), "{problems:#}");
 }

@@ -5196,11 +5196,6 @@
                                                                     "Record": {
                                                                       "value": "Int"
                                                                     }
-                                                                  },
-                                                                  "spawn": {
-                                                                    "Record": {
-                                                                      "name": "String"
-                                                                    }
                                                                   }
                                                                 },
                                                                 "tag": "kind"
@@ -5303,11 +5298,6 @@
                                                                 "halt": {
                                                                   "Record": {
                                                                     "value": "Int"
-                                                                  }
-                                                                },
-                                                                "spawn": {
-                                                                  "Record": {
-                                                                    "name": "String"
                                                                   }
                                                                 }
                                                               },
@@ -5412,11 +5402,6 @@
                                                                 "Record": {
                                                                   "value": "Int"
                                                                 }
-                                                              },
-                                                              "spawn": {
-                                                                "Record": {
-                                                                  "name": "String"
-                                                                }
                                                               }
                                                             },
                                                             "tag": "kind"
@@ -5519,11 +5504,6 @@
                                                             "halt": {
                                                               "Record": {
                                                                 "value": "Int"
-                                                              }
-                                                            },
-                                                            "spawn": {
-                                                              "Record": {
-                                                                "name": "String"
                                                               }
                                                             }
                                                           },
@@ -5678,11 +5658,6 @@
                                             "Record": {
                                               "value": "Int"
                                             }
-                                          },
-                                          "spawn": {
-                                            "Record": {
-                                              "name": "String"
-                                            }
                                           }
                                         },
                                         "tag": "kind"
@@ -5785,11 +5760,6 @@
                                         "halt": {
                                           "Record": {
                                             "value": "Int"
-                                          }
-                                        },
-                                        "spawn": {
-                                          "Record": {
-                                            "name": "String"
                                           }
                                         }
                                       },
@@ -5894,11 +5864,6 @@
                                         "Record": {
                                           "value": "Int"
                                         }
-                                      },
-                                      "spawn": {
-                                        "Record": {
-                                          "name": "String"
-                                        }
                                       }
                                     },
                                     "tag": "kind"
@@ -6001,11 +5966,6 @@
                                     "halt": {
                                       "Record": {
                                         "value": "Int"
-                                      }
-                                    },
-                                    "spawn": {
-                                      "Record": {
-                                        "name": "String"
                                       }
                                     }
                                   },
@@ -6241,11 +6201,6 @@
                             "halt": {
                               "Record": {
                                 "value": "Int"
-                              }
-                            },
-                            "spawn": {
-                              "Record": {
-                                "name": "String"
                               }
                             }
                           },

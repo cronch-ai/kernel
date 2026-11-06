@@ -44,7 +44,7 @@ fn a_refused_call_has_no_effect_and_a_child_has_no_state() {
     );
     let child = msg(
         "act",
-        json!({ "kind": "spawn", "name": "worker", "harness": worker(), "narrow": [], "arg": { "kind": "call", "op": "fs.write", "args": { "path": "/workspace/a" } } }),
+        json!({ "kind": "spawn", "name": "worker", "harness": written(&worker()), "narrow": "[]", "arg": { "kind": "call", "op": "fs.write", "args": { "path": "/workspace/a" } } }),
     );
     let (_, events) = deliver_all(system, vec![refused, child]);
     let seen = views(&events);
@@ -179,7 +179,8 @@ fn a_failed_child_s_start_value_is_text() {
     let spawned = rec(vec![
         ("kind", lit(json!("spawn"))),
         ("name", lit(json!("kid"))),
-        ("harness", lit(child)),
+        ("harness", lit(written(&child))),
+        ("narrow", lit(json!("[]"))),
         ("arg", path("input", &["value"])),
     ]);
     let idle = || step(var("state"), vec![]);
