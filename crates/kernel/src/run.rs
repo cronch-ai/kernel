@@ -5,8 +5,9 @@
 //! is one the environment could admissibly produce, steps `δ` on it, and processes the actions in order:
 //!
 //! * `call(op, args)` gets the next identifier. It is performed and becomes pending if the interface has the operation,
-//!   the arguments have its input type and its precondition holds; otherwise it is refused, and `refused(k, op)` is
-//!   queued. The interpreter checks the precondition itself, at the point of the call, so it holds whatever `δ` does.
+//!   the arguments have its input type exactly and its precondition holds; otherwise it is refused, and
+//!   `refused(k, op)` is queued. The checker reads a step's values by width subtyping, so arguments with a field the
+//!   input doesn't declare check, and are refused here: a capability never receives a field it didn't declare. The interpreter checks the precondition itself, at the point of the call, so it holds whatever `δ` does.
 //! * `cancel(k)` is passed to the world. It is a request: `k` stays pending and its results may still arrive.
 //! * `spawn(harness, narrow, arg)` gets the next identifier and starts a child run of `harness` with `arg`, against the
 //!   parent's interface narrowed by `narrow`. The harness and the narrowing are text, since a term has no Cronch type,
@@ -760,7 +761,7 @@ impl Run {
                     let k = self.next;
                     self.next += 1;
                     let declared = self.interface.operations.get(&op).filter(|o| {
-                        inhabits(&args.value(), &o.input)
+                        inhabits_exactly(&args.value(), &o.input)
                             && holds(
                                 &o.pre,
                                 vec![
