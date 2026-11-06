@@ -100,7 +100,7 @@ These are a host's own choices. The protocol says nothing about them:
 What each obligation looks like in the platform, from reading its `main`:
 
 - **H1:** the run object stores the configuration as returned, and hands it back.
-- **H2:** `create` takes a user's grant by key and passes it to `init`. Since the kernel took no grant, that grant is ignored; the platform should stop taking one.
+- **H2:** `create` takes a user's grant by key and passes it to `init`. The kernel ignores it, since `init` takes no grant, and the platform should stop taking one.
 - **H3:** a delivery is stepped and stored with no `await` in between, in one Durable Object ([run.gleam](https://github.com/cronch-ai/platform/blob/main/src/run.gleam)).
 - **H4:** `admits` lets users deliver only `start` and `msg`, and only the dispatcher `ret`, `end` and `failed`. A user's `start` reaches the kernel with whatever label the user gave. That fits H4 only while every user who starts a run is a trusted principal.
 - **H5:** the dispatcher routes each performed call to its capability.
