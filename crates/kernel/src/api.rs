@@ -97,7 +97,7 @@ pub enum Request {
     },
     /// The incremental monitor's state before any event, if it can decide the property.
     MonitorStart { property: Property },
-    /// The incremental monitor over more events: its next state, and where `φ` first fails among them.
+    /// The incremental monitor over more events: its next state, and where `phi` first fails among them.
     MonitorStep {
         property: Property,
         #[serde(default)]

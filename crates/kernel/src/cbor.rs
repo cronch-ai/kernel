@@ -1,4 +1,4 @@
-//! Deterministic CBOR (RFC 8949 §4.2.1): the one representation of every object Cronch stores, exchanges or hashes.
+//! Deterministic CBOR (RFC 8949 section 4.2.1): the one representation of every object Cronch stores, exchanges or hashes.
 //!
 //! Integers take their shortest form, map keys are sorted by their encoded bytes, and a number with no fractional part
 //! that fits in 64 bits is encoded as an integer, so `3` and `3.0` have one encoding. Other numbers are float64.
@@ -273,7 +273,7 @@ mod tests {
 
     #[test]
     fn decoding_round_trips() {
-        let v = json!({"spec": {"name": "Square", "output": "Int"}, "args": {"n": -3}, "x": [1.5, true, null, "é"]});
+        let v = json!({"spec": {"name": "Square", "output": "Int"}, "args": {"n": -3}, "x": [1.5, true, null, "\u{e9}"]});
         assert_eq!(decode(&encode(&v)), Ok(v));
     }
 

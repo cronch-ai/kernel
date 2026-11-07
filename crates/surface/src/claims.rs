@@ -1,7 +1,7 @@
 //! What is claimed about a harness, written in source: properties, elaborated into the kernel's formulas, and
 //! invariants, into expressions over the generated state.
 //!
-//! A property is `□φ`. `φ` is built from `and`, `or`, `not`, `implies`, `since`, `once`, `prev`, `historically`,
+//! A property is `always(phi)`. `phi` is built from `and`, `or`, `not`, `implies`, `since`, `once`, `prev`, `historically`,
 //! `exists` and `forall`, whose leaves are atoms: an event helper (`called`, `returned`, `failed`, `refused`, `effect`,
 //! `msg`), a node helper (`ok`, `failed`, `refused`, `skipped`, `running`, `waiting`), or any boolean expression over
 //! `event`. Each helper is an atom of its own, a `match` down to the case of the event it is about, and false at any

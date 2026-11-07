@@ -141,7 +141,7 @@ export type LValue =
 
 // Harnesses and interfaces (`crates/kernel/src/harness.rs`).
 
-/** `⟨A, S, s₀, δ⟩`. `step` is over `state` and `input`, and gives `{ state, actions }`. */
+/** `(A, S, s0, step)`. `step` is over `state` and `input`, and gives `{ state, actions }`. */
 export interface Harness {
   readonly arg: Type;
   /** What a run halts with; a halt outside it fails the step. */
@@ -326,11 +326,11 @@ export type WorldInput =
   | { readonly kind: "start"; readonly value: Value; readonly label?: Label }
   | { readonly kind: "ret"; readonly call: number; readonly value: Value }
   | { readonly kind: "end"; readonly call: number }
-  /** `δ` receives `error` as `{ kind: "world", detail: error }`: see `CallError`. */
+  /** `step` receives `error` as `{ kind: "world", detail: error }`: see `CallError`. */
   | { readonly kind: "failed"; readonly call: number; readonly error: Value }
   | { readonly kind: "msg"; readonly channel: string; readonly value: Value };
 
-/** Why a call or a child failed, as `δ` receives it. */
+/** Why a call or a child failed, as `step` receives it. */
 export type CallError =
   | { readonly kind: "cancelled" }
   | { readonly kind: "child"; readonly error: string }
@@ -472,7 +472,7 @@ export type Formula =
   | { readonly f: "once"; readonly of: Formula }
   | { readonly f: "historically"; readonly of: Formula };
 
-/** `□always`: at every event of every run. */
+/** `always`: a formula that holds at every event of every run. */
 export interface Property {
   readonly name: string;
   readonly always: Formula;

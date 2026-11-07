@@ -22,7 +22,7 @@ test("round-trips", () => {
   const value = {
     spec: { name: "Square", output: "Int" },
     args: { n: -3 },
-    x: [1.5, true, null, "é"],
+    x: [1.5, true, null, "\u00e9"],
   };
   assert.deepEqual(decode(encode(value)), { ok: true, value });
 });

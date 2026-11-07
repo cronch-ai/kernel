@@ -1,6 +1,6 @@
 //! Properties: what a harness must never do, stated over the events of its runs.
 //!
-//! A property is `□φ`: `φ` holds at every event of every run. `φ` is first-order past-time temporal logic, so every
+//! A property is `always(phi)`: `phi` holds at every event of every run. `phi` is first-order past-time temporal logic, so every
 //! property is a safety property: a run violates it exactly when some finite prefix does, and that prefix is a
 //! counterexample anyone can replay. Past-time operators look back over what already happened (`prev`, `since`,
 //! `once`, `historically`), which is what lets a property be checked as the trace grows, and lets it be monitored at
@@ -70,7 +70,7 @@ pub enum Formula {
     },
 }
 
-/// `□always`: at every event of every run.
+/// `always`: a formula that holds at every event of every run.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Property {
     pub name: String,
@@ -211,7 +211,7 @@ fn holds_at(f: &Formula, trace: &[Value], i: usize, env: &mut Vec<(String, Value
     }
 }
 
-/// Whether a trace satisfies `□φ`, and if not, the first event where `φ` fails.
+/// Whether a trace satisfies `always(phi)`, and if not, the first event where `phi` fails.
 #[derive(Serialize, Clone, Debug, PartialEq)]
 #[serde(tag = "verdict", rename_all = "camelCase")]
 pub enum Monitored {
@@ -226,7 +226,7 @@ pub fn monitor(property: &Property, trace: &[Value]) -> Monitored {
     }
 }
 
-/// The first event at or after `from` where `φ` fails, given everything before it.
+/// The first event at or after `from` where `phi` fails, given everything before it.
 pub fn first_violation(property: &Property, trace: &[Value], from: usize) -> Option<usize> {
     (from..trace.len()).find(|&i| !holds_at(&property.always, trace, i, &mut Vec::new()))
 }
@@ -265,7 +265,7 @@ pub enum MonitorError {
     State { expected: usize, got: usize },
 }
 
-/// The incremental monitor over more events: its state after them, and whether `φ` held at each. On a violation it
+/// The incremental monitor over more events: its state after them, and whether `phi` held at each. On a violation it
 /// stops there, with `at` counted from the first of `events`. A host keeps the state between steps and hands it back
 /// unchanged, so it needs neither the trace so far nor the time to re-check it.
 pub fn monitor_step(
@@ -310,7 +310,7 @@ fn size(f: &Formula) -> usize {
     }
 }
 
-/// The monitor after one more event, and whether `φ` holds there.
+/// The monitor after one more event, and whether `phi` holds there.
 pub fn advance(
     formula: &Formula,
     state: &MonitorState,

@@ -2,12 +2,12 @@
 //!
 //! A configuration holds the state, the pending calls, the next call identifier and a queue of inputs the
 //! interpreter produced itself. The environment delivers one input at a time; the interpreter checks that the input
-//! is one the environment could admissibly produce, steps `δ` on it, and processes the actions in order:
+//! is one the environment could admissibly produce, steps `step` on it, and processes the actions in order:
 //!
 //! * `call(op, args)` gets the next identifier. It is performed and becomes pending if the interface has the operation,
 //!   the arguments have its input type exactly and its precondition holds; otherwise it is refused, and
 //!   `refused(k, op)` is queued. The checker reads a step's values by width subtyping, so arguments with a field the
-//!   input doesn't declare check, and are refused here: a capability never receives a field it didn't declare. The interpreter checks the precondition itself, at the point of the call, so it holds whatever `δ` does.
+//!   input doesn't declare check, and are refused here: a capability never receives a field it didn't declare. The interpreter checks the precondition itself, at the point of the call, so it holds whatever `step` does.
 //! * `cancel(k)` is passed to the world. It is a request: `k` stays pending and its results may still arrive.
 //! * `spawn(harness, narrow, arg)` gets the next identifier and starts a child run of `harness` with `arg`, against the
 //!   parent's interface narrowed by `narrow`. The harness and the narrowing are text, since a term has no Cronch type,
@@ -32,7 +32,7 @@
 //! postcondition) is recorded as withheld and changes nothing: the run stays a run under an admissible environment,
 //! one that hasn't delivered that input yet. A withheld result is evidence against the capability's publisher.
 //!
-//! Each run has a grant state, which is the interpreter's, not `δ`'s: preconditions read it, and only contracts change
+//! Each run has a grant state, which is the interpreter's, not `step`'s: preconditions read it, and only contracts change
 //! it. A result's `onResult` and a message's `onMsg` apply only when what arrived is trusted, so a harness can't grant
 //! itself anything, and neither can anything untrusted it talks to. They apply to the run that received it and to
 //! every ancestor, so an approval given to a child widens what its parents may do, and never what its siblings may.
@@ -62,7 +62,7 @@ pub struct Pending {
     pub args: LValue,
 }
 
-/// An input with its label, as `δ` receives it.
+/// An input with its label, as `step` receives it.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Inbound {
     pub input: Value,
@@ -78,7 +78,7 @@ pub enum Outcome {
         #[serde(default, skip_serializing_if = "Label::is_empty")]
         label: Label,
     },
-    /// `δ` failed on an input, or gave something that isn't a step. The run can't go on.
+    /// `step` failed on an input, or gave something that isn't a step. The run can't go on.
     Failed { error: StepError },
 }
 
@@ -133,7 +133,7 @@ pub struct System {
     pub root: Run,
 }
 
-/// An input as `δ` sees it. What arrived (`value`, or a failure's `error`) carries the sources it came from. The
+/// An input as `step` sees it. What arrived (`value`, or a failure's `error`) carries the sources it came from. The
 /// rest is the interpreter's own: which kind of input it is, which call it answers, of which operation, on which
 /// channel. The harness made those calls itself and chose to listen on those channels, so they tell it nothing an
 /// untrusted source chose, and a step may branch on them without depending on that source.
@@ -235,7 +235,7 @@ pub enum Withheld {
 pub enum StepError {
     /// The evaluation error, as data so it can be kept with the configuration.
     Eval { error: Value },
-    /// `δ` gave something other than `{state, actions}` with a state of type `S` and a list of actions.
+    /// `step` gave something other than `{state, actions}` with a state of type `S` and a list of actions.
     NotAStep { got: Value },
     /// An action that isn't `call`, `spawn`, `cancel` or `halt` with the fields they need.
     BadAction { action: Value },
@@ -344,14 +344,14 @@ impl Update {
     }
 }
 
-/// An input `δ` will receive, and the change to grant states its arrival makes.
+/// An input `step` will receive, and the change to grant states its arrival makes.
 struct Admitted {
     inbound: Inbound,
     update: Option<Update>,
 }
 
 impl System {
-    /// A system that hasn't started: the harness at `s₀`, against the interface, with the empty grant.
+    /// A system that hasn't started: the harness at `s0`, against the interface, with the empty grant.
     pub fn new(harness: Harness, interface: Interface) -> Result<System, InitError> {
         let problems = check_harness(&harness, &interface);
         if !problems.is_empty() {
@@ -428,7 +428,7 @@ impl System {
     }
 }
 
-/// The input as `δ` receives it. Results name the operation they answer (`op`), so a harness can match on it and
+/// The input as `step` receives it. Results name the operation they answer (`op`), so a harness can match on it and
 /// know the result's type; a spawned child's results name `spawn`.
 fn input_value(input: &WorldInput, op: &str) -> Value {
     match input {
@@ -551,7 +551,7 @@ impl Run {
         }
     }
 
-    /// The input as `δ` will receive it, if the environment could admissibly produce it now.
+    /// The input as `step` will receive it, if the environment could admissibly produce it now.
     fn admit(&self, input: &WorldInput) -> Result<Admitted, Withheld> {
         if self.outcome.is_some() {
             return Err(Withheld::Ended);
@@ -712,7 +712,7 @@ impl Run {
         self.outcome = Some(Outcome::Failed { error });
     }
 
-    /// One step of `δ` on an admitted input, then its actions in order.
+    /// One step of `step` on an admitted input, then its actions in order.
     fn step(
         &mut self,
         origin: &[u64],

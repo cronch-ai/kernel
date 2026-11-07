@@ -1,7 +1,7 @@
 //! Harnesses and the interfaces they run against.
 //!
-//! A harness is a state machine `⟨A, S, s₀, δ⟩`: what a run starts with, the type of its state, the initial state,
-//! and the step function. `δ` is an expression over `state` and `input` that gives the next state and a list of
+//! A harness is a state machine `(A, S, s0, step)`: what a run starts with, the type of its state, the initial state,
+//! and the step function. `step` is an expression over `state` and `input` that gives the next state and a list of
 //! actions. It is data: the term that is hashed is the term that is checked, proved and run, and it is never compiled.
 //! All nondeterminism is in the inputs, which the environment chooses.
 //!
@@ -28,9 +28,9 @@ pub struct Harness {
     pub spawns: BTreeMap<String, Signature>,
     /// `S`: the type of the state.
     pub state: Type,
-    /// `s₀`.
+    /// `s0`: the initial state.
     pub init: Value,
-    /// `δ : S × Inp → S × List(Act)`, over the variables `state` and `input`, giving `{state, actions}`.
+    /// `step : S x Inp -> S x List(Act)`, over the variables `state` and `input`, giving `{state, actions}`.
     pub step: Expr,
 }
 
@@ -83,7 +83,7 @@ impl Mode {
 /// The contract is what a harness may rely on about the operation, and what the interpreter enforces:
 ///
 /// * `pre`, over `args` and the grant state `grant`: the call is performed only if it holds, checked by the
-///   interpreter at the point of the call, whatever `δ` does. Absent: `true`.
+///   interpreter at the point of the call, whatever `step` does. Absent: `true`.
 /// * `post`, over `args` and `result`: every result the environment delivers satisfies it, or it is withheld.
 ///   Absent: `true`, the adversary stance, under which a proof covers every result the implementation could give.
 /// * `ret`, over `args`: the label of what the call delivers, as a list of sources. Absent: the join of the
@@ -243,7 +243,7 @@ pub enum Narrowing {
     DropChannel {
         channel: String,
     },
-    /// The precondition becomes `pre ∧ extra`. `extra` is over `args` and `grant`, like `pre`.
+    /// The precondition becomes `pre and extra`. `extra` is over `args` and `grant`, like `pre`.
     Restrict {
         op: String,
         pre: Expr,
@@ -322,9 +322,9 @@ pub enum Place {
 pub enum HarnessProblem {
     /// A problem inside one of the expressions.
     Expr { place: Place, problem: Problem },
-    /// `s₀` doesn't inhabit `S`.
+    /// `s0` doesn't inhabit `S`.
     Init { expected: Type, got: Value },
-    /// `δ` doesn't give `{state: S, actions: List}`.
+    /// `step` doesn't give `{state: S, actions: List}`.
     Step { expected: Type, got: Type },
     /// A declared child whose results would arrive on an operation the interface already has.
     SpawnClash { name: String },
@@ -474,7 +474,7 @@ pub fn check_interface(interface: &Interface) -> Vec<HarnessProblem> {
     problems
 }
 
-/// What `δ` must give: the next state and the actions, each of type `action`.
+/// What `step` must give: the next state and the actions, each of type `action`.
 pub fn step_type(state: &Type, action: &Type) -> Type {
     Type::Record(BTreeMap::from([
         ("state".to_string(), state.clone()),
@@ -482,7 +482,7 @@ pub fn step_type(state: &Type, action: &Type) -> Type {
     ]))
 }
 
-/// The type of an action `δ` may give against this interface, a variant over `kind`:
+/// The type of an action `step` may give against this interface, a variant over `kind`:
 ///
 /// * `call`, a variant over `op` with a case for each of the interface's operations, holding its `args`;
 /// * `cancel`, of a call identifier;
@@ -550,7 +550,7 @@ pub fn action_type(
     }
 }
 
-/// The type of what `δ` receives against this interface: a variant over input kinds. A result's case is itself a
+/// The type of what `step` receives against this interface: a variant over input kinds. A result's case is itself a
 /// variant over the operation it answers (`op`), so matching on it gives the operation's output type. A child's result arrives on `spawn.<name>`, for the declared child it is, at its
 /// signature's result type. A message's case is a variant over channels, each with its type.
 pub fn input_type(harness: &Harness, interface: &Interface) -> Type {
