@@ -6,6 +6,23 @@ T1 from the north star: a Claude Code-style harness in Pata, proved unable to re
 - The other `.json` files are its capabilities, as contracts in kernel JSON, passed to `install` and `elaborate`. The surface language has no syntax for contracts or grants.
 - [mcp.json](mcp.json) is the capability T1 adds.
 
+## Running it
+
+`pata run`, in `@pata/kernel`, runs it on your machine, and asks you at the terminal before each URL:
+
+```console
+$ node javascript/cli.js run examples/claude-code
+task: Fetch https://example.com/ and tell me its title.
+model: chooses net.fetch
+ask: allow https://example.com/? [y/N] y
+ask: allowed
+net.fetch: https://example.com/
+model: answers
+{"kind":"halted","label":["model"],"value":"Its title is \"Example Domain\"."}
+```
+
+Answer `n`, or nothing, and the URL isn't fetched. `--input` gives the task. The model is a scripted demo that fetches the first URL in the task: pass `--model <module.js>` for your own, a default export taking `{ messages }` and answering one of `brain.choose`'s choices. `fs` reads and writes under `--root` (the current directory by default), and nowhere else. `shell` is refused, since nothing on your machine keeps a command off the network as the assumptions below need.
+
 ## The claim
 
 **`net.fetch` and `shell.online` can't happen until a person has allowed, through `net.ask`, the URL they reach.** It is two rules, one per operation, each approved by `net.ask` when its result is `allow` and its URL is the call's.
