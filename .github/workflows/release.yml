@@ -6,6 +6,8 @@ on:
 
 permissions:
   contents: write
+  # npm's trusted publishing: npm trusts this workflow, so no token is stored anywhere.
+  id-token: write
 
 jobs:
   release:
@@ -13,18 +15,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       # A push that doesn't change the version has nothing to publish: its release exists already.
+      # npm is checked on its own, so a publish that failed is retried with the release's own tarball.
       - name: Check for this version's release
         id: version
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           version=$(jq -r .version javascript/package.json)
+          name=$(jq -r .name javascript/package.json)
           echo "version=$version" >> "$GITHUB_OUTPUT"
           if gh release view "v$version" >/dev/null 2>&1; then
-            echo "v$version is released already; skipping."
+            echo "v$version is released already."
             echo "exists=true" >> "$GITHUB_OUTPUT"
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+          if npm view "$name@$version" version >/dev/null 2>&1; then
+            echo "$name@$version is on npm already."
+            echo "published=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
           fi
       - if: steps.version.outputs.exists == 'false'
         uses: dtolnay/rust-toolchain@master
@@ -40,10 +50,21 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           version=${{ steps.version.outputs.version }}
-          # if [ "${version%%.*}" = "0" ]; then
-          #   echo "Version $version is major 0; skipping release."
-          #   exit 0
-          # fi
           tarball=$(cd javascript && npm pack --silent)
           gh release create "v$version" javascript/kernel.wasm javascript/kernel.sha256 "javascript/$tarball" \
             --target "$GITHUB_SHA" --generate-notes
+      # npm gets the release's tarball, byte for byte, whichever run built it.
+      - if: steps.version.outputs.published == 'false'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - name: Publish to npm
+        if: steps.version.outputs.published == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          npm install -g npm@11.6.2
+          mkdir -p release
+          gh release download "v${{ steps.version.outputs.version }}" --pattern '*.tgz' --dir release
+          npm publish release/*.tgz --provenance --access public

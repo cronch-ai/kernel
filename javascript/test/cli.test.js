@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
@@ -23,9 +23,9 @@ before(async () => {
 });
 after(() => server.close());
 
-function pata(args, stdin = "") {
+function pata(args, stdin = "", command = cli) {
   return new Promise((resolve) => {
-    const child = spawn(process.execPath, [cli, ...args]);
+    const child = spawn(process.execPath, [command, ...args]);
     let stdout = "";
     let stderr = "";
     child.stdout.on("data", (d) => (stdout += d));
@@ -98,5 +98,22 @@ test("a model plugged in uses fs under --root, and nowhere else; shell is refuse
 test("says how to use it", async () => {
   const { code, stderr } = await pata(["help"]);
   assert.equal(code, 2);
-  assert.match(stderr, /usage: pata run <dir>/);
+  assert.match(stderr, /usage: pata run \[dir\]/);
+});
+
+// What `npx @pata/kernel run` does on a machine with nothing but Node: the packed package, installed into an
+// empty directory, runs T1's example, which it ships, with no directory given.
+test("the package, installed, runs T1's example by itself", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "pata-npx-"));
+  const javascript = new URL("..", import.meta.url).pathname;
+  const [{ filename }] = JSON.parse(
+    execFileSync("npm", ["pack", "--json", "--pack-destination", dir], { cwd: javascript }),
+  );
+  execFileSync("npm", ["install", "--no-audit", "--no-fund", join(dir, filename)], { cwd: dir });
+  const bin = join(dir, "node_modules/@pata/kernel/cli.js");
+  fetched.length = 0;
+  const { code, stdout, stderr } = await pata(["run", "--input", `Read ${url}.`], "y\n", bin);
+  assert.equal(code, 0, stderr);
+  assert.equal(JSON.parse(stdout).value, 'Its title is "Local page".');
+  assert.deepEqual(fetched, ["/page"]);
 });
