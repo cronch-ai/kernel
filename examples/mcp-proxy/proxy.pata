@@ -1,0 +1,13 @@
+harness mcp_proxy(owner: String) -> String
+uses agent, net, docs = "mcp:docs", mail = "mcp:mail"
+carry heard: String = ""
+turn   = agent.next(result: heard)
+call   = turn
+url    = match call { mail.send(c) => "https://mail.example/mcp", _ => "" }
+asked  = net.ask(url: url) when url != ""
+result = perform call when (match asked { ok(a) => a == "allow", skipped => true, _ => false })
+seen   = match result { ok(v) => v  failed(e) => concat("failed: ", e)  refused => "not allowed"  skipped => "denied" }
+closed = match call { close(c) => true, _ => false }
+next heard = seen
+return "closed" when closed
+otherwise return "closed"
