@@ -1,6 +1,6 @@
 # Security
 
-Report a vulnerability privately, through GitHub: **Security → Report a vulnerability** on this repo. Please don't open a public issue for it.
+Report a vulnerability privately, through GitHub: **Security > Report a vulnerability** on this repo. Please don't open a public issue for it.
 
 ## What counts
 

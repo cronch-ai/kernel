@@ -28,13 +28,13 @@ Everything else is already in the kernel:
 
 A looping harness is the graph run again and again, with a record carried from each run to the next. One run of the graph is a **round**.
 
-- **Carried values** `c : C`, with a start value `c₀(arg)`. Throughout a round they are constants that any expression may read, like the parameter.
+- **Carried values** `c : C`, with a start value `c0(arg)`. Throughout a round they are constants that any expression may read, like the parameter.
 - **The round**: the file's graph, as before, over `arg` and `c`. Every slot starts the round `waiting`.
 - **At the end of a round**, once every call (and everything the end reads) has settled:
   - if the stop condition holds, the run halts with `return`'s value;
   - otherwise each carried value takes its `next` value, every slot goes back to `waiting`, and the next round starts in the same step.
 
-As a state machine over the kernel's `δ`, nothing changes. The generated state is `{arg, next, carry, nodes}`, and `carry` is the only addition. A round boundary is one more case of the generated step: it updates `carry`, resets `nodes` to their initial slots, and runs the scheduling pass again. Rounds use no kernel feature that one-round graphs don't.
+As a state machine over the kernel's `step`, nothing changes. The generated state is `{arg, next, carry, nodes}`, and `carry` is the only addition. A round boundary is one more case of the generated step: it updates `carry`, resets `nodes` to their initial slots, and runs the scheduling pass again. Rounds use no kernel feature that one-round graphs don't.
 
 A run is still a sequence of steps, each total and finite, driven by inputs the environment chooses. A loop that never stops is a run that never halts, which the kernel already allows: properties are safety properties, and none of them depends on a run ending.
 
@@ -51,7 +51,7 @@ A run is still a sequence of steps, each total and finite, driven by inputs the 
 4. **`return e when c`** ends a round: when `c` holds, the run halts with `e`, and otherwise the next round starts. A `return` without `when` halts after the first round, so every existing harness elaborates to the same term. `next` without a looping `return` is an error, since it could never be read.
    - `c`, `e` and every `next` read nodes as `return` does, and under the same rules: a node that can be skipped is read through `match`, and a failure read as a value ends the run through `otherwise`.
 5. **A round that starts and settles in the same step stalls.** The next round starts in the step that ended the last one, so its first calls go out at once. If it settles in that step anyway, with nothing to wait for, no input could ever start the round after it. The run then halts through `otherwise`, or with `{"failed": "round"}` without one, so a looping harness whose result type doesn't admit that must declare `otherwise`.
-   - The alternative was to run rounds until one waits. That makes `δ` partial: a round that never waits would loop inside a single step.
+   - The alternative was to run rounds until one waits. That makes `step` partial: a round that never waits would loop inside a single step.
 6. **`x = perform e`** is a call node whose action is the value of `e`, of any type.
    - When the round reaches it, `e` is tested against `Action`, the action type of the interface the harness runs against. If it is a `call`, it is issued like any other call and checked against its operation's precondition. If not, the slot is `skipped`.
    - Only calls are performed. A model can't choose to halt, cancel or spawn: those stay the harness's.
@@ -176,7 +176,7 @@ property approved_since_chosen:
 ```
 harness session(first: String) -> Json
 
-uses agent = harness "harness:sha256-…", session
+uses agent = harness "harness:sha256-...", session
 
 carry prompt: String = first
 
@@ -203,7 +203,7 @@ return turn when heard == "/exit"
 
 ## Pieces
 
-- **L1** (this change): `carry`, `next`, `return … when`, `perform` and polled receives, in the parser, the elaborator and claims, with the agent loop above as a test (with `notes` as its tool): it runs, `approved_since_chosen` holds up to a depth, and the heedless version is refuted. A compliance vector for a loop that performs. Minor version: no existing source elaborates differently.
+- **L1** (this change): `carry`, `next`, `return ... when`, `perform` and polled receives, in the parser, the elaborator and claims, with the agent loop above as a test (with `notes` as its tool): it runs, `approved_since_chosen` holds up to a depth, and the heedless version is refuted. A compliance vector for a loop that performs. Minor version: no existing source elaborates differently.
 - **L2:** parallel tool calls, `results = for a in choice.calls: perform a`, a fan-out of performs.
 - **L3:** the platform runs looping harnesses, and gives a model writing a harness the agent loop as a starting point.
 

@@ -379,7 +379,7 @@ mod tests {
     #[test]
     fn strings_escape_what_smtlib_reads_specially() {
         assert_eq!(
-            Term::string("a\"b\\é").unwrap().to_string(),
+            Term::string("a\"b\\\u{e9}").unwrap().to_string(),
             "\"a\"\"b\\u{5c}\\u{e9}\""
         );
         assert_eq!(

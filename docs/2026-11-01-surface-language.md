@@ -4,7 +4,7 @@ Plan for the surface language and its elaborator, listed as later work in the [h
 
 Today a harness is a JSON `Expr` term and a property a JSON `Formula`. The platform's `approved-note` fixture is about 150 lines of JSON for what reads as ten lines of source, and a property is harder still. Nobody but the kernel's own tests should have to write either.
 
-Revised on 2026-11-02: the first draft of this plan proposed a Python-like language whose sequential code compiles to `δ` the way `async`/`await` does. It is replaced by the declarative graph style of `cronch-ai/cronch-gleam`.
+Revised on 2026-11-02: the first draft of this plan proposed a Python-like language whose sequential code compiles to `step` the way `async`/`await` does. It is replaced by the declarative graph style of `cronch-ai/cronch-gleam`.
 
 ## The idea: a harness is a graph
 
@@ -20,7 +20,7 @@ Order meant nothing, since the references are the dependencies, and a verifier c
 The surface language takes that shape and gives it the kernel's semantics:
 
 - **A node is a wish or a value.** `draft = model.generate(...)` names a call of an operation. Its value is what `ret` delivers: a value of the operation's output type that meets its contract. Who fills it (a model, a person through `approve`, a sandboxed module, a child harness) is the installation and the grant, never the harness. A node can also be a pure expression over other nodes.
-- **What runs is still the pure `δ`.** The elaborator turns the graph into `δ`'s state machine:
+- **What runs is still the pure `step`.** The elaborator turns the graph into `step`'s state machine:
   - The state holds one slot per call node: waiting, running, returned, failed, refused or skipped.
   - Each step records the result it was given. It then starts, in dependency order, every call whose dependencies have settled.
   - The run halts once every call has settled, so a call nothing reads still runs.
@@ -28,7 +28,7 @@ The surface language takes that shape and gives it the kernel's semantics:
 The graph suits the kernel better than sequential code would:
 
 - **Concurrency is free.** Calls with no path between them are issued in the same step, and their results arrive in any order, as the kernel already allows. There is no `gather`.
-- **Elaboration is a schedule, not a continuation transform.** There are no resume points, live locals or call stacks to generate. The generated `δ` is linear in the size of the graph.
+- **Elaboration is a schedule, not a continuation transform.** There are no resume points, live locals or call stacks to generate. The generated `step` is linear in the size of the graph.
 - **The state has a fixed shape**, one slot per node, named in the source. Exhaustive exploration and invariant certificates work over a small, legible state, and properties can name nodes.
 - **There is little to reject.** The language has no loops, exceptions or functions to forbid, so a program that looks valid almost always is.
 
@@ -41,8 +41,8 @@ Everything the kernel proves is about the elaborated `Expr`, which is the term t
    - `crates/kernel` stays the trusted core; nothing in it depends on `surface`.
    - The `cronch-ai/lang` repo, created empty on 2026-11-01, isn't used.
 3. **The parser is hand-written, with no new dependencies.** The grammar is small: declarations, calls with named arguments, and the pure expressions. Anything outside it is rejected with a source span. Declarations end at a newline, and braces and brackets group, so the lexer needs no indentation tracking. A hand-written recursive-descent parser keeps the wasm small (972 KB today) and the errors precise.
-4. **Calls are counted in the state.** `δ` sees a call's identifier only on its result. Identifiers are handed out in order, one per `call` or `spawn` action, refused or not, so the generated state keeps its own counter, and each running slot records its call's identifier. This needs no kernel change.
-   - The alternative was to give `δ` the next identifier as a third variable. That changes the step rule, the SMT-LIB export and every proof for one convenience.
+4. **Calls are counted in the state.** `step` sees a call's identifier only on its result. Identifiers are handed out in order, one per `call` or `spawn` action, refused or not, so the generated state keeps its own counter, and each running slot records its call's identifier. This needs no kernel change.
+   - The alternative was to give `step` the next identifier as a third variable. That changes the step rule, the SMT-LIB export and every proof for one convenience.
    - If the counter ever disagreed with the interpreter, a result would land in the wrong slot. That breaks the author's intent, not a contract: preconditions are still checked at every call.
 5. **No source object in the kernel yet.** The harness's key is the key of the elaborated term. `elaborate` returns a source map with it, and the platform stores the source next to the harness it registers. Elaboration is deterministic for a given elaborator version, so anyone with the source and the same `@cronch/kernel` can recompute the term.
 6. **Node slots are part of the language, not the elaborator.** The `nodes` field of the generated state, and each slot's fields, are defined here. Properties and invariants may read them and mean the same thing whatever else the elaborator generates. The call counter and anything else the elaborator adds stay out of reach.
@@ -80,7 +80,7 @@ property no_effect_without_approval:
 ### Harnesses (S1)
 
 - **`harness name(arg: T) -> R`** opens the file. `arg` is the run's start value, of type `A`.
-- **`uses`** binds names to capabilities (decision 7). `uses notes` binds `notes` to the capability whose identifier is `notes`. `uses search = "module:sha256-…"` binds `search` to that identifier. A call `name.op(...)` is of the operation `op` of the capability bound to `name`. A call of a name the header doesn't bind is an error, and so is an operation that capability doesn't have. A reader, or the platform, sees what the harness can do without reading its nodes, as with cronch-gleam's `requested_effects`.
+- **`uses`** binds names to capabilities (decision 7). `uses notes` binds `notes` to the capability whose identifier is `notes`. `uses search = "module:sha256-..."` binds `search` to that identifier. A call `name.op(...)` is of the operation `op` of the capability bound to `name`. A call of a name the header doesn't bind is an error, and so is an operation that capability doesn't have. A reader, or the platform, sees what the harness can do without reading its nodes, as with cronch-gleam's `requested_effects`.
 - **Nodes:** `name = expr` binds a pure value, and `name = op(field: e, ...)` a call. A call's argument is the record of its named arguments. Each name is bound once, and the order of nodes in the file has no meaning.
 - **Graph checks**, before anything is typed, as in cronch-gleam's verifier:
   - names are unique;
@@ -95,7 +95,7 @@ property no_effect_without_approval:
   - A call node that fails or is refused ends the run through `otherwise`, unless every read of it is a `match` with arms for both, or a `_`. A node nothing reads ends the run too, since nothing handles its failure.
 - **`return expr`**, once per harness, is `halt(expr)`, emitted once every call, and everything `expr` reads, has settled. `return` may not read, as a value, a node that can be skipped (one with a guard, or that reads such a node). It must `match` it.
 - **`otherwise return expr`** is what a failure or refusal read as a value halts with. Without it, the run halts with `{"failed": name}`, so a harness whose result type doesn't admit that, and that has a failure it doesn't handle, must have an `otherwise`: the kernel checks every halt against the result type. `expr` can't read nodes.
-- **Types:** `String`, `Int`, `Float`, `Bool`, `Json`, `Action`, `List[T]`, records as `{field: T}`, and named record and variant types declared with `type`. A `|` of tagged records is a variant. The names are the kernel's. A `Json` value is read with `if e is T as x then a else b`: `a` with `x` holding `e` at `T` if it has that type, `b` if not. `Action` is an action the harness may take against the interface it runs against, so `if pick is Action as a then …` tests a model's chosen tool call against whatever that interface allows.
+- **Types:** `String`, `Int`, `Float`, `Bool`, `Json`, `Action`, `List[T]`, records as `{field: T}`, and named record and variant types declared with `type`. A `|` of tagged records is a variant. The names are the kernel's. A `Json` value is read with `if e is T as x then a else b`: `a` with `x` holding `e` at `T` if it has that type, `b` if not. `Action` is an action the harness may take against the interface it runs against, so `if pick is Action as a then ...` tests a model's chosen tool call against whatever that interface allows.
 - **Expressions** are the pure fragment, mapped one-to-one onto `Expr`:
   - literals, names, field access (`r.text`), records (`{text: s}`), lists;
   - the operators in `ops.rs`, with infix spelling where there is one (`a + b`, `a == b`, `x in xs`), and calls otherwise (`len(xs)`, `prefix(p, s)`, `str(x)`);
@@ -124,15 +124,15 @@ property no_effect_without_approval:
   - The slot's lists are rebuilt by folds annotated with their types, so they stay `List[T]` throughout.
 - **Spawning:** `summary = spawn summarizer(draft) only model.generate without fs.write` is a call node filled by a child run, with the kernel's spawn semantics. The harness declares each child it spawns, by the name its header binds, with the child's argument and result types, so the node's value has the child's result type.
   - `only` and `without` are the kernel's `only` and `drop` narrowings, so the child can never do what the parent couldn't.
-  - The target is bound in the header: `uses summarizer = harness "harness:sha256-…"` names a registered harness, so the body never carries a key. A `spawn` action carries the child's whole term, so `elaborate` takes the terms of the harnesses the header names, as it takes the contracts of capabilities, and returns the bindings as `harnesses`.
+  - The target is bound in the header: `uses summarizer = harness "harness:sha256-..."` names a registered harness, so the body never carries a key. A `spawn` action carries the child's whole term, so `elaborate` takes the terms of the harnesses the header names, as it takes the contracts of capabilities, and returns the bindings as `harnesses`.
   - The child is checked against the narrowed interface when the parent is elaborated, so a child that would be refused at run time is reported with its problems instead.
 - **Iteration across steps** (a ReAct loop) is the one thing a fixed graph can't say. See the open questions, and [Agentic loops](2026-11-02-agentic-loops.md) for how it was settled.
 
 ### Properties and invariants (S3)
 
-- **`property name: φ`** gives `□φ`, with `φ` written as an expression. The body can start on the next line. `always(φ)` around the whole body says the same thing, and is refused anywhere else.
+- **`property name: phi`** gives `always(phi)`, with `phi` written as an expression. The body can start on the next line. `always(phi)` around the whole body says the same thing, and is refused anywhere else.
   - The connectives are `implies`, `and`, `or` and `not`. The temporal operators are `prev`, `since`, `once` and `historically`.
-  - `exists x in e: φ` and `forall x in e: φ` range over the values `e` gave at the events so far, as the kernel requires. The kernel only searches quantifier-free properties, so a quantified one is monitored, not proved.
+  - `exists x in e: phi` and `forall x in e: phi` range over the values `e` gave at the events so far, as the kernel requires. The kernel only searches quantifier-free properties, so a quantified one is monitored, not proved.
   - Any other boolean expression is an atom over `event`.
 - **Event helpers** spell the common atoms. Each takes an operation or channel as a path from a capability (`approve.ask`) or a string. An optional condition reads what arrived:
   - `called(op, cond)`: a performed call (an `out` event), with the arguments as `args`;
@@ -160,7 +160,7 @@ property no_effect_without_approval:
   - `next`, the call counter;
   - `nodes`, a record with one slot per call or receive node. A slot is a record `{kind, call, value, error}`, with `error` as text: the kind of the failure (`cancelled`, `child` or `world`). `kind` is `waiting`, `running`, `ok`, `failed`, `refused` or `skipped`, and says which of the other fields mean anything. `value` is the operation's output, a stream's items as a list, or the message.
   - A slot is a record rather than a variant. When S1 was written, the kernel had no expression that builds a value at a variant type. Since A1 it has, but slots stay records (decided on 2026-11-02): as a variant, every read of a slot's `call` or `value`, in the generated step and in properties, would become a `match`, and what a property reads of a slot would change, for no gain in what can be proved. `value` is carried from slot to slot, never rebuilt from a literal, so it keeps its type in every branch.
-- **The generated `δ`** is one pass:
+- **The generated `step`** is one pass:
   1. **Record:** `start` stores `arg`. `ret`, `failed` or `refused` for call `k` settles the slot running `k`; on a stream, `ret` appends an item and `end` settles it. A message settles every receive listening on its channel whose filter it passes. An input for a call no slot is running (only possible after a cancel) changes nothing.
   2. **Cancel:** every call whose `until` node has returned fails as cancelled, and `cancel` is emitted for it if it was running.
   3. **Fail:** if a node whose failure isn't handled has failed or been refused, halt through `otherwise`.
@@ -201,7 +201,7 @@ All in this repo except S4. Each is a PR with compliance vectors, and S1 to S3 t
 
    `loop` is the likeliest. It is postponed past v0.4.0; until then, a host that needs a loop starts a run per turn.
    - **Decided on 2026-11-02:** the whole graph is the loop's body, run once per round with carried values, and a `perform` node acts on an action a model chose. See [Agentic loops](2026-11-02-agentic-loops.md).
-2. **Failure by default.** A node that fails, read as a value, ends the run through `otherwise`. That is the least surprising default for a total `δ`, and declaring `otherwise` keeps the policy in the harness rather than the language. Whether a harness should also be able to say "retry" is left until a real one needs it.
+2. **Failure by default.** A node that fails, read as a value, ends the run through `otherwise`. That is the least surprising default for a total `step`, and declaring `otherwise` keeps the policy in the harness rather than the language. Whether a harness should also be able to say "retry" is left until a real one needs it.
 3. **Versions.** A binding names one identifier, and a module's key pins its exact code. A platform capability's identifier pins nothing, so a contract can change under a registered harness. Whether identifiers should carry versions, as cronch-gleam's `{id, version}` references did, is the platform's call, and the kernel needs no change either way.
 4. **Labels on control state.** The interpreter labels a step's whole input, `kind`, `call` and `op` included, with its result's sources. So a step taken on the model's result runs under the label `model`, and so does every slot it writes. A later step decides what to do from those slots, so its actions and its halt carry `model` too. A hand-written harness that keeps no control state doesn't have this problem. In S1's `approved-note`, the denied run halts with `"denied"` labelled `model`, where the hand-written one's is trusted.
    - Labels only ever over-approximate, so this loses precision, not safety. But a property about information flow, such as "no untrusted data reaches a send", could be refuted for an elaborated harness and hold for the hand-written one.

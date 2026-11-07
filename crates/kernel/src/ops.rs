@@ -268,10 +268,10 @@ fn as_f64(n: &Num) -> f64 {
     }
 }
 
-/// The largest integer every host carries exactly: JSON's and JavaScript's safe integers, ±(2^53 - 1).
+/// The largest integer every host carries exactly: JSON's and JavaScript's safe integers, +/-(2^53 - 1).
 pub const MAX_SAFE_INT: i64 = (1 << 53) - 1;
 
-/// The integer, if it is within ±(2^53 - 1).
+/// The integer, if it is within +/-(2^53 - 1).
 fn safe(i: i64) -> Option<i64> {
     (-MAX_SAFE_INT..=MAX_SAFE_INT).contains(&i).then_some(i)
 }

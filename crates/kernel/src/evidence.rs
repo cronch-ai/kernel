@@ -21,7 +21,7 @@
 //!   (`certificate` finds them by search); checking them is the kernel's.
 //!
 //! The alphabet is an assumption about the environment, stated in the evidence: a proof over it says nothing about
-//! inputs outside it. For invariants of `δ` over every state and every well-typed input, see `obligation`: a solver
+//! inputs outside it. For invariants of `step` over every state and every well-typed input, see `obligation`: a solver
 //! looks for a counterexample to induction, and the kernel checks what it finds.
 
 use crate::harness::{Harness, Interface};

@@ -1,5 +1,5 @@
 /**
- * Deterministic CBOR (RFC 8949 §4.2.1): the one representation of every object Cronch stores, exchanges or hashes.
+ * Deterministic CBOR (RFC 8949 section 4.2.1): the one representation of every object Cronch stores, exchanges or hashes.
  * The same rules as the kernel's (`crates/kernel/src/cbor.rs`), so both produce the same bytes for the same value.
  *
  * Integers take their shortest form, map keys are sorted by their encoded bytes, and a number with no fractional part

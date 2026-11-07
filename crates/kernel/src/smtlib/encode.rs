@@ -129,7 +129,7 @@ fn over_reals(name: &str) -> &str {
     }
 }
 
-/// The integer is one every host carries exactly: JSON's and JavaScript's safe integers, within ±(2^53 - 1). Both
+/// The integer is one every host carries exactly: JSON's and JavaScript's safe integers, within +/-(2^53 - 1). Both
 /// what a counterexample is made of and what the kernel computes from it stay within it.
 fn carried(term: Term) -> Term {
     const SAFE: i64 = crate::ops::MAX_SAFE_INT;

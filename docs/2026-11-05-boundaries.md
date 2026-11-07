@@ -32,23 +32,23 @@ There is no `Json` type and no `is`. A value is an `Int`, `Float`, `String`, `Bo
 
 ## The table
 
-| Boundary                         | Its type comes from                                              | Checked                       | What doesn't fit  |
-| -------------------------------- | ---------------------------------------------------------------- | ----------------------------- | ----------------- |
-| Start value → harness            | the harness's `arg`                                              | on delivery                   | withheld          |
-| Capability result → harness      | the operation's `output`, then `post`                            | on delivery                   | withheld          |
-| Message → harness                | the channel's `type`, then `inv`                                 | on delivery                   | withheld          |
-| Harness → call's arguments       | the operation's `input`, then `pre`                              | statically, then at the call  | refused           |
-| Model's chosen call → harness    | the model operation's `output`: a variant of its tools           | on delivery                   | withheld          |
-| Parent → child's argument        | the signature's `arg`, then the child's own                      | statically, then at the spawn | refused           |
-| Parent → child's harness         | `String`: the term as text, then the signature and the narrowing | at the spawn                  | refused           |
-| Child's result → parent          | the signature's `result`                                         | statically, then at its halt  | the child fails   |
-| Harness's result                 | the harness's `result`, which it must declare                    | statically, then at the halt  | the run fails     |
-| Harness's next state             | the harness's `state`                                            | after each step               | the run fails     |
-| Initial grant                    | the empty value of the interface's `grant`: nothing passes one   | when the interface is checked | refused           |
-| Update → grant                   | the interface's `grant`                                          | statically                    | refused at `init` |
-| World's failure detail → harness | it is `String`                                                   | always text                   | nothing           |
-| A failed child's error → parent  | it is `String`                                                   | always text                   | nothing           |
-| Event → property                 | the event's variant, and `String` for what one type can't cover  | never: it only reads          | nothing to refuse |
+| Boundary                          | Its type comes from                                              | Checked                       | What doesn't fit  |
+| --------------------------------- | ---------------------------------------------------------------- | ----------------------------- | ----------------- |
+| Start value -> harness            | the harness's `arg`                                              | on delivery                   | withheld          |
+| Capability result -> harness      | the operation's `output`, then `post`                            | on delivery                   | withheld          |
+| Message -> harness                | the channel's `type`, then `inv`                                 | on delivery                   | withheld          |
+| Harness -> call's arguments       | the operation's `input`, then `pre`                              | statically, then at the call  | refused           |
+| Model's chosen call -> harness    | the model operation's `output`: a variant of its tools           | on delivery                   | withheld          |
+| Parent -> child's argument        | the signature's `arg`, then the child's own                      | statically, then at the spawn | refused           |
+| Parent -> child's harness         | `String`: the term as text, then the signature and the narrowing | at the spawn                  | refused           |
+| Child's result -> parent          | the signature's `result`                                         | statically, then at its halt  | the child fails   |
+| Harness's result                  | the harness's `result`, which it must declare                    | statically, then at the halt  | the run fails     |
+| Harness's next state              | the harness's `state`                                            | after each step               | the run fails     |
+| Initial grant                     | the empty value of the interface's `grant`: nothing passes one   | when the interface is checked | refused           |
+| Update -> grant                   | the interface's `grant`                                          | statically                    | refused at `init` |
+| World's failure detail -> harness | it is `String`                                                   | always text                   | nothing           |
+| A failed child's error -> parent  | it is `String`                                                   | always text                   | nothing           |
+| Event -> property                 | the event's variant, and `String` for what one type can't cover  | never: it only reads          | nothing to refuse |
 
 [boundaries.rs](../crates/kernel/tests/boundaries.rs) and [chosen_call.rs](../crates/kernel/tests/chosen_call.rs) pin the rows of a single run and the model's chosen call, and [spawn.rs](../crates/kernel/tests/spawn.rs) the refused spawn. [boundaries.rs](../crates/kernel/tests/boundaries.rs) also pins a child's result, the next state, and what a property reads.
 
@@ -119,7 +119,7 @@ The closed stack's `Call`, `Returned`, `@none`, approvals as text, and `op` in c
 
 ## Open
 
-- **Update → grant is only checked statically.** The interpreter merges an update's fields without checking them again. That is sound while the checker is, and a second interpreter has nothing to compare against.
+- **Update -> grant is only checked statically.** The interpreter merges an update's fields without checking them again. That is sound while the checker is, and a second interpreter has nothing to compare against.
 - **A `ret` label that can't evaluate withholds `failed` too.** `admit` needs the label for a failure as it does for a result. `init` accepts an operation whose `ret` is `[str(div(1, 0))]`. A `failed` on its call is then withheld as `returnLabel` and the call stays pending, so a compliant host can't end that call.
 - **A step's state can still hold fields its type doesn't declare.** Every value a step sends across a boundary is checked exactly (see [undeclared fields](#undeclared-fields)), but its state is checked by width subtyping, so such a field is one the harness wrote and never leaves the run. The encoder still has no reading of record equality because of these fields ([smtlib/mod.rs](../crates/kernel/src/smtlib/mod.rs)).
 - **`Float` in a query.** Ethos reads `Float64` no more than it did under `Json`, so a rule over a `Float` can't be checked as the kernel computes it: Ethos says `Could not find symbol Float64`. [Rules](2026-11-05-rules.md) has the detail. Nothing needs one yet.

@@ -57,7 +57,7 @@ Most of those values aren't untyped. Their type is decided by the interface the 
 - `Type::Json`, `Expr::Is`, and their rules in checking, evaluation, labels and SMT-LIB.
 - `smtlib/json.rs`, and the `Json` paths in `encode.rs` and `values.rs`.
 - Undeclared spawns, default result and grant types, and partial reads in properties.
-- In the surface language: the `Json` type, `is … as`, and `Action` as a written type.
+- In the surface language: the `Json` type, `is ... as`, and `Action` as a written type.
 
 ## Migration
 

@@ -476,7 +476,7 @@ mod tests {
         assert_eq!(one("true", Type::Bool), Ok(json!(true)));
         assert_eq!(
             one("\"a\"\"b\\u{e9}\\u{5c}\"", Type::String),
-            Ok(json!("a\"bé\\"))
+            Ok(json!("a\"b\u{e9}\\"))
         );
         assert_eq!(
             one("(fp #b0 #b01111111111 #x8000000000000)", Type::Float),

@@ -186,7 +186,7 @@ pub struct File {
     /// Every `return`, so more than one can be reported.
     pub returns: Vec<Return>,
     pub otherwise: Vec<Expr>,
-    /// `property name: formula`, each `□formula` over the events of a run.
+    /// `property name: formula`, each `always(formula)` over the events of a run.
     pub properties: Vec<(Name, Expr)>,
     /// `invariant name: expr`, over the node slots of the state.
     pub invariants: Vec<(Name, Expr)>,

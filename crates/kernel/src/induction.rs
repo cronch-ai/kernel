@@ -1,16 +1,16 @@
 //! Inductive invariants of a harness's state, over every state and every well-typed input.
 //!
-//! An invariant here is an expression over `state`. It is inductive when it holds of `s₀` (initiation) and, whenever it
-//! holds of a state, it holds of the state `δ` gives on any input (consecution). Then it holds of every state of every
+//! An invariant here is an expression over `state`. It is inductive when it holds of `s0` (initiation) and, whenever it
+//! holds of a state, it holds of the state `step` gives on any input (consecution). Then it holds of every state of every
 //! run, whatever the environment does, without bounding depth or listing configurations.
 //!
 //! The kernel decides initiation by evaluating. Consecution quantifies over infinitely many states and inputs, so the
 //! kernel writes it as an SMT-LIB query (`obligation`) whose models are counterexamples to induction: a state where the
 //! invariant holds and an input after which it doesn't. A solver searches; the kernel checks what it finds by
-//! evaluating `δ` on it (`check_step`). A solver's `unsat` is not a verdict here, as nowhere in the kernel: it comes
+//! evaluating `step` on it (`check_step`). A solver's `unsat` is not a verdict here, as nowhere in the kernel: it comes
 //! with no certificate the kernel can check.
 //!
-//! The query is over `δ`'s next state only: other parts of the step are projected away, which can only add steps (one
+//! The query is over `step`'s next state only: other parts of the step are projected away, which can only add steps (one
 //! whose actions would fail to evaluate), so the obligation is at least as strong as consecution. Every input is in
 //! it: every value is typed, and every type has a sort.
 
@@ -298,7 +298,7 @@ fn inhabited(ty: &Type) -> Type {
 #[derive(Serialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Obligation {
-    /// Whether the invariant holds of `s₀`, decided by the kernel.
+    /// Whether the invariant holds of `s0`, decided by the kernel.
     pub initiation: bool,
     /// Consecution as an SMT-LIB query: `sat` exactly where there is a counterexample to induction.
     pub text: String,
@@ -363,7 +363,7 @@ pub fn obligation(
     })
 }
 
-/// What `δ` does to the invariant on one state and one input.
+/// What `step` does to the invariant on one state and one input.
 #[derive(Serialize, Clone, Debug, PartialEq)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum Induction {
@@ -385,7 +385,7 @@ pub enum InductionError {
     Input,
     /// The invariant doesn't hold of the state, so nothing follows from the step.
     NotHeld,
-    /// `δ` fails on this state and input, or gives no state of its type: the run would end, not continue.
+    /// `step` fails on this state and input, or gives no state of its type: the run would end, not continue.
     Step,
 }
 

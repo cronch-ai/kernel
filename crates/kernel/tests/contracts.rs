@@ -1,6 +1,6 @@
 //! Contracts and grants: preconditions checked at the point of the call, postconditions and invariants on what
 //! arrives, return labels, footprints, and grant state that only trusted results and messages change. The harness here
-//! is a puppet that calls whatever its input says, so the guarantees shown hold whatever `δ` does.
+//! is a puppet that calls whatever its input says, so the guarantees shown hold whatever `step` does.
 
 mod common;
 use common::*;
