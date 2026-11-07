@@ -1,0 +1,18 @@
+{
+  "operations": {
+    "next": {
+      "input": { "Record": { "result": "String" } },
+      "output": {
+        "Variant": {
+          "tag": "kind",
+          "cases": {
+            "close": { "Record": {} },
+            "docs.search": { "Record": { "input": "String" } },
+            "mail.send": { "Record": { "input": "String" } }
+          }
+        }
+      },
+      "ret": { "e": "list", "items": [{ "e": "lit", "v": "agent" }] }
+    }
+  }
+}
