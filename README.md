@@ -31,7 +31,7 @@ Terms are defined briefly in the [glossary](docs/glossary.md). The definitions a
 - `crates/kernel`: the library. Requests enter through `api::call` (CBOR in, CBOR out).
 - `crates/surface`: the surface language and its elaborator, which turns a harness written as a graph of named calls into a harness term. It answers the `elaborate` request and passes every other request to the kernel. It is untrusted: the kernel checks what it produces. The design is in [the surface language](docs/2026-11-01-surface-language.md).
 - `crates/kernel-abi`: the WASM exports `cronch_alloc`, `cronch_call` and `cronch_free`, through `surface`.
-- `javascript`: the JS loader, the CBOR codec and the TypeScript types.
+- `javascript`: the JS loader, the CBOR codec and the TypeScript types. `@pata/kernel/run` is a local host for Node: `run(harness, capabilities, handlers)` runs a harness with each operation answered by a JavaScript function, keeping the [host protocol](docs/2026-11-06-host-protocol.md).
 - `compliance`: cross-implementation test vectors, replayed by both the Rust crates and the WASM build.
 - `proofs`: proves a rule's queries with cvc5 and checks the proofs with Ethos, using no part of the kernel but its queries. `check-lean.mjs` checks a Lean proof of a rule's Lean statement with Lake's `comparator`, which needs `bwrap`.
 
