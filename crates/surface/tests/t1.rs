@@ -1,4 +1,4 @@
-//! T1's harness: the Claude Code-style agent in `examples/claude-code/agent.cronch`, against the capabilities beside it.
+//! T1's harness: the Claude Code-style agent in `examples/claude-code/agent.pata`, against the capabilities beside it.
 //! The model chooses a tool; a network tool is performed only after a person allows its URL through `net.ask`. These
 //! runs show what the harness does. That it can't reach the network without an allow, whatever it does and whatever
 //! the model says, is the rules' claim, proved in `proofs/t1.test.mjs`.
@@ -45,7 +45,7 @@ fn interface() -> Value {
 
 fn harness() -> Value {
     let out = call(
-        json!({ "op": "elaborate", "source": example("agent.cronch"), "capabilities": capabilities() }),
+        json!({ "op": "elaborate", "source": example("agent.pata"), "capabilities": capabilities() }),
     );
     assert_eq!(out["kind"], "elaborated", "{out:#}");
     out["harness"].clone()

@@ -1,6 +1,6 @@
 # Boundaries
 
-Written on 2026-11-05, and agreed but for one item. What a value's type promises as it passes between a harness, its capabilities, its children and the world. It replaces [Typed boundaries](2026-11-02-typed-boundaries.md), and is meant to become the first section of the VHF spec.
+Written on 2026-11-05, and agreed but for one item. What a value's type promises as it passes between a harness, its capabilities, its children and the world. It replaces [Typed boundaries](2026-11-02-typed-boundaries.md), and is meant to become the first section of the Pata spec.
 
 ## Status
 
