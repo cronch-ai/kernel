@@ -8,12 +8,18 @@
       "default": "./index.js"
     },
     "./kernel.wasm": "./kernel.wasm",
-    "./kernel.sha256": "./kernel.sha256"
+    "./kernel.sha256": "./kernel.sha256",
+    "./run": {
+      "types": "./run.d.ts",
+      "default": "./run.js"
+    }
   },
   "files": [
     "index.js",
     "cbor.js",
     "index.d.ts",
+    "run.js",
+    "run.d.ts",
     "kernel.wasm",
     "kernel.sha256",
     "LICENSE"
