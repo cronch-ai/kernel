@@ -1,0 +1,29 @@
+{
+  "operations": {
+    "search": {
+      "input": {
+        "Record": {
+          "input": "String"
+        }
+      },
+      "output": "String",
+      "raise": ["mcp:docs"],
+      "footprint": {
+        "e": "record",
+        "fields": {
+          "reaches": {
+            "e": "lit",
+            "v": "https://docs.example/mcp"
+          }
+        }
+      }
+    }
+  },
+  "grant": {
+    "Record": {
+      "netAllow": {
+        "List": "String"
+      }
+    }
+  }
+}

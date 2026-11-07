@@ -1,0 +1,48 @@
+{
+  "operations": {
+    "send": {
+      "input": {
+        "Record": {
+          "input": "String"
+        }
+      },
+      "output": "String",
+      "raise": ["mcp:mail"],
+      "footprint": {
+        "e": "record",
+        "fields": {
+          "reaches": {
+            "e": "lit",
+            "v": "https://mail.example/mcp"
+          }
+        }
+      },
+      "effect": true,
+      "pre": {
+        "e": "op",
+        "op": "contains",
+        "args": [
+          {
+            "e": "get",
+            "of": {
+              "e": "var",
+              "name": "grant"
+            },
+            "field": "netAllow"
+          },
+          {
+            "e": "lit",
+            "v": "https://mail.example/mcp"
+          }
+        ]
+      }
+    }
+  },
+  "grant": {
+    "Record": {
+      "netAllow": {
+        "List": "String"
+      }
+    }
+  }
+}
