@@ -1,6 +1,6 @@
 {
-  "name": "@cronch/kernel",
-  "version": "0.10.0",
+  "name": "@pata/kernel",
+  "version": "0.11.0",
   "type": "module",
   "exports": {
     ".": {
@@ -15,11 +15,13 @@
     "cbor.js",
     "index.d.ts",
     "kernel.wasm",
-    "kernel.sha256"
+    "kernel.sha256",
+    "LICENSE"
   ],
   "scripts": {
     "build": "../scripts/build-wasm.sh",
     "test": "node --test",
     "clean": "npm run clean --prefix .."
-  }
+  },
+  "license": "Apache-2.0"
 }

@@ -1,8 +1,8 @@
 # A Claude Code-style harness
 
-T1 from the north star: a Claude Code-style harness in VHF, proved unable to reach the network without permission, then extended with a capability, measuring what is proved again.
+T1 from the north star: a Claude Code-style harness in Pata, proved unable to reach the network without permission, then extended with a capability, measuring what is proved again.
 
-- [agent.cronch](agent.cronch) is the harness, in the surface language. The model chooses a tool. A network tool first asks a person about its URL through `net.ask`, and is performed only after an `allow`. The result goes back to the model, round after round, until it answers, the user says `stop`, or 20 turns pass.
+- [agent.pata](agent.pata) is the harness, in the surface language. The model chooses a tool. A network tool first asks a person about its URL through `net.ask`, and is performed only after an `allow`. The result goes back to the model, round after round, until it answers, the user says `stop`, or 20 turns pass.
 - The other `.json` files are its capabilities, as contracts in kernel JSON, passed to `install` and `elaborate`. The surface language has no syntax for contracts or grants.
 - [mcp.json](mcp.json) is the capability T1 adds.
 
@@ -10,7 +10,7 @@ T1 from the north star: a Claude Code-style harness in VHF, proved unable to rea
 
 **`net.fetch` and `shell.online` can't happen until a person has allowed, through `net.ask`, the URL they reach.** It is two rules, one per operation, each approved by `net.ask` when its result is `allow` and its URL is the call's.
 
-The claim is about the contracts, so it holds for every harness on this interface and whatever the model says, not only `agent.cronch`. The kernel writes each rule's queries (`ruleObligations`), cvc5 proves them, and Ethos checks the proofs. [proofs/t1.test.mjs](../../proofs/t1.test.mjs) does this, and also breaks the contracts to show the proofs depend on them: with `net.fetch` ungated, or with `net.ask` adding a URL whatever the person says, there is a counterexample.
+The claim is about the contracts, so it holds for every harness on this interface and whatever the model says, not only `agent.pata`. The kernel writes each rule's queries (`ruleObligations`), cvc5 proves them, and Ethos checks the proofs. [proofs/t1.test.mjs](../../proofs/t1.test.mjs) does this, and also breaks the contracts to show the proofs depend on them: with `net.fetch` ungated, or with `net.ask` adding a URL whatever the person says, there is a counterexample.
 
 [crates/surface/tests/t1.rs](../../crates/surface/tests/t1.rs) runs the harness itself: a denied URL isn't fetched, an allowed one is, a local tool needs no ask, and each URL is asked for separately.
 

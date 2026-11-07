@@ -1,6 +1,6 @@
 # kernel
 
-Rust implementation of the Cronch kernel, compiled to WebAssembly and published as `@cronch/kernel`.
+The reference kernel for Pata (Proven Agents, Trusted Actions), the open format for agent harnesses whose safety can be proved. It is written in Rust, compiled to WebAssembly and published as `@pata/kernel`. Cronch is one platform that runs Pata.
 
 The kernel gives agent harnesses a formal semantics. A harness is a state machine whose step function is data, not code: the term that is hashed is the term that is checked, run and proved. The kernel interprets harnesses against capabilities whose contracts it enforces, monitors their runs against safety properties, and reaches verdicts on those properties as evidence anyone can re-check. Language models, people and other agents are never trusted: they are capabilities whose results a proof quantifies over. The kernel does no I/O and keeps no state.
 

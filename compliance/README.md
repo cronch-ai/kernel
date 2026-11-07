@@ -15,7 +15,7 @@ Requests and responses are shown as JSON. On the wire they are deterministic CBO
 
 The Rust kernel replays them in `crates/kernel/tests/compliance.rs`, and the WebAssembly build in `javascript/test/compliance.test.js`.
 
-`surface/` holds the vectors for `elaborate`, in the same form. They pin the elaborated term exactly, since anyone with a source and the same `@cronch/kernel` must be able to recompute it. `crates/surface/tests/compliance.rs` replays them, and the WebAssembly build replays them with the rest.
+`surface/` holds the vectors for `elaborate`, in the same form. They pin the elaborated term exactly, since anyone with a source and the same `@pata/kernel` must be able to recompute it. `crates/surface/tests/compliance.rs` replays them, and the WebAssembly build replays them with the rest.
 
 ## Changing them
 

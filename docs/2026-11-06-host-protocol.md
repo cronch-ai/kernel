@@ -1,6 +1,6 @@
 # Host protocol
 
-Written on 2026-11-06, and proposed. What a host must do to run a harness under the interpreter's semantics. It is meant to become a section of the VHF spec. Tracked by [CRO-59](https://linear.app/cronch-ai/issue/CRO-59).
+Written on 2026-11-06, and proposed. What a host must do to run a harness under the interpreter's semantics. It is meant to become a section of the Pata spec. Tracked by [CRO-59](https://linear.app/cronch-ai/issue/CRO-59).
 
 ## Status
 
@@ -114,4 +114,4 @@ What each obligation looks like in the platform, from reading its `main`:
 
 - **Should H1 be checkable?** The kernel could key the configuration it returns, and a host could log that key, so an audit replaying the log would show an edit. Replaying already shows one if the log is complete.
 - **Vectors.** H4's withholding is pinned by the compliance vectors. H8 could get vectors of its own. The others are about what a host does outside the kernel, so no vector reaches them.
-- **A local host.** A small one in `@cronch/kernel` would be G2's reference, and a second host to test this document against.
+- **A local host.** A small one in `@pata/kernel` would be G2's reference, and a second host to test this document against.
