@@ -160,3 +160,6 @@ target/
 
 # scripts/install-proof-tools.sh
 .proof-tools/
+
+# Copied in by javascript/package.json's prepack
+javascript/examples/

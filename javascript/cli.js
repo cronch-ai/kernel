@@ -1,28 +1,35 @@
 #!/usr/bin/env node
 /**
- * `pata run <dir>`: runs the harness in `dir` on this machine, with the local host (`run.js`), and answers each ask
+ * `pata run [dir]`: runs the harness in `dir` on this machine, with the local host (`run.js`), and answers each ask
  * at the terminal. `dir` holds one `.pata` harness and its capabilities' contracts, one `<name>.json` each, as
- * `examples/claude-code` does.
+ * `examples/claude-code` does. Without `dir`, it runs that example, which the package ships.
  *
  * The host's implementations: `net.ask` asks you, `net.fetch` is Node's `fetch`, and `fs` reads and writes under
  * `--root`. `shell` is refused, since nothing here keeps a command off the network. The model, `brain.choose`, is a
  * module you pass with `--model`, or the scripted demo: it fetches the first URL in the task and answers.
  */
 
+import { existsSync } from "node:fs";
 import { readdir, readFile, writeFile } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve } from "node:path";
 import { createInterface } from "node:readline";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import { run } from "./run.js";
 
-const USAGE = `usage: pata run <dir> [--input <task>] [--root <dir>] [--model <module.js>]
+const USAGE = `usage: pata run [dir] [--input <task>] [--root <dir>] [--model <module.js>]
 
+  dir      a harness and its contracts (default: T1's example, examples/claude-code)
   --input  the task the run starts with (default: a demo task)
   --root   the directory fs reads and writes under (default: the current one)
   --model  a module whose default export answers brain.choose (default: a scripted demo)`;
 
 const DEMO_TASK = "Fetch https://example.com/ and tell me its title.";
+
+/** T1's example: in the package, where `prepack` copies it, or in the repo. */
+const EXAMPLE = ["./examples/claude-code", "../examples/claude-code"]
+  .map((path) => fileURLToPath(new URL(path, import.meta.url)))
+  .find((path) => existsSync(path));
 
 /** Lines read from standard input, one per ask, whether it's a terminal or a pipe. */
 function lines() {
@@ -153,11 +160,11 @@ async function main(argv) {
       help: { type: "boolean", short: "h" },
     },
   });
-  if (values.help || positionals[0] !== "run" || positionals.length !== 2) {
+  if (values.help || positionals[0] !== "run" || positionals.length > 2) {
     console.error(USAGE);
     return values.help ? 0 : 2;
   }
-  const { source, capabilities } = await load(positionals[1]);
+  const { source, capabilities } = await load(positionals[1] ?? EXAMPLE);
   const model = values.model
     ? (await import(pathToFileURL(resolve(values.model)).href)).default
     : demoModel;

@@ -1,10 +1,45 @@
 # kernel
 
-The reference kernel for Pata (Proven Agents, Trusted Actions), the open format for agent harnesses whose safety can be proved. It is written in Rust, compiled to WebAssembly and published as `@pata/kernel`. Cronch is one platform that runs Pata.
+The reference kernel for Pata (Proven Agents, Trusted Actions), the open format for agent harnesses whose safety can be proved. A harness's rules are proved over its capabilities' contracts, so they hold whatever the model says. Cronch is one platform that runs Pata.
 
-The kernel gives agent harnesses a formal semantics. A harness is a state machine whose step function is data, not code: the term that is hashed is the term that is checked, run and proved. The kernel interprets harnesses against capabilities whose contracts it enforces, monitors their runs against safety properties, and reaches verdicts on those properties as evidence anyone can re-check. Language models, people and other agents are never trusted: they are capabilities whose results a proof quantifies over. The kernel does no I/O and keeps no state.
+## Quickstart
 
-## Model
+With Node 24 and nothing else:
+
+```console
+$ npx @pata/kernel run
+task: Fetch https://example.com/ and tell me its title.
+model: chooses net.fetch
+ask: allow https://example.com/? [y/N] y
+ask: allowed
+net.fetch: https://example.com/
+model: answers
+{"kind":"halted","label":["model"],"value":"Its title is \"Example Domain\"."}
+```
+
+That ran T1, a Claude Code-style harness ([examples/claude-code](examples/claude-code)), on your machine. The model chose to fetch a URL, and the harness asked you first. Answer `n` and nothing is fetched. `--input "<task>"` gives it another task, and `--model <module.js>` plugs in your own model.
+
+The ask isn't the harness being polite. It's a rule, proved over the contracts of `net` and `shell`: **`net.fetch` and `shell.online` can't happen until a person has allowed, through `net.ask`, the URL they reach.** Any harness on those contracts keeps it, whatever its model says. Run `npx @pata/kernel run <dir>` on a directory of your own harness and contracts.
+
+### Checking the proof yourself
+
+- [app.cronch.ai/t1](https://app.cronch.ai/t1) shows the rule, the statements its proof had to prove, and the verdicts, each with what you need to check it again.
+- Or check it here, using no part of the kernel but the statements it writes. cvc5 proves each of the rule's queries `unsat` and Ethos checks the proofs, and Lake's `comparator` checks the same rule's proofs in Lean. With the toolchain in [Development](#development), and `bwrap` for `comparator`:
+
+  ```sh
+  ./scripts/install-proof-tools.sh
+  ./scripts/install-lean.sh
+  npm run build
+  node --test proofs/t1.test.mjs
+  ```
+
+  The test also breaks the contracts (`net.fetch` ungated, or `net.ask` allowing whatever the person says) and finds a counterexample each time.
+
+## What the kernel does
+
+The kernel gives agent harnesses a formal semantics. A harness is a state machine whose step function is data, not code: the term that is hashed is the term that is checked, run and proved. The kernel interprets harnesses against capabilities whose contracts it enforces, monitors their runs against safety properties, and reaches verdicts on those properties as evidence anyone can re-check. Language models, people and other agents are never trusted: they are capabilities whose results a proof quantifies over. The kernel does no I/O and keeps no state. It is written in Rust, compiled to WebAssembly and published as `@pata/kernel`.
+
+### Model
 
 - **Harness**: `(A, S, s0, step)`. `step` is a pure expression over `state` and `input` that gives the next state and a list of actions: `call`, `spawn`, `cancel` or `halt`. Calls run concurrently and their results arrive in any order.
 - **Capability**: operations and channels with contracts. A precondition (`pre`) is checked by the interpreter at the point of the call, whatever `step` does. A postcondition (`post`) and a channel invariant (`inv`) filter what arrives. `ret` gives the label of results. `effect` and `footprint` record what a call may change. There are no built-in operations.
@@ -51,7 +86,9 @@ npm run lint
 npm run test:proofs              # after npm run build
 ```
 
-Pushes to `main` publish a GitHub release of the version in `javascript/package.json`. A push that doesn't change the version skips the release, since that release exists already: bump the version to publish.
+Pushes to `main` publish a GitHub release of the version in `javascript/package.json`, and publish its tarball to npm as `@pata/kernel`. A push that doesn't change the version skips the release, since that release exists already: bump the version to publish. npm is checked separately, so a version missing there is published from its release's tarball on the next push.
+
+npm publishes by [trusted publishing](https://docs.npmjs.com/trusted-publishers): npm trusts `release.yml` in this repo, so no npm token is stored anywhere. npm can't trust a workflow for a package that doesn't exist yet, so the package's first version was published once by hand, and the trusted publisher was set in the package's settings.
 
 ## License
 
