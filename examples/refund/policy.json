@@ -1,0 +1,166 @@
+{
+  "grant": {
+    "Record": {
+      "damaged": {
+        "List": "String"
+      },
+      "late": {
+        "List": "String"
+      },
+      "premium": {
+        "List": "String"
+      },
+      "refundable": {
+        "List": "String"
+      }
+    }
+  },
+  "operations": {
+    "prove_refundable": {
+      "input": {
+        "Record": {
+          "damaged": {
+            "List": "String"
+          },
+          "late": {
+            "List": "String"
+          },
+          "order": "String",
+          "premium": {
+            "List": "String"
+          },
+          "proof": "String"
+        }
+      },
+      "onResult": {
+        "cond": {
+          "e": "get",
+          "field": "ok",
+          "of": {
+            "e": "var",
+            "name": "result"
+          }
+        },
+        "e": "if",
+        "else": {
+          "e": "var",
+          "name": "grant"
+        },
+        "then": {
+          "e": "record",
+          "fields": {
+            "refundable": {
+              "args": [
+                {
+                  "e": "get",
+                  "field": "refundable",
+                  "of": {
+                    "e": "var",
+                    "name": "grant"
+                  }
+                },
+                {
+                  "e": "get",
+                  "field": "order",
+                  "of": {
+                    "e": "var",
+                    "name": "args"
+                  }
+                }
+              ],
+              "e": "op",
+              "op": "append"
+            }
+          }
+        }
+      },
+      "output": {
+        "Record": {
+          "ok": "Bool"
+        }
+      },
+      "pre": {
+        "args": [
+          {
+            "args": [
+              {
+                "e": "get",
+                "field": "late",
+                "of": {
+                  "e": "var",
+                  "name": "args"
+                }
+              },
+              {
+                "e": "get",
+                "field": "late",
+                "of": {
+                  "e": "var",
+                  "name": "grant"
+                }
+              }
+            ],
+            "e": "op",
+            "op": "eq"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "e": "get",
+                    "field": "premium",
+                    "of": {
+                      "e": "var",
+                      "name": "args"
+                    }
+                  },
+                  {
+                    "e": "get",
+                    "field": "premium",
+                    "of": {
+                      "e": "var",
+                      "name": "grant"
+                    }
+                  }
+                ],
+                "e": "op",
+                "op": "eq"
+              },
+              {
+                "args": [
+                  {
+                    "e": "get",
+                    "field": "damaged",
+                    "of": {
+                      "e": "var",
+                      "name": "args"
+                    }
+                  },
+                  {
+                    "e": "get",
+                    "field": "damaged",
+                    "of": {
+                      "e": "var",
+                      "name": "grant"
+                    }
+                  }
+                ],
+                "e": "op",
+                "op": "eq"
+              }
+            ],
+            "e": "op",
+            "op": "and"
+          }
+        ],
+        "e": "op",
+        "op": "and"
+      },
+      "ret": {
+        "e": "list",
+        "items": []
+      }
+    }
+  }
+}

@@ -1,0 +1,118 @@
+{
+  "grant": {
+    "Record": {
+      "late": {
+        "List": "String"
+      },
+      "premium": {
+        "List": "String"
+      }
+    }
+  },
+  "operations": {
+    "lookup": {
+      "input": {
+        "Record": {
+          "id": "String"
+        }
+      },
+      "onResult": {
+        "e": "record",
+        "fields": {
+          "late": {
+            "cond": {
+              "e": "get",
+              "field": "late",
+              "of": {
+                "e": "var",
+                "name": "result"
+              }
+            },
+            "e": "if",
+            "else": {
+              "e": "get",
+              "field": "late",
+              "of": {
+                "e": "var",
+                "name": "grant"
+              }
+            },
+            "then": {
+              "args": [
+                {
+                  "e": "get",
+                  "field": "late",
+                  "of": {
+                    "e": "var",
+                    "name": "grant"
+                  }
+                },
+                {
+                  "e": "get",
+                  "field": "id",
+                  "of": {
+                    "e": "var",
+                    "name": "args"
+                  }
+                }
+              ],
+              "e": "op",
+              "op": "append"
+            }
+          },
+          "premium": {
+            "cond": {
+              "e": "get",
+              "field": "premium",
+              "of": {
+                "e": "var",
+                "name": "result"
+              }
+            },
+            "e": "if",
+            "else": {
+              "e": "get",
+              "field": "premium",
+              "of": {
+                "e": "var",
+                "name": "grant"
+              }
+            },
+            "then": {
+              "args": [
+                {
+                  "e": "get",
+                  "field": "premium",
+                  "of": {
+                    "e": "var",
+                    "name": "grant"
+                  }
+                },
+                {
+                  "e": "get",
+                  "field": "id",
+                  "of": {
+                    "e": "var",
+                    "name": "args"
+                  }
+                }
+              ],
+              "e": "op",
+              "op": "append"
+            }
+          }
+        }
+      },
+      "output": {
+        "Record": {
+          "late": "Bool",
+          "premium": "Bool"
+        }
+      },
+      "ret": {
+        "e": "list",
+        "items": []
+      }
+    }
+  }
+}

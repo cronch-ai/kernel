@@ -1,0 +1,61 @@
+{
+  "grant": {
+    "Record": {
+      "damaged": {
+        "List": "String"
+      }
+    }
+  },
+  "operations": {
+    "claim": {
+      "input": {
+        "Record": {
+          "id": "String"
+        }
+      },
+      "onResult": {
+        "cond": {
+          "e": "var",
+          "name": "result"
+        },
+        "e": "if",
+        "else": {
+          "e": "var",
+          "name": "grant"
+        },
+        "then": {
+          "e": "record",
+          "fields": {
+            "damaged": {
+              "args": [
+                {
+                  "e": "get",
+                  "field": "damaged",
+                  "of": {
+                    "e": "var",
+                    "name": "grant"
+                  }
+                },
+                {
+                  "e": "get",
+                  "field": "id",
+                  "of": {
+                    "e": "var",
+                    "name": "args"
+                  }
+                }
+              ],
+              "e": "op",
+              "op": "append"
+            }
+          }
+        }
+      },
+      "output": "Bool",
+      "ret": {
+        "e": "list",
+        "items": []
+      }
+    }
+  }
+}
