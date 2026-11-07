@@ -33,7 +33,7 @@ Two more cases show where the line falls:
 - **The rules name every operation that reaches the network.** Nothing checks that. It's the vocabulary below, and adding `mcp.call` meant adding its rule.
 - **The interpreter complies with the semantics**, and the host keeps the [host protocol](../../docs/2026-11-06-host-protocol.md).
 - **`net.ask`'s answer is a person's**, given now or earlier under a policy they set.
-- **The encoder writes queries that say what the rules say**, and **Ethos is sound.** [CRO-61](https://linear.app/cronch-ai/issue/CRO-61) is open: an Ethos overload may let a proof of a false query pass `check.mjs`. Until it is closed, a checked proof here is strong evidence, not yet a guarantee.
+- **The encoder writes queries that say what the rules say**, and **the checker that accepts a proof is sound**: Ethos with `check.mjs`'s restrictions, or Lean's kernel with Comparator. `check.mjs` refuses a `define` that would overload a name, which closed [CRO-61](https://linear.app/cronch-ai/issue/CRO-61): an overload could let a proof of a false query pass.
 
 See [Rules](../../docs/2026-11-05-rules.md) for the general case.
 
