@@ -1,0 +1,106 @@
+{
+  "grant": {
+    "Record": {
+      "refundable": {
+        "List": "String"
+      },
+      "refunded": {
+        "List": "String"
+      }
+    }
+  },
+  "operations": {
+    "issue": {
+      "effect": true,
+      "input": {
+        "Record": {
+          "order": "String"
+        }
+      },
+      "onCall": {
+        "e": "record",
+        "fields": {
+          "refunded": {
+            "args": [
+              {
+                "e": "get",
+                "field": "refunded",
+                "of": {
+                  "e": "var",
+                  "name": "grant"
+                }
+              },
+              {
+                "e": "get",
+                "field": "order",
+                "of": {
+                  "e": "var",
+                  "name": "args"
+                }
+              }
+            ],
+            "e": "op",
+            "op": "append"
+          }
+        }
+      },
+      "output": "String",
+      "pre": {
+        "args": [
+          {
+            "args": [
+              {
+                "e": "get",
+                "field": "refundable",
+                "of": {
+                  "e": "var",
+                  "name": "grant"
+                }
+              },
+              {
+                "e": "get",
+                "field": "order",
+                "of": {
+                  "e": "var",
+                  "name": "args"
+                }
+              }
+            ],
+            "e": "op",
+            "op": "contains"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "e": "get",
+                    "field": "refunded",
+                    "of": {
+                      "e": "var",
+                      "name": "grant"
+                    }
+                  },
+                  {
+                    "e": "get",
+                    "field": "order",
+                    "of": {
+                      "e": "var",
+                      "name": "args"
+                    }
+                  }
+                ],
+                "e": "op",
+                "op": "contains"
+              }
+            ],
+            "e": "op",
+            "op": "not"
+          }
+        ],
+        "e": "op",
+        "op": "and"
+      }
+    }
+  }
+}
