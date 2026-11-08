@@ -81,7 +81,8 @@ pub enum NoReading {
     Equality { left: Type, right: Type },
     /// A fold: it runs once per item of a list whose length a solver doesn't know.
     Fold,
-    /// A label: an export reads values, not their provenance.
+    /// A label of anything but a field of a query's free variable: an export reads values, and only those labels can
+    /// be quantified over.
     Label,
     /// A variant with no cases: SMT-LIB has no datatype without constructors.
     EmptyVariant,
@@ -358,6 +359,18 @@ pub fn refutation(
     let (body, _) = encoder.expr_as(formula, &Type::Bool, "").map_err(refused)?;
     if !encoder.total() {
         return Err(at(NoReading::Partial));
+    }
+    // A label read is quantified over as the parameters are: a proof holds whatever it is.
+    let sources = Type::List(Box::new(Type::String));
+    for (name, of) in encoder.labels().map_err(at)? {
+        query.push(script::Entry {
+            comments: vec![format!("The label of {of}: the sources it may depend on.")],
+            command: Some(script::Command::DeclareConst {
+                name: name.clone(),
+                sort: encoder.sort(&sources).map_err(at)?,
+            }),
+        });
+        held.extend(encoder.well_formed(&sources, name).map_err(at)?);
     }
     for (name, v) in fixed {
         let p = params.iter().find(|p| p.name == *name);
