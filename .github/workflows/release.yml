@@ -67,4 +67,5 @@ jobs:
           npm install -g npm@11.6.2
           mkdir -p release
           gh release download "v${{ steps.version.outputs.version }}" --pattern '*.tgz' --dir release
-          npm publish release/*.tgz --provenance --access public
+          # ./ makes it a path: `release/<file>` alone is GitHub shorthand for a repo.
+          npm publish ./release/*.tgz --provenance --access public
