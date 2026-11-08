@@ -23,11 +23,11 @@ The kernel's terms, one or two sentences each, with where each is defined. Pata 
 - **Induction:** proving an invariant of a harness's state. The kernel decides initiation and writes consecution as an SMT-LIB query; a solver searches for counterexamples, and the kernel checks any it finds. See [induction.rs](../crates/kernel/src/induction.rs).
 - **Interface:** the capabilities a harness runs against, each under its own prefix. Their contracts are enforced at every call, so they bind every harness on the interface.
 - **Key:** the SHA-256 of an object's deterministic CBOR, prefixed by its kind and version. See [key.rs](../crates/kernel/src/key.rs).
-- **Label:** the untrusted sources a value may depend on, including through control flow. Preconditions and properties can read labels.
+- **Label:** the untrusted sources a value may depend on, including through control flow. Preconditions, rules and properties can read labels.
 - **Narrowing:** the combinators that make a child's interface from its parent's. They can only drop, restrict or distrust, so a child can never do what its parent couldn't.
 - **Obligation:** a query whose `unsat` shows part of a rule holds, or, in Lean, the statement that it's `unsat`. `ruleObligations` writes them, and a proof checked outside the kernel discharges them. See [Rules](2026-11-05-rules.md).
 - **Property:** a claim about one harness: `always(phi)`, with `phi` in first-order past-time temporal logic over a run's events. Every property is a safety property, monitored online or offline. See [property.rs](../crates/kernel/src/property.rs) and [Rules and properties](#rules-and-properties).
-- **Rule:** what a capability's contracts alone rule out, whatever a harness does and whatever a model says. For example: an operation can't happen until a person has approved it. See [Rules](2026-11-05-rules.md) and [Rules and properties](#rules-and-properties).
+- **Rule:** what a capability's contracts alone rule out, whatever a harness does and whatever a model says. For example: an operation can't happen until a person has approved it, or, with `when`, only a call whose arguments depend on something untrusted can't. See [Rules](2026-11-05-rules.md) and [Rules and properties](#rules-and-properties).
 - **Spawn:** the action that starts a child harness, against its parent's interface narrowed. Cancelling the spawn revokes the child.
 - **Statement:** what a claim says, in the one statement language for properties, rules and invariants. For a rule's Lean obligation, it's the theorem a proof must prove.
 - **Step:** a pure expression over `state` and `input` that gives the next state and a list of actions. It's data, not code: the term that is hashed is the term that is checked, run and proved.
