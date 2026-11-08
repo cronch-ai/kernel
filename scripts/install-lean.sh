@@ -22,7 +22,7 @@ OUT=${PROOF_TOOLS:-"$ROOT/.proof-tools"}
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 
-curl -fsSL -o "$TMP/lean.zip" \
+curl -fsSL --retry 10 --retry-all-errors --retry-delay 30 -o "$TMP/lean.zip" \
   "https://github.com/leanprover/lean4/releases/download/v$LEAN_VERSION/lean-$LEAN_VERSION-linux.zip"
 echo "$LEAN_SHA256  $TMP/lean.zip" | sha256sum -c -
 
