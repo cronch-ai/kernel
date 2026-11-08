@@ -20,7 +20,7 @@ TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 
 fetch() {
-  curl -fsSL -o "$TMP/$1" "$2"
+  curl -fsSL --retry 10 --retry-all-errors --retry-delay 30 -o "$TMP/$1" "$2"
   echo "$3  $TMP/$1" | sha256sum -c -
 }
 

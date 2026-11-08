@@ -22,7 +22,7 @@ esac
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 
-curl -fsSL -o "$TMP/binaryen.tar.gz" \
+curl -fsSL --retry 10 --retry-all-errors --retry-delay 30 -o "$TMP/binaryen.tar.gz" \
   "https://github.com/WebAssembly/binaryen/releases/download/$VERSION/binaryen-$VERSION-$ARCH-linux.tar.gz"
 echo "$SHA256  $TMP/binaryen.tar.gz" | sha256sum -c -
 tar -xzf "$TMP/binaryen.tar.gz" -C "$TMP"
