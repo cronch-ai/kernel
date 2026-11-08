@@ -795,9 +795,11 @@ export interface Kernel {
     | { readonly kind: "unreadable"; readonly error: Unreadable };
 }
 
-/** `op` can't happen until an approval has been given (`crates/kernel/src/rules.rs`). */
+/** A call to `op` for which `when` holds can't happen until an approval has been given (`crates/kernel/src/rules.rs`). */
 export interface Rule {
   readonly op: string;
+  /** Over the call's `args` alone, which may read their labels; absent, every call. */
+  readonly when?: Expr;
   /** Each `when` reads `args` (the call's), `approval` (this operation's arguments) and `result`. */
   readonly approvedBy?: readonly { readonly op: string; readonly when: Expr }[];
 }
@@ -806,6 +808,7 @@ export type RuleError =
   | { readonly kind: "interface"; readonly problems: readonly unknown[] }
   | { readonly kind: "noSuchOperation"; readonly name: string }
   | { readonly kind: "grantNotARecord" }
+  | { readonly kind: "whenReadsGrant" }
   | { readonly kind: "unreadable"; readonly update: string }
   | { readonly kind: "refused"; readonly place: string; readonly refusal: SmtlibRefusal };
 

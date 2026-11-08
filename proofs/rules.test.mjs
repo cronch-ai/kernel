@@ -9,6 +9,7 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { instantiate } from "../javascript/index.js";
 import { check, forbidden, tools } from "./check.mjs";
+import { checkLean } from "./check-lean.mjs";
 import { prove } from "./prove.mjs";
 
 /** What Ethos itself says of a proof against `queryPath`, with no allowlist: its last line, or an error. */
@@ -181,6 +182,65 @@ test("broken contracts give counterexamples", () => {
     },
   };
   assertCounterexample(obligations(install(net(), rogue), netRule), "rogue.unlock.onResult");
+});
+
+// A rule with `when` over a label: a call whose URL depends on something untrusted needs an approval, and one whose
+// URL is trusted needs none. The encoders read each label as one more value a proof must hold for.
+const label = (of) => ({ e: "label", of });
+const trusted = (of) => eq(op("len", label(of)), lit(0));
+const url = get(v("args"), "url");
+/** `net` whose `act` needs `pre`, with `url` and `note` to read labels of. */
+const labelled = (pre) => {
+  const capability = gated("netAllow", "url");
+  capability.operations.act.input = { Record: { url: "String", note: "String" } };
+  capability.operations.act.pre = pre;
+  return install({ prefix: "net", capability });
+};
+const allowed = op("contains", get(v("grant"), "netAllow"), url);
+const exfiltration = {
+  op: "net.act",
+  when: op("not", trusted(url)),
+  approvedBy: approvedBy("net", "url"),
+};
+
+test("a rule over labelled arguments is proved, and the proofs check, in SMT-LIB and in Lean", () => {
+  const iface = labelled(op("or", trusted(url), allowed));
+  const out = obligations(iface, exfiltration);
+  assert.deepEqual(Object.keys(assertProved(out)), ["initial", "net.ask.onResult"]);
+  // The precondition and `when` read the same label, so they share one constant.
+  assert.match(out.obligations[0].text, /\(declare-const \|label:0\| \(Seq String\)\)/);
+  assert.doesNotMatch(out.obligations[0].text, /\|label:1\|/);
+  const lean = kernel.ruleObligations({ interface: iface, rule: exfiltration, format: "lean" });
+  assert.equal(lean.kind, "obligations", JSON.stringify(lean));
+  for (const { name, text } of lean.obligations) {
+    const solution = `${text}\ntheorem obligation : statement := by\n  grind\n`;
+    assert.deepEqual(checkLean(text, solution), { ok: true }, name);
+  }
+});
+
+test("a labelled rule's counterexamples", () => {
+  // Without `when`, a trusted URL passes with no approval.
+  const iface = labelled(op("or", trusted(url), allowed));
+  assertCounterexample(obligations(iface, { ...exfiltration, when: undefined }), "initial");
+  // A precondition that checks another argument's label: what relates two labels is forgotten.
+  const other = labelled(op("or", trusted(get(v("args"), "note")), allowed));
+  assertCounterexample(obligations(other, exfiltration), "initial");
+  // A precondition with no allowlist at all.
+  assertCounterexample(obligations(labelled(lit(true)), exfiltration), "initial");
+});
+
+test("a rule's `when` is over the call alone, and a label only of a query's free value", () => {
+  const iface = labelled(op("or", trusted(url), allowed));
+  const out = kernel.ruleObligations({
+    interface: iface,
+    rule: { ...exfiltration, when: op("eq", get(v("grant"), "netAllow"), lit([])) },
+  });
+  assert.deepEqual(out.error, { kind: "whenReadsGrant" });
+  // A label of a value the query builds, rather than one it quantifies over, has no reading.
+  const built = labelled(op("or", trusted(op("concat", url, lit("/"))), allowed));
+  const refused = kernel.ruleObligations({ interface: built, rule: exfiltration });
+  assert.equal(refused.kind, "refused", JSON.stringify(refused));
+  assert.deepEqual(refused.error.refusal?.reason, { kind: "label" }, JSON.stringify(refused));
 });
 
 const { query, proof } = proved["net.ask.onResult"];
