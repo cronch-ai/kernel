@@ -8,7 +8,7 @@ T1 from the north star: a Claude Code-style harness in Pata, proved unable to re
 
 ## Running it
 
-`pata run`, in `@pata/kernel`, runs it on your machine, and asks you at the terminal before each URL:
+`pata run`, in `@cronch/kernel`, runs it on your machine, and asks you at the terminal before each URL:
 
 ```console
 $ node javascript/cli.js run examples/claude-code

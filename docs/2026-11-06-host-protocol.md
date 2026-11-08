@@ -114,4 +114,4 @@ What each obligation looks like in the platform, from reading its `main`:
 
 - **Should H1 be checkable?** The kernel could key the configuration it returns, and a host could log that key, so an audit replaying the log would show an edit. Replaying already shows one if the log is complete.
 - **Vectors.** H4's withholding is pinned by the compliance vectors. H8 could get vectors of its own. The others are about what a host does outside the kernel, so no vector reaches them.
-- **A local host.** `@pata/kernel/run` ([run.js](../javascript/run.js)) is one, and marks where it keeps each obligation. Its test replays `withheld-then-failed.json` through it, so H1, H3 and H8's `failed` half are checked against a vector. A second host is now there to test this document against.
+- **A local host.** `@cronch/kernel/run` ([run.js](../javascript/run.js)) is one, and marks where it keeps each obligation. Its test replays `withheld-then-failed.json` through it, so H1, H3 and H8's `failed` half are checked against a vector. A second host is now there to test this document against.
