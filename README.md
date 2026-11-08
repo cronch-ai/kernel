@@ -17,7 +17,7 @@ model: answers
 {"kind":"halted","label":["model"],"value":"Its title is \"Example Domain\"."}
 ```
 
-That ran T1, a Claude Code-style harness ([examples/claude-code](examples/claude-code)), on your machine. The model chose to fetch a URL, and the harness asked you first. Answer `n` and nothing is fetched. `--input "<task>"` gives it another task, and `--model <module.js>` plugs in your own model.
+That ran T1, a Claude Code-style harness ([examples/claude-code](examples/claude-code)), on your machine. The model chose to fetch a URL, and the harness asked you first. Answer `n` and nothing is fetched. `--input "<task>"` gives it another task, and `--model <module.js>` plugs in your own model. In a clone, `node javascript/cli.js run examples/research` runs the [research agent](examples/research), whose planner never sees a page and whose rule is that nothing a page says is fetched without asking.
 
 The ask isn't the harness being polite. It's a rule, proved over the contracts of `net` and `shell`: **`net.fetch` and `shell.online` can't happen until a person has allowed, through `net.ask`, the URL they reach.** Any harness on those contracts keeps it, whatever its model says. Run `npx @cronch/kernel run <dir>` on a directory of your own harness and contracts.
 

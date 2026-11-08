@@ -1,0 +1,13 @@
+{
+  "operations": {
+    "write": {
+      "input": {
+        "Record": {
+          "text": "String"
+        }
+      },
+      "output": "String",
+      "effect": true
+    }
+  }
+}

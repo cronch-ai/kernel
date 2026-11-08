@@ -5,8 +5,10 @@
  * `examples/claude-code` does. Without `dir`, it runs that example, which the package ships.
  *
  * The host's implementations: `net.ask` asks you, `net.fetch` is Node's `fetch`, and `fs` reads and writes under
- * `--root`. `shell` is refused, since nothing here keeps a command off the network. The model, `brain.choose`, is a
- * module you pass with `--model`, or the scripted demo: it fetches the first URL in the task and answers.
+ * `--root`. `shell` is refused, since nothing here keeps a command off the network. For the research template
+ * (`examples/research`), `reader.extract` is a demo that reads a page's title, and `report.write` prints the report to
+ * standard error. The model, `brain.choose`, is a module you pass with `--model`, or the scripted demo: it fetches the
+ * first URL in the task and answers.
  */
 
 import { existsSync } from "node:fs";
@@ -63,13 +65,21 @@ async function demoModel({ messages }) {
       ? { kind: "net.fetch", url }
       : { kind: "answer", text: "There's no URL in the task." };
   }
-  const title = last.content.match(/<title>([^<]*)<\/title>/i)?.[1]?.trim();
+  // The research template tells its planner only which URL it read: the page went to the report.
+  if (last.content.startsWith("read "))
+    return { kind: "answer", text: "What I found is in the report." };
+  const title = titleOf(last.content);
   if (last.content === "denied")
     return { kind: "answer", text: "You didn't allow it, so I didn't fetch it." };
   return {
     kind: "answer",
     text: title ? `Its title is "${title}".` : `It answered: ${last.content.slice(0, 200)}`,
   };
+}
+
+/** A page's title, if it has one. */
+function titleOf(page) {
+  return page.match(/<title>([^<]*)<\/title>/i)?.[1]?.trim();
 }
 
 /** `path` under `root`, or a throw if it would leave it. */
@@ -127,6 +137,15 @@ function hosted({ root, model, ask }) {
     "fs.write": async ({ path, text }) => {
       say(`fs.write: ${path}`);
       await writeFile(under(root, path), text);
+      return "written";
+    },
+    "reader.extract": async ({ page }) => {
+      say("reader: reads the page");
+      const title = titleOf(page);
+      return title ? `The page is titled "${title}".` : "The page has no title.";
+    },
+    "report.write": async ({ text }) => {
+      say(`report: ${text}`);
       return "written";
     },
     "shell.run": refused("shell.run"),
