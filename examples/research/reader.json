@@ -3,8 +3,14 @@
     "extract": {
       "input": {
         "Record": {
-          "page": "String",
-          "question": "String"
+          "messages": {
+            "List": {
+              "Record": {
+                "role": "String",
+                "content": "String"
+              }
+            }
+          }
         }
       },
       "output": "String"
