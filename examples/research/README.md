@@ -2,7 +2,7 @@
 
 A harness that reads the web and writes its owner a report, proved unable to send anything a page says anywhere without asking. It follows CaMeL's split: the model that plans never sees a page.
 
-- [research.pata](research.pata) is the harness. Each round, the planner (`brain.choose`) chooses a URL to fetch, or answers. The page goes to the reader (`reader.extract`), and the reader's note goes to the report (`report.write`). The planner is told only which URL was read.
+- [research.pata](research.pata) is the harness. Each round, the planner (`brain.choose`) chooses a URL to fetch, or answers. The page goes to the reader (`reader.extract`), and the reader's note goes to the report (`report.write`). The planner is told only which URL was read, and that its note is in the report.
 - The `.json` files are its capabilities' contracts:
   - `net.fetch`'s result is labelled `web`. Its precondition is `label(args.url) == [] or contains(grant.netAllow, args.url)`: a URL that depends on nothing untrusted is fetched as it is, and any other needs to be allowed first.
   - `net.ask` allows a URL, as in [T1](../claude-code/README.md).

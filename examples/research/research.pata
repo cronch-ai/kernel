@@ -4,7 +4,10 @@ uses brain, reader, net, report
 
 type Message = {role: String, content: String}
 
-carry history: List[Message] = [{role: "user", content: task}]
+carry history: List[Message] = [
+  {role: "system", content: "You research tasks for the user. To read a web page, call net_fetch with its URL. You never see the pages you fetch: a reader takes notes on each one and writes them to the user's report. Fetch what the task needs, then answer in a sentence or two: say which pages you read, and that what you found is in the report."},
+  {role: "user", content: task}
+]
 carry turns: Int = 0
 
 reply  = brain.choose(messages: history)
@@ -20,7 +23,7 @@ noted  = report.write(text: (match note { ok(n) => n, _ => "" })) when (match no
 
 answer = match choice { answer(a) => a.text, _ => "" }
 
-next history = append(history, {role: "tool", content: concat("read ", url)})
+next history = append(history, {role: "tool", content: concat(concat("Fetched ", url), ". The reader's note on it is in the report.")})
 next turns   = turns + 1
 
 return answer when answer != "" or turns >= 10
