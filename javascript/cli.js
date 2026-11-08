@@ -56,7 +56,8 @@ function lines() {
 }
 
 /** The scripted demo model: fetch the first URL in the task, then answer from what came back. */
-async function demoModel({ messages }) {
+async function demoModel(args) {
+  const messages = args.messages.filter((m) => m.role !== "system");
   const task = messages[0]?.content ?? "";
   const last = messages.at(-1);
   if (messages.length === 1) {
@@ -66,7 +67,7 @@ async function demoModel({ messages }) {
       : { kind: "answer", text: "There's no URL in the task." };
   }
   // The research template tells its planner only which URL it read: the page went to the report.
-  if (last.content.startsWith("read "))
+  if (last.content.startsWith("Fetched "))
     return { kind: "answer", text: "What I found is in the report." };
   const title = titleOf(last.content);
   if (last.content === "denied")
