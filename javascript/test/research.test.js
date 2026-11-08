@@ -36,7 +36,8 @@ function canned() {
       seen.asked.push(url);
       return "deny";
     },
-    "reader.extract": async ({ page }) => `The page says: ${page}`,
+    "reader.extract": async ({ messages }) =>
+      `The page says: ${messages.at(-1).content.split("Page:\n")[1]}`,
     "report.write": async ({ text }) => {
       seen.report.push(text);
       return "written";

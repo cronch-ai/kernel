@@ -139,7 +139,8 @@ function hosted({ root, model, ask }) {
       await writeFile(under(root, path), text);
       return "written";
     },
-    "reader.extract": async ({ page }) => {
+    "reader.extract": async ({ messages }) => {
+      const page = messages.at(-1)?.content ?? "";
       say("reader: reads the page");
       const title = titleOf(page);
       return title ? `The page is titled "${title}".` : "The page has no title.";
