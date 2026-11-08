@@ -1,0 +1,35 @@
+{
+  "operations": {
+    "choose": {
+      "input": {
+        "Record": {
+          "messages": {
+            "List": {
+              "Record": {
+                "role": "String",
+                "content": "String"
+              }
+            }
+          }
+        }
+      },
+      "output": {
+        "Variant": {
+          "tag": "kind",
+          "cases": {
+            "answer": {
+              "Record": {
+                "text": "String"
+              }
+            },
+            "net.fetch": {
+              "Record": {
+                "url": "String"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

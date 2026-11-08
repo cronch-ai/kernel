@@ -38,12 +38,14 @@
     "kernel.sha256",
     "examples/claude-code/*.pata",
     "examples/claude-code/*.json",
+    "examples/research/*.pata",
+    "examples/research/*.json",
     "LICENSE"
   ],
   "scripts": {
     "build": "../scripts/build-wasm.sh",
     "test": "node --test",
-    "prepack": "rm -rf examples && mkdir -p examples/claude-code && cp ../examples/claude-code/*.pata ../examples/claude-code/*.json examples/claude-code/",
+    "prepack": "rm -rf examples && for e in claude-code research; do mkdir -p examples/$e && cp ../examples/$e/*.pata ../examples/$e/*.json examples/$e/; done",
     "clean": "npm run clean --prefix .."
   },
   "license": "Apache-2.0"

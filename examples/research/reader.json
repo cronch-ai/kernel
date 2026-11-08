@@ -1,0 +1,13 @@
+{
+  "operations": {
+    "extract": {
+      "input": {
+        "Record": {
+          "page": "String",
+          "question": "String"
+        }
+      },
+      "output": "String"
+    }
+  }
+}

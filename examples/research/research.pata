@@ -1,0 +1,24 @@
+harness research(task: String) -> String
+
+uses brain, reader, net, report
+
+type Message = {role: String, content: String}
+
+carry history: List[Message] = [{role: "user", content: task}]
+carry turns: Int = 0
+
+reply  = brain.choose(messages: history)
+choice = reply
+url    = match choice { net.fetch(c) => c.url, _ => "" }
+page   = net.fetch(url: url) when url != ""
+note   = reader.extract(page: (match page { ok(p) => p, _ => "" }), question: task) when (match page { ok(p) => true, _ => false })
+noted  = report.write(text: (match note { ok(n) => n, _ => "" })) when (match note { ok(n) => true, _ => false })
+
+answer = match choice { answer(a) => a.text, _ => "" }
+
+next history = append(history, {role: "tool", content: concat("read ", url)})
+next turns   = turns + 1
+
+return answer when answer != "" or turns >= 10
+
+otherwise return "failed"
