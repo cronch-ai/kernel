@@ -256,6 +256,29 @@ fn tester(variant: &str, case: &str, term: Term) -> Read<Term> {
     Ok(Term::List(vec![is, term]))
 }
 
+/// A free variable and the fields read from it, in order.
+#[derive(Clone, Debug, PartialEq)]
+pub(super) struct Reached(Vec<String>);
+
+impl Reached {
+    fn new(root: &str) -> Reached {
+        Reached(vec![root.to_string()])
+    }
+
+    fn field(mut self, field: &str) -> Reached {
+        self.0.push(field.to_string());
+        self
+    }
+}
+
+impl std::fmt::Display for Reached {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let (root, fields) = self.0.split_first().expect("a root");
+        write!(f, "{root}")?;
+        fields.iter().try_for_each(|field| write!(f, ".{field}"))
+    }
+}
+
 #[derive(Clone)]
 enum Datatype {
     Record(BTreeMap<String, Type>),
@@ -265,8 +288,10 @@ enum Datatype {
 pub struct Encoder {
     /// Record and variant sorts, each after the sorts it uses.
     datatypes: Vec<(String, Datatype)>,
-    /// Variables in scope, innermost last.
-    scope: Vec<(String, Type)>,
+    /// Variables in scope, innermost last, each with the free variable and fields it is bound to, if it is one.
+    scope: Vec<(String, Type, Option<Reached>)>,
+    /// The labels read, each of a free variable's field, in the order first read: `label:<i>` is the `i`th.
+    labels: Vec<Reached>,
     fresh: usize,
     /// The branch conditions on the way to the node being encoded.
     guards: Vec<Term>,
@@ -284,6 +309,7 @@ impl Encoder {
         Encoder {
             datatypes: Vec::new(),
             scope: Vec::new(),
+            labels: Vec::new(),
             fresh: 0,
             guards: Vec::new(),
             defined: Vec::new(),
@@ -855,8 +881,8 @@ impl Encoder {
                 };
                 Ok((self.value(v, &ty).map_err(here)?, ty))
             }
-            Expr::Var { name } => match self.scope.iter().rev().find(|(n, _)| n == name) {
-                Some((_, ty)) => Ok((local(name).map_err(here)?, ty.clone())),
+            Expr::Var { name } => match self.scope.iter().rev().find(|(n, ..)| n == name) {
+                Some((_, ty, _)) => Ok((local(name).map_err(here)?, ty.clone())),
                 None => Err(ill_formed(Problem::UnknownVariable {
                     at: at.to_string(),
                     name: name.clone(),
@@ -895,7 +921,8 @@ impl Encoder {
             Expr::Let { name, be, body, ty } => {
                 let (bound, bound_ty) = self.encode(be, &child(at, "be"), ty.as_ref())?;
                 let var = local(name).map_err(here)?;
-                self.scope.push((name.clone(), bound_ty));
+                let path = self.path(be);
+                self.scope.push((name.clone(), bound_ty, path));
                 let from = self.defined.len();
                 let result = self.encode(body, &child(at, "in"), expected);
                 self.scope.pop();
@@ -1035,7 +1062,7 @@ impl Encoder {
                                 ),
                             };
                             let var = local(&c.bind).map_err(&here)?;
-                            self.scope.push((c.bind.clone(), case_ty.clone()));
+                            self.scope.push((c.bind.clone(), case_ty.clone(), None));
                             let inner = self.defined.len();
                             let body = self.encode(&c.body, &body_at, expected);
                             self.scope.pop();
@@ -1088,7 +1115,22 @@ impl Encoder {
                 Ok((Term::bind(x, matched, body), joined))
             }
             Expr::Fold { .. } => Err(here(NoReading::Fold)),
-            Expr::Label { .. } => Err(here(NoReading::Label)),
+            // Of a free variable's field, a label is one more free variable: a proof over every label holds of the one the
+            // interpreter computes. Two reads of the same field share one; what relates different fields is forgotten,
+            // which can make a true statement unprovable but never a false one provable.
+            Expr::Label { of } => {
+                self.expr(of, &child(at, "of"))?;
+                let path = self.path(of).ok_or_else(|| here(NoReading::Label))?;
+                let i = match self.labels.iter().position(|p| *p == path) {
+                    Some(i) => i,
+                    None => {
+                        self.labels.push(path);
+                        self.labels.len() - 1
+                    }
+                };
+                let label = Term::symbol("label:", &i.to_string()).map_err(&here)?;
+                Ok((label, Type::List(Box::new(Type::String))))
+            }
         }
     }
 
@@ -1341,10 +1383,34 @@ impl Encoder {
     pub(super) fn free_variables(&mut self, params: &[Param]) {
         self.scope = params
             .iter()
-            .map(|p| (p.name.clone(), p.ty.clone()))
+            .map(|p| (p.name.clone(), p.ty.clone(), Some(Reached::new(&p.name))))
             .collect();
+        self.labels.clear();
         self.guards.clear();
         self.defined.clear();
+    }
+
+    /// The labels read since `free_variables`, each as its free constant and what it is the label of.
+    pub(super) fn labels(&self) -> Read<Vec<(Term, String)>> {
+        self.labels
+            .iter()
+            .enumerate()
+            .map(|(i, p)| Ok((Term::symbol("label:", &i.to_string())?, p.to_string())))
+            .collect()
+    }
+
+    /// The free variable and fields `e` reads, if it is a field of one, through bindings.
+    fn path(&self, e: &Expr) -> Option<Reached> {
+        match e {
+            Expr::Var { name } => self
+                .scope
+                .iter()
+                .rev()
+                .find(|(n, ..)| n == name)
+                .and_then(|(.., p)| p.clone()),
+            Expr::Get { of, field } => self.path(of).map(|p| p.field(field)),
+            _ => None,
+        }
     }
 
     /// Whether everything encoded since `free_variables` evaluates in the kernel without an error, whatever the
@@ -1363,7 +1429,7 @@ impl Encoder {
                 name: p.name.clone(),
             });
             params.push((local(&p.name).map_err(&at)?, self.sort(&p.ty).map_err(&at)?));
-            self.scope.push((p.name.clone(), p.ty.clone()));
+            self.scope.push((p.name.clone(), p.ty.clone(), None));
         }
         let (body, ty) = match &def.result {
             Some(result) => self.expr_as(&def.body, result, "")?,

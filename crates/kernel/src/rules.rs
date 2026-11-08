@@ -1,15 +1,16 @@
 //! Rules: what a capability's contracts alone rule out, whatever a harness does and whatever a model says.
 //!
 //! The interpreter checks an operation's precondition at the point of every call, so a call happens only where the
-//! precondition holds of the grant state. A rule says that about one operation: it can't happen until a person has
-//! approved it. That follows from contracts, never from a harness's step, so it holds of every harness on the
+//! precondition holds of the grant state. A rule says that about one operation: a call to it for which the rule's
+//! `when` holds (every call, if it has none) can't happen until a person has approved it. `when` reads the call's
+//! arguments alone, and may read their labels: then the rule is about calls that depend on something untrusted. That follows from contracts, never from a harness's step, so it holds of every harness on the
 //! interface. With a new capability, only what that capability can change has anything new to show.
 //!
-//! The rule holds if, for every value of the call's arguments, the invariant "the precondition holds only if an
-//! approval has been given" holds of the initial grant and survives every update. Each of those is an obligation
+//! The rule holds if, for every value of the call's arguments and of their labels, the invariant "the precondition and
+//! `when` hold only if an approval has been given" holds of the initial grant and survives every update. Each of those is an obligation
 //! here, a query whose `unsat` is the claim:
 //!
-//! * `initial`: the precondition holds of no arguments under the initial grant.
+//! * `initial`: the precondition and `when` hold together of no arguments under the initial grant.
 //! * one per update (`onCall`, `onResult`, `onMsg`) that writes a field the precondition reads: an update that keeps
 //!   the invariant. Only a result of an operation in `approvedBy` for which `when` holds counts as approval.
 //!
@@ -36,11 +37,15 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet};
 
-/// `op` can't happen until an approval has been given.
+/// A call to `op` for which `when` holds can't happen until an approval has been given.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Rule {
     pub op: String,
+    /// Over the call's `args`, and only them; absent, every call. It may read their labels, as in
+    /// `label(args.url) != []`: a call whose URL depends on something untrusted.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub when: Option<Expr>,
     #[serde(default)]
     pub approved_by: Vec<Approval>,
 }
@@ -74,6 +79,8 @@ pub enum RuleError {
     Interface { problems: Vec<HarnessProblem> },
     /// The rule or an approval names an operation the interface doesn't have.
     NoSuchOperation { name: String },
+    /// The rule's `when` reads the grant state: it is over the call alone.
+    WhenReadsGrant,
     /// A rule reads a grant state as a record of fields.
     GrantNotARecord,
     /// This update isn't made of records, branches and bindings, so what it writes can't be read off it.
@@ -344,22 +351,16 @@ fn in_update(update: &Update, body: Expr) -> Expr {
         })
 }
 
-/// The invariant, of a grant given by `grant`: the precondition holds of the call only if `approved`.
-fn invariant(pre: &Expr, grant: Expr, approved: Expr) -> Expr {
-    op(
-        "or",
-        vec![
-            op(
-                "not",
-                vec![binding(
-                    "args",
-                    var(CALL),
-                    binding("grant", grant, pre.clone()),
-                )],
-            ),
-            approved,
-        ],
-    )
+/// The invariant, of a grant given by `grant`: the precondition holds of a call the rule is about only if `approved`.
+fn invariant(pre: &Expr, when: Option<&Expr>, grant: Expr, approved: Expr) -> Expr {
+    let mut allowed = binding("args", var(CALL), binding("grant", grant, pre.clone()));
+    if let Some(when) = when {
+        allowed = op(
+            "and",
+            vec![binding("args", var(CALL), when.clone()), allowed],
+        );
+    }
+    op("or", vec![op("not", vec![allowed]), approved])
 }
 
 /// The obligations of `rule` over `interface`, for runs that start from the empty grant, as every run does.
@@ -390,6 +391,17 @@ pub fn obligations(
     let Type::Record(declared) = &interface.grant else {
         return Err(RuleError::GrantNotARecord);
     };
+    let when = rule.when.as_ref();
+    if when.is_some_and(|w| {
+        let mut any = false;
+        each_use(w, "grant", &mut |e| {
+            any |= matches!(e, Expr::Var { name } if name == "grant");
+            true
+        });
+        any
+    }) {
+        return Err(RuleError::WhenReadsGrant);
+    }
     // `check_interface` refused a grant with no empty value.
     let initial = zero(&interface.grant).unwrap_or_else(|| Value::Object(Default::default()));
     let grant = &initial;
@@ -397,14 +409,19 @@ pub fn obligations(
     let pre = guarded.pre.clone().unwrap_or(Expr::Lit {
         v: Value::Bool(true),
     });
+    // Said in the header only when there is one, so a rule without it writes what it always has.
+    let condition = match when {
+        Some(_) => ", when its `when` holds,",
+        None => "",
+    };
     let header = |name: &str| match format {
         Format::Smtlib => format!(
-            "Rule: {} needs an approval. Obligation: {name}.\nunsat is what the rule needs; sat gives a counterexample. Unsat is not the kernel's verdict: check a proof against this query.",
-            rule.op
+            "Rule: {}{} needs an approval. Obligation: {name}.\nunsat is what the rule needs; sat gives a counterexample. Unsat is not the kernel's verdict: check a proof against this query.",
+            rule.op, condition
         ),
         Format::Lean => format!(
-            "Rule: {} needs an approval. Obligation: {name}.\nA proof of `statement` is what the rule needs: check it against this statement.",
-            rule.op
+            "Rule: {}{} needs an approval. Obligation: {name}.\nA proof of `statement` is what the rule needs: check it against this statement.",
+            rule.op, condition
         ),
     };
     let refused = |place: &str| {
@@ -430,7 +447,10 @@ pub fn obligations(
             param("grant", &Type::Record(initial_part)),
         ],
         &[("grant", &initial_grant)],
-        &pre,
+        &match when {
+            Some(when) => op("and", vec![when.clone(), pre.clone()]),
+            None => pre.clone(),
+        },
         floats,
         format,
     )
@@ -479,13 +499,13 @@ pub fn obligations(
             }
             op("or", vec![acc, e])
         });
-        let mut holds = vec![invariant(&pre, var(GRANT), var(APPROVED))];
+        let mut holds = vec![invariant(&pre, when, var(GRANT), var(APPROVED))];
         if let Some(given) = update.given {
             holds.push(in_update(&update, given.clone()));
         }
         holds.push(op(
             "not",
-            vec![invariant(&pre, in_update(&update, after), approved)],
+            vec![invariant(&pre, when, in_update(&update, after), approved)],
         ));
         let formula = holds
             .into_iter()
