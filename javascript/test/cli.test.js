@@ -101,7 +101,7 @@ test("says how to use it", async () => {
   assert.match(stderr, /usage: pata run \[dir\]/);
 });
 
-// What `npx @pata/kernel run` does on a machine with nothing but Node: the packed package, installed into an
+// What `npx @cronch/kernel run` does on a machine with nothing but Node: the packed package, installed into an
 // empty directory, runs T1's example, which it ships, with no directory given.
 test("the package, installed, runs T1's example by itself", async () => {
   const dir = await mkdtemp(join(tmpdir(), "pata-npx-"));
@@ -110,7 +110,7 @@ test("the package, installed, runs T1's example by itself", async () => {
     execFileSync("npm", ["pack", "--json", "--pack-destination", dir], { cwd: javascript }),
   );
   execFileSync("npm", ["install", "--no-audit", "--no-fund", join(dir, filename)], { cwd: dir });
-  const bin = join(dir, "node_modules/@pata/kernel/cli.js");
+  const bin = join(dir, "node_modules/@cronch/kernel/cli.js");
   fetched.length = 0;
   const { code, stdout, stderr } = await pata(["run", "--input", `Read ${url}.`], "y\n", bin);
   assert.equal(code, 0, stderr);
