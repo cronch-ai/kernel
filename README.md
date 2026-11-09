@@ -17,7 +17,16 @@ model: answers
 {"kind":"halted","label":["model"],"value":"Its title is \"Example Domain\"."}
 ```
 
-That ran T1, a Claude Code-style harness ([examples/claude-code](examples/claude-code)), on your machine. The model chose to fetch a URL, and the harness asked you first. Answer `n` and nothing is fetched. `--input "<task>"` gives it another task, and `--model <module.js>` plugs in your own model. In a clone, `node javascript/cli.js run examples/research` runs the [research agent](examples/research), whose planner never sees a page and whose rule is that nothing a page says is fetched without asking.
+That ran T1, a Claude Code-style harness ([examples/claude-code](examples/claude-code)), on your machine, with a scripted model, so it needs no key. The model chose to fetch a URL, and the harness asked you first. Answer `n` and nothing is fetched.
+
+With a key, a real model chooses instead, and the harness still asks:
+
+```console
+$ ANTHROPIC_API_KEY=... npx @cronch/kernel run --model anthropic --input "What's on https://example.com/?"
+$ OPENAI_API_KEY=... npx @cronch/kernel run --model openai
+```
+
+`--model anthropic` uses Claude Opus 5.5 and `--model openai` uses GPT-6 Astra; `anthropic:<model id>` or `openai:<model id>` picks another. `--input "<task>"` gives it another task, and `--model <module.js>` plugs in your own model. `@cronch/kernel/run` exports the same providers (`anthropic`, `openai`) behind a `ModelProvider` port, and `model(provider, contract)` makes one a capability. In a clone, `node javascript/cli.js run examples/research` runs the [research agent](examples/research), whose planner never sees a page and whose rule is that nothing a page says is fetched without asking.
 
 The ask isn't the harness being polite. It's a rule, proved over the contracts of `net` and `shell`: **`net.fetch` and `shell.online` can't happen until a person has allowed, through `net.ask`, the URL they reach.** Any harness on those contracts keeps it, whatever its model says. Run `npx @cronch/kernel run <dir>` on a directory of your own harness and contracts.
 

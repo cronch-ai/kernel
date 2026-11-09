@@ -7,6 +7,16 @@
 import { readFile } from "node:fs/promises";
 import { instantiate } from "./index.js";
 
+export {
+  ANTHROPIC_MODEL,
+  anthropic,
+  model,
+  OPENAI_MODEL,
+  openai,
+  TOOL_RESULT,
+  toolName,
+} from "./model.js";
+
 /** The `prev` of a log's first entry. */
 export const GENESIS = `sha256:${"0".repeat(64)}`;
 
