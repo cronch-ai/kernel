@@ -65,3 +65,86 @@ export function run(
   readonly events: readonly Event[];
   readonly log: readonly LogEntry[];
 }>;
+
+/** What performing a call gave: its result, or why it failed. Either way it returns to the run. */
+export type Performed = { ok: true; value: Value } | { ok: false; error: Value };
+
+/** Whom a call is performed for: the run's owner, the run, and the call's identifier in it. */
+export interface Context {
+  owner: string;
+  run: string;
+  origin: number[];
+  call: number;
+}
+
+/**
+ * A capability: its contract, and how its operations are performed. Its publisher vouches for its contract: the kernel
+ * checks every result against `post` and withholds what breaks it.
+ */
+export interface Capability {
+  /** The contract, before installation under a prefix. Null: there is no such capability. */
+  contract: Interface | Promise<Interface | null>;
+  /** Perform `op`, named as in the contract, on arguments the kernel has already checked. */
+  perform(op: string, args: Value, context: Context): Performed | Promise<Performed>;
+}
+
+/** A message as a provider takes it. A harness's `tool` message reaches it as the user's, after `TOOL_RESULT`. */
+export interface ModelMessage {
+  readonly role: "system" | "user" | "assistant";
+  readonly content: string;
+}
+
+/** A tool the model is offered: one case of a choosing operation's output, with its fields as `parameters`. */
+export interface ModelTool {
+  readonly name: string;
+  readonly description: string;
+  /** A JSON Schema object whose properties are all required. */
+  readonly parameters: { readonly [key: string]: unknown };
+}
+
+/** What the model said: its text, if any, and the tools it called, first first. */
+export interface ModelReply {
+  readonly text: string | null;
+  readonly calls: readonly { readonly name: string; readonly input: unknown }[];
+}
+
+/** The port to a language model. A throw fails the call. */
+export interface ModelProvider {
+  complete(request: {
+    readonly messages: readonly ModelMessage[];
+    readonly tools: readonly ModelTool[];
+  }): Promise<ModelReply>;
+}
+
+/**
+ * The model behind `provider`, as a capability under `contract`. An operation whose output is `String` answers with
+ * text. One whose output is a variant offers its cases other than `answer` as tools, and answers with the case the
+ * model called, its fields the tool's input, or with `answer {text}`.
+ */
+export function model(provider: ModelProvider, contract: Interface): Capability;
+
+/** What begins a tool's result, sent as the user's. */
+export const TOOL_RESULT: string;
+
+/** A tool's name: providers allow only letters, digits, `_` and `-`, so `fs.read` is `fs_read`. */
+export function toolName(option: string): string;
+
+export interface ProviderOptions {
+  readonly apiKey: string;
+  /** The model's identifier: `ANTHROPIC_MODEL` or `OPENAI_MODEL` if not given. */
+  readonly model?: string;
+  /** In place of the provider's own API. */
+  readonly baseUrl?: string;
+  readonly fetch?: typeof fetch;
+}
+
+export const ANTHROPIC_MODEL: string;
+export const OPENAI_MODEL: string;
+
+/** Claude, through Anthropic's Messages API, with plain `fetch`. */
+export function anthropic(
+  options: ProviderOptions & { readonly maxTokens?: number },
+): ModelProvider;
+
+/** OpenAI's models, through its Responses API, with plain `fetch`. */
+export function openai(options: ProviderOptions): ModelProvider;

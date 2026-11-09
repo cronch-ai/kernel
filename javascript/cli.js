@@ -7,8 +7,10 @@
  * The host's implementations: `net.ask` asks you, `net.fetch` is Node's `fetch`, and `fs` reads and writes under
  * `--root`. `shell` is refused, since nothing here keeps a command off the network. For the research template
  * (`examples/research`), `reader.extract` is a demo that reads a page's title, and `report.write` prints the report to
- * standard error. The model, `brain.choose`, is a module you pass with `--model`, or the scripted demo: it fetches the
- * first URL in the task and answers.
+ * standard error. The model, `brain.choose`, is the scripted demo, which fetches the first URL in the task and answers,
+ * or what `--model` names: `anthropic` or `openai`, a real model with the key in `ANTHROPIC_API_KEY` or
+ * `OPENAI_API_KEY` (`anthropic:<id>` picks the model), which then reads pages for `reader.extract` too, or a module
+ * whose default export answers `brain.choose`.
  */
 
 import { existsSync } from "node:fs";
@@ -17,14 +19,21 @@ import { isAbsolute, join, relative, resolve } from "node:path";
 import { createInterface } from "node:readline";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
-import { run } from "./run.js";
+import { anthropic, model as modelCapability, openai, run } from "./run.js";
 
-const USAGE = `usage: pata run [dir] [--input <task>] [--root <dir>] [--model <module.js>]
+const USAGE = `usage: pata run [dir] [--input <task>] [--root <dir>] [--model anthropic|openai|<module.js>]
 
   dir      a harness and its contracts (default: T1's example, examples/claude-code)
   --input  the task the run starts with (default: a demo task)
   --root   the directory fs reads and writes under (default: the current one)
-  --model  a module whose default export answers brain.choose (default: a scripted demo)`;
+  --model  anthropic or openai, with ANTHROPIC_API_KEY or OPENAI_API_KEY set (anthropic:<id> picks
+           the model), or a module whose default export answers brain.choose (default: a scripted demo)`;
+
+/** Each provider `--model` can name, with the variable its key is in. */
+const PROVIDERS = {
+  anthropic: { key: "ANTHROPIC_API_KEY", base: "ANTHROPIC_BASE_URL", make: anthropic },
+  openai: { key: "OPENAI_API_KEY", base: "OPENAI_BASE_URL", make: openai },
+};
 
 const DEMO_TASK = "Fetch https://example.com/ and tell me its title.";
 
@@ -78,6 +87,37 @@ async function demoModel(args) {
   };
 }
 
+/** The demo reader: it notes a page's title. */
+async function demoReader({ messages }) {
+  const title = titleOf(messages.at(-1)?.content ?? "");
+  return title ? `The page is titled "${title}".` : "The page has no title.";
+}
+
+/** The provider `--model` names, if it names one, or null for a module. */
+function provider(name) {
+  const [kind, id] = name.split(/:(.*)/s);
+  const known = Object.hasOwn(PROVIDERS, kind) ? PROVIDERS[kind] : undefined;
+  if (known === undefined) return null;
+  const apiKey = process.env[known.key];
+  if (!apiKey)
+    throw new Error(`--model ${kind} needs ${known.key} set; without --model, the demo runs`);
+  return known.make({
+    apiKey,
+    ...(id ? { model: id } : {}),
+    ...(process.env[known.base] ? { baseUrl: process.env[known.base] } : {}),
+  });
+}
+
+/** `op` of a capability, as a handler: its error, if it fails, is the call's. */
+function performer(capability, op) {
+  const context = { owner: "local", run: "local", origin: [], call: 0 };
+  return async (args) => {
+    const performed = await capability.perform(op, args, context);
+    if (performed.ok) return performed.value;
+    throw new Error(JSON.stringify(performed.error));
+  };
+}
+
 /** A page's title, if it has one. */
 function titleOf(page) {
   return page.match(/<title>([^<]*)<\/title>/i)?.[1]?.trim();
@@ -104,7 +144,7 @@ function handlers(given) {
   return said;
 }
 
-function hosted({ root, model, ask }) {
+function hosted({ root, model, reader, ask }) {
   const say = (text) => process.stderr.write(`${text}\n`);
   const refused = (op) => async () => {
     throw new Error(
@@ -140,11 +180,9 @@ function hosted({ root, model, ask }) {
       await writeFile(under(root, path), text);
       return "written";
     },
-    "reader.extract": async ({ messages }) => {
-      const page = messages.at(-1)?.content ?? "";
+    "reader.extract": async (args) => {
       say("reader: reads the page");
-      const title = titleOf(page);
-      return title ? `The page is titled "${title}".` : "The page has no title.";
+      return await reader(args);
     },
     "report.write": async ({ text }) => {
       say(`report: ${text}`);
@@ -186,9 +224,18 @@ async function main(argv) {
     return values.help ? 0 : 2;
   }
   const { source, capabilities } = await load(positionals[1] ?? EXAMPLE);
-  const model = values.model
-    ? (await import(pathToFileURL(resolve(values.model)).href)).default
-    : demoModel;
+  let model = demoModel;
+  let reader = demoReader;
+  const real = values.model ? provider(values.model) : null;
+  if (real !== null) {
+    if (capabilities.brain === undefined)
+      throw new Error(`--model ${values.model} needs brain.json`);
+    model = performer(modelCapability(real, capabilities.brain), "choose");
+    if (capabilities.reader !== undefined)
+      reader = performer(modelCapability(real, capabilities.reader), "extract");
+  } else if (values.model) {
+    model = (await import(pathToFileURL(resolve(values.model)).href)).default;
+  }
   if (typeof model !== "function")
     throw new Error(`${values.model} has no default export to answer brain.choose`);
 
@@ -199,7 +246,7 @@ async function main(argv) {
     const { outcome } = await run(
       source,
       capabilities,
-      handlers({ root: resolve(values.root ?? "."), model, ask: stdin.next }),
+      handlers({ root: resolve(values.root ?? "."), model, reader, ask: stdin.next }),
       { input },
     );
     console.log(JSON.stringify(outcome));
