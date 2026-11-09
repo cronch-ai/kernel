@@ -13,6 +13,7 @@ export {
   model,
   OPENAI_MODEL,
   openai,
+  openrouter,
   TOOL_RESULT,
   toolName,
 } from "./model.js";

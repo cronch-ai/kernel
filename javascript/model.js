@@ -10,7 +10,7 @@
  *
  * A choice that doesn't fit its case fails, rather than leaving the call pending: the kernel would withhold it.
  *
- * `anthropic` and `openai` are providers over plain `fetch`, with no SDK.
+ * `anthropic`, `openai` and `openrouter` are providers over plain `fetch`, with no SDK.
  */
 
 /** What begins a tool's result, sent as the user's: a harness's `tool` message has no tool call id. */
@@ -223,6 +223,41 @@ export function openai({
         calls: output
           .filter((item) => item.type === "function_call")
           .map((item) => ({ name: item.name, input: parsed(item.arguments) })),
+      };
+    },
+  };
+}
+
+/**
+ * Any model OpenRouter serves, through its Chat Completions API. Without `model`, OpenRouter uses the account's default.
+ */
+export function openrouter({
+  apiKey,
+  model,
+  baseUrl = "https://openrouter.ai/api",
+  fetch = globalThis.fetch,
+}) {
+  return {
+    async complete({ messages, tools }) {
+      const body = { messages: messages.map(({ role, content }) => ({ role, content })) };
+      if (model !== undefined) body.model = model;
+      if (tools.length > 0) {
+        body.tools = tools.map((t) => ({
+          type: "function",
+          function: { name: t.name, description: t.description, parameters: t.parameters },
+        }));
+      }
+      const headers = { "content-type": "application/json", authorization: `Bearer ${apiKey}` };
+      const reply = await post(fetch, `${baseUrl}/v1/chat/completions`, headers, body);
+      if (reply.error !== undefined) throw new Error(JSON.stringify(reply.error).slice(0, 500));
+      const message = reply.choices?.[0]?.message ?? {};
+      return {
+        text:
+          typeof message.content === "string" && message.content !== "" ? message.content : null,
+        calls: (message.tool_calls ?? []).map((call) => ({
+          name: call.function?.name,
+          input: parsed(call.function?.arguments),
+        })),
       };
     },
   };
