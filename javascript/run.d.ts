@@ -131,7 +131,7 @@ export function toolName(option: string): string;
 
 export interface ProviderOptions {
   readonly apiKey: string;
-  /** The model's identifier: `ANTHROPIC_MODEL` or `OPENAI_MODEL` if not given. */
+  /** The model's identifier: `ANTHROPIC_MODEL` or `OPENAI_MODEL` if not given, or OpenRouter's account default. */
   readonly model?: string;
   /** In place of the provider's own API. */
   readonly baseUrl?: string;
@@ -148,3 +148,6 @@ export function anthropic(
 
 /** OpenAI's models, through its Responses API, with plain `fetch`. */
 export function openai(options: ProviderOptions): ModelProvider;
+
+/** Any model OpenRouter serves, through its Chat Completions API, with plain `fetch`. */
+export function openrouter(options: ProviderOptions): ModelProvider;

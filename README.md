@@ -24,9 +24,10 @@ With a key, a real model chooses instead, and the harness still asks:
 ```console
 $ ANTHROPIC_API_KEY=... npx @cronch/kernel run --model anthropic --input "What's on https://example.com/?"
 $ OPENAI_API_KEY=... npx @cronch/kernel run --model openai
+$ OPENROUTER_API_KEY=... npx @cronch/kernel run --model openrouter:<model id>
 ```
 
-`--model anthropic` uses Claude Opus 5.5 and `--model openai` uses GPT-6 Astra; `anthropic:<model id>` or `openai:<model id>` picks another. `--input "<task>"` gives it another task, and `--model <module.js>` plugs in your own model. `@cronch/kernel/run` exports the same providers (`anthropic`, `openai`) behind a `ModelProvider` port, and `model(provider, contract)` makes one a capability. In a clone, `node javascript/cli.js run examples/research` runs the [research agent](examples/research), whose planner never sees a page and whose rule is that nothing a page says is fetched without asking.
+`--model anthropic` uses Claude Opus 5.5 and `--model openai` uses GPT-6 Astra; `anthropic:<model id>` or `openai:<model id>` picks another. `--model openrouter:<model id>` runs any model OpenRouter serves, and `--model openrouter` alone uses your OpenRouter account's default. `--input "<task>"` gives it another task, and `--model <module.js>` plugs in your own model. `@cronch/kernel/run` exports the same providers (`anthropic`, `openai`, `openrouter`) behind a `ModelProvider` port, and `model(provider, contract)` makes one a capability. In a clone, `node javascript/cli.js run examples/research` runs the [research agent](examples/research), whose planner never sees a page and whose rule is that nothing a page says is fetched without asking.
 
 The ask isn't the harness being polite. It's a rule, proved over the contracts of `net` and `shell`: **`net.fetch` and `shell.online` can't happen until a person has allowed, through `net.ask`, the URL they reach.** Any harness on those contracts keeps it, whatever its model says. Run `npx @cronch/kernel run <dir>` on a directory of your own harness and contracts.
 

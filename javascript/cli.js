@@ -8,8 +8,9 @@
  * `--root`. `shell` is refused, since nothing here keeps a command off the network. For the research template
  * (`examples/research`), `reader.extract` is a demo that reads a page's title, and `report.write` prints the report to
  * standard error. The model, `brain.choose`, is the scripted demo, which fetches the first URL in the task and answers,
- * or what `--model` names: `anthropic` or `openai`, a real model with the key in `ANTHROPIC_API_KEY` or
- * `OPENAI_API_KEY` (`anthropic:<id>` picks the model), which then reads pages for `reader.extract` too, or a module
+ * or what `--model` names: `anthropic`, `openai` or `openrouter`, a real model with the key in `ANTHROPIC_API_KEY`,
+ * `OPENAI_API_KEY` or `OPENROUTER_API_KEY` (`anthropic:<id>` picks the model), which then reads pages for
+ * `reader.extract` too, or a module
  * whose default export answers `brain.choose`.
  */
 
@@ -19,20 +20,22 @@ import { isAbsolute, join, relative, resolve } from "node:path";
 import { createInterface } from "node:readline";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
-import { anthropic, model as modelCapability, openai, run } from "./run.js";
+import { anthropic, model as modelCapability, openai, openrouter, run } from "./run.js";
 
-const USAGE = `usage: pata run [dir] [--input <task>] [--root <dir>] [--model anthropic|openai|<module.js>]
+const USAGE = `usage: pata run [dir] [--input <task>] [--root <dir>] [--model anthropic|openai|openrouter|<module.js>]
 
   dir      a harness and its contracts (default: T1's example, examples/claude-code)
   --input  the task the run starts with (default: a demo task)
   --root   the directory fs reads and writes under (default: the current one)
-  --model  anthropic or openai, with ANTHROPIC_API_KEY or OPENAI_API_KEY set (anthropic:<id> picks
-           the model), or a module whose default export answers brain.choose (default: a scripted demo)`;
+  --model  anthropic, openai or openrouter, with ANTHROPIC_API_KEY, OPENAI_API_KEY or OPENROUTER_API_KEY
+           set (anthropic:<id> picks the model; openrouter alone uses your OpenRouter default), or a
+           module whose default export answers brain.choose (default: a scripted demo)`;
 
 /** Each provider `--model` can name, with the variable its key is in. */
 const PROVIDERS = {
   anthropic: { key: "ANTHROPIC_API_KEY", base: "ANTHROPIC_BASE_URL", make: anthropic },
   openai: { key: "OPENAI_API_KEY", base: "OPENAI_BASE_URL", make: openai },
+  openrouter: { key: "OPENROUTER_API_KEY", base: "OPENROUTER_BASE_URL", make: openrouter },
 };
 
 const DEMO_TASK = "Fetch https://example.com/ and tell me its title.";

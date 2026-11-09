@@ -1,6 +1,6 @@
 {
   "name": "@cronch/kernel",
-  "version": "0.14.0",
+  "version": "0.15.0",
   "description": "The reference kernel for Pata (Proven Agents, Trusted Actions): agent harnesses whose safety can be proved",
   "repository": {
     "type": "git",

@@ -3,7 +3,15 @@ import { spawn } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { after, before, test } from "node:test";
-import { ANTHROPIC_MODEL, anthropic, model, OPENAI_MODEL, openai, TOOL_RESULT } from "../run.js";
+import {
+  ANTHROPIC_MODEL,
+  anthropic,
+  model,
+  OPENAI_MODEL,
+  openai,
+  openrouter,
+  TOOL_RESULT,
+} from "../run.js";
 
 // The model port and its providers, with `fetch` stubbed: nothing here reaches a real API.
 const contract = async (example, name) =>
@@ -158,7 +166,67 @@ test("OpenAI: the Responses API, with function tools and their arguments as JSON
   assert.equal(second.body.tools, undefined, "an operation answering with text offers no tools");
 });
 
-// `pata run --model anthropic` and `--model openai`, against a local stand-in for each API.
+test("OpenRouter: Chat Completions, with the account's default model unless one is named", async () => {
+  const { fetch, sent } = stub(
+    [
+      200,
+      {
+        choices: [
+          {
+            message: {
+              role: "assistant",
+              content: null,
+              tool_calls: [
+                {
+                  id: "c",
+                  type: "function",
+                  function: { name: "net_fetch", arguments: '{"url":"https://c.example/"}' },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    ],
+    [200, { choices: [{ message: { role: "assistant", content: "Noted." } }] }],
+    [200, { error: { code: 402, message: "Insufficient credits" } }],
+  );
+  const chose = await model(openrouter({ apiKey: "k", fetch }), brain).perform(
+    "choose",
+    { messages: history },
+    context,
+  );
+  assert.deepEqual(chose, { ok: true, value: { kind: "net.fetch", url: "https://c.example/" } });
+  const named = openrouter({ apiKey: "k", model: "vendor/some-model", fetch });
+  const noted = await model(named, reader).perform("extract", { messages: history }, context);
+  assert.deepEqual(noted, { ok: true, value: "Noted." });
+  const refused = await model(named, reader).perform("extract", { messages: history }, context);
+  assert.equal(refused.error.kind, "model");
+  assert.match(refused.error.detail, /Insufficient credits/);
+  const [first, second] = sent;
+  assert.equal(first.url, "https://openrouter.ai/api/v1/chat/completions");
+  assert.equal(first.headers.authorization, "Bearer k");
+  assert.equal(first.body.model, undefined, "no model: OpenRouter's account default");
+  assert.deepEqual(first.body.messages.at(0), { role: "system", content: "Be brief." });
+  assert.deepEqual(first.body.messages.at(-1), { role: "user", content: TOOL_RESULT });
+  assert.deepEqual(first.body.tools.at(-1), {
+    type: "function",
+    function: {
+      name: "net_fetch",
+      description: "The net.fetch operation.",
+      parameters: {
+        type: "object",
+        properties: { url: { type: "string", description: "url" } },
+        required: ["url"],
+        additionalProperties: false,
+      },
+    },
+  });
+  assert.equal(second.body.model, "vendor/some-model");
+  assert.equal(second.body.tools, undefined, "an operation answering with text offers no tools");
+});
+
+// `pata run --model anthropic`, `--model openai` and `--model openrouter`, against a local stand-in for each API.
 const cli = new URL("../cli.js", import.meta.url).pathname;
 const examples = new URL("../../examples/", import.meta.url).pathname;
 let server;
@@ -181,6 +249,23 @@ before(async () => {
           ? [{ type: "tool_use", id: "t", name: "net_fetch", input: { url: page } }]
           : [{ type: "text", text: tools ? "It's titled Local page." : "A note." }];
       return response.end(JSON.stringify({ stop_reason: "end_turn", content }));
+    }
+    if (request.url === "/v1/chat/completions") {
+      const message =
+        tools && turn === 1
+          ? {
+              role: "assistant",
+              content: null,
+              tool_calls: [
+                {
+                  id: "c",
+                  type: "function",
+                  function: { name: "net_fetch", arguments: JSON.stringify({ url: page }) },
+                },
+              ],
+            }
+          : { role: "assistant", content: tools ? "It's titled Local page." : "A note." };
+      return response.end(JSON.stringify({ choices: [{ message }] }));
     }
     const output =
       tools && turn === 1
@@ -242,6 +327,23 @@ test("--model openai runs the research template, whose reader is the model too",
     requests.map((r) => r.body.tools?.length ?? 0),
     [1, 0, 1],
     "planner, reader, planner",
+  );
+});
+
+test("--model openrouter runs T1 against the model it names, and the ask still happens", async () => {
+  requests.length = 0;
+  const env = { OPENROUTER_API_KEY: "k", OPENROUTER_BASE_URL: base };
+  const args = ["run", `${examples}claude-code`, "--model", "openrouter:vendor/some-model"];
+  const { code, stdout, stderr } = await pata([...args, "--input", "Read the page."], env, "y\n");
+  assert.equal(code, 0, stderr);
+  assert.match(stderr, new RegExp(`ask: allow ${page}\\? \\[y/N\\] y\\nask: allowed\\nnet.fetch:`));
+  assert.equal(JSON.parse(stdout).value, "It's titled Local page.");
+  assert.deepEqual(
+    requests.map((r) => [r.path, r.body.model]),
+    [
+      ["/v1/chat/completions", "vendor/some-model"],
+      ["/v1/chat/completions", "vendor/some-model"],
+    ],
   );
 });
 
