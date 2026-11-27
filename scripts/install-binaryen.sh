@@ -26,5 +26,18 @@ curl -fsSL --retry 10 --retry-all-errors --retry-delay 30 -o "$TMP/binaryen.tar.
   "https://github.com/WebAssembly/binaryen/releases/download/$VERSION/binaryen-$VERSION-$ARCH-linux.tar.gz"
 echo "$SHA256  $TMP/binaryen.tar.gz" | sha256sum -c -
 tar -xzf "$TMP/binaryen.tar.gz" -C "$TMP"
-sudo install -m 755 "$TMP/binaryen-$VERSION/bin/wasm-opt" /usr/local/bin/wasm-opt
-wasm-opt --version
+# Into /usr/local/bin where that's possible; otherwise (CI's runner has no sudo) into ~/.local/bin,
+# which CI then puts on PATH for the steps after this one.
+if [ -w /usr/local/bin ]; then
+  BIN=/usr/local/bin
+  install -m 755 "$TMP/binaryen-$VERSION/bin/wasm-opt" "$BIN/wasm-opt"
+elif sudo -n true 2>/dev/null; then
+  BIN=/usr/local/bin
+  sudo install -m 755 "$TMP/binaryen-$VERSION/bin/wasm-opt" "$BIN/wasm-opt"
+else
+  BIN="$HOME/.local/bin"
+  mkdir -p "$BIN"
+  install -m 755 "$TMP/binaryen-$VERSION/bin/wasm-opt" "$BIN/wasm-opt"
+  if [ -n "${GITHUB_PATH:-}" ]; then echo "$BIN" >>"$GITHUB_PATH"; fi
+fi
+"$BIN/wasm-opt" --version

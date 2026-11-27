@@ -7,7 +7,7 @@ on:
 
 jobs:
   biome:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, homelab]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -19,7 +19,7 @@ jobs:
 
   rust:
     needs: biome
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, homelab]
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@master
@@ -36,8 +36,14 @@ jobs:
       - run: ./scripts/install-lean.sh
       - run: ../.proof-tools/lean/bin/lake build
         working-directory: lean
-      # Lake's comparator builds a solution in a bwrap sandbox, which Ubuntu's AppArmor keeps from making namespaces.
+      # Lake's comparator builds a solution in a bwrap sandbox, which needs a user namespace, and the runner
+      # can't make one. So the proofs run in a container that can, seeing the runner's whole work directory
+      # (this checkout and setup-node's node) at the same paths.
       - run: |
-          sudo apt-get install -y bubblewrap
-          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
-      - run: npm run test:proofs
+          work="$(dirname "$RUNNER_WORKSPACE")"
+          docker run --rm \
+            --security-opt seccomp=unconfined --security-opt apparmor=unconfined \
+            -v "$work:$work" -w "$PWD" \
+            -e PATH="$(dirname "$(command -v node)"):/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
+            ubuntu:24.04 \
+            sh -c 'apt-get update -qq && apt-get install -y -qq bubblewrap >/dev/null && npm run test:proofs'

@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   release:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, homelab]
     steps:
       - uses: actions/checkout@v4
       # A push that doesn't change the version has nothing to publish: its release exists already.
